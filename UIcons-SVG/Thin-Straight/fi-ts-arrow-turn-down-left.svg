@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 300 300">
+    <path d="M288 275V144Q288 136 282.5 130.5Q277 125 269 125H16L92 208L83 217L6 133Q0 127 0.0 118.5Q0 110 6 105L83 21L92 29L16 113H269Q282 113 291.0 122.0Q300 131 300 144V275Z"
+          transform="translate(0,300) scale(1,-1)"/>
+</svg>

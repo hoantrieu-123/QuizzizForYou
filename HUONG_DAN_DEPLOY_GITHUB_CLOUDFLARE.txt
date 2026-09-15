@@ -1,0 +1,187 @@
+================================================================================
+           HƯỚNG DẪN CHI TIẾT DEPLOY DỰ ÁN LÊN GITHUB VÀ CLOUDFLARE
+================================================================================
+
+Dự án của bạn gồm 2 thành phần chính:
+  1. Frontend: Ứng dụng React + Vite (Giao diện web trực quan).
+  2. Backend: Python FastAPI + SQLite + Thư viện python-docx (Phân tích file Word, 
+     tạo câu hỏi, kéo thả trắc nghiệm, chấm điểm).
+
+VÌ SAO CẦN PHỐI HỢP CLOUDFLARE PAGES + MÁY CHỦ PYTHON?
+--------------------------------------------------------------------------------
+- Cloudflare Pages là dịch vụ lưu trữ Web tĩnh (HTML/CSS/JavaScript/React) nhanh nhất
+  thế giới hiện nay, miễn phí 100%, có CDN toàn cầu và tự động cấp chứng chỉ HTTPS.
+- Tuy nhiên, Cloudflare Pages KHÔNG hỗ trợ chạy code Python và không lưu cơ sở 
+  dữ liệu SQLite trực tiếp trên máy chủ web tĩnh.
+- DO ĐÓ, mô hình chuẩn và tối ưu nhất (Miễn phí 100% vĩnh viễn) là:
+    + FRONTEND: Chạy trên Cloudflare Pages (kết nối trực tiếp từ GitHub).
+    + BACKEND (Python): Chạy trên Render.com hoặc Railway / Koyeb (kết nối cùng GitHub).
+    + CẦU NỐI: Cloudflare Pages tự động chuyển tiếp các lệnh gọi API (/api/*) sang 
+      Backend thông qua file "_redirects" đã tạo sẵn trong dự án.
+
+Dưới đây là toàn bộ quy trình 5 bước thực hiện từ A đến Z cực kỳ dễ hiểu.
+
+================================================================================
+BƯỚC 1: ĐƯA TOÀN BỘ MÃ NGUỒN DỰ ÁN LÊN GITHUB
+================================================================================
+
+1. Chuẩn bị file:
+   - Hệ thống đã tự động tạo sẵn file ".gitignore" chuẩn (để không đẩy các thư mục nặng
+     như node_modules, cache, dist lên GitHub).
+
+2. Tạo Repository trên GitHub:
+   - Truy cập: https://github.com
+   - Đăng nhập và nhấn nút "+" ở góc trên bên phải -> Chọn "New repository".
+   - Repository name: đặt tên bất kỳ, ví dụ "tool-quizizz" hoặc "wordquiz-pro".
+   - Chọn "Public" hoặc "Private" tùy ý bạn.
+   - KHÔNG tích vào "Add a README file" (vì dự án của bạn đã có sẵn).
+   - Nhấn "Create repository".
+
+3. Mở Terminal (PowerShell hoặc CMD) tại thư mục dự án và chạy các lệnh sau:
+   (Thay đường link GitHub của bạn vào dòng git remote add origin):
+
+   git init
+   git add .
+   git commit -m "Khoi tao du an WordQuiz Pro"
+   git branch -M main
+   git remote add origin https://github.com/TEN_TAI_KHOAN_CUA_BAN/TEN_REPO_CUA_BAN.git
+   git push -u origin main
+
+   (Lưu ý: Nếu GitHub yêu cầu đăng nhập, hãy chọn đăng nhập qua trình duyệt web).
+
+================================================================================
+BƯỚC 2: DEPLOY PHẦN BACKEND (PYTHON FASTAPI) LÊN RENDER.COM (MIỄN PHÍ)
+================================================================================
+
+1. Đăng ký tài khoản:
+   - Truy cập: https://render.com
+   - Nhấn "Sign Up" và chọn "Continue with GitHub" (để liên kết trực tiếp với GitHub).
+
+2. Tạo Web Service mới:
+   - Trên bảng điều khiển Render, nhấn nút "New +" -> Chọn "Web Service".
+   - Chọn tab "Build and deploy from a Git repository" -> Next.
+   - Chọn repository vừa đẩy lên ở Bước 1 (nếu chưa thấy, nhấn "Configure account" 
+     để cấp quyền truy cập cho repo đó).
+
+3. Cấu hình thông số Web Service:
+   - Name: wordquiz-backend (hoặc tên tùy thích)
+   - Region: Singapore (chọn Singapore để tốc độ truy cập từ Việt Nam nhanh nhất)
+   - Branch: main
+   - Root Directory: để trống (mặc định)
+   - Runtime: Python 3
+   - Build Command: pip install -r requirements.txt
+   - Start Command: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+   - Instance Type: Chọn gói "Free" ($0/tháng)
+
+4. Triển khai:
+   - Nhấn nút "Create Web Service" ở cuối trang.
+   - Render sẽ tự động cài đặt thư viện và khởi chạy máy chủ trong khoảng 2-3 phút.
+   - Khi thấy dòng chữ màu xanh lá "Live", hãy copy đường link backend của bạn ở đầu trang.
+     (Ví dụ: https://wordquiz-backend-xxxx.onrender.com)
+
+5. Kiểm tra Backend:
+   - Mở trình duyệt và truy cập: https://wordquiz-backend-xxxx.onrender.com/api/health
+   - Nếu màn hình hiện: {"status":"ok","message":"Docx Quiz API is running"} là backend đã sẵn sàng!
+
+================================================================================
+BƯỚC 3: CẬP NHẬT FILE CẦU NỐI _redirects VÀ PUSH LÊN GITHUB
+================================================================================
+
+1. Mở file "frontend/public/_redirects" trong thư mục dự án trên máy tính của bạn:
+   Nội dung ban đầu:
+   /api/*  https://YOUR-BACKEND-URL.onrender.com/api/:splat  200
+   /*  /index.html  200
+
+2. Hãy thay thế "YOUR-BACKEND-URL.onrender.com" bằng địa chỉ backend Render thực tế
+   của bạn vừa lấy được ở Bước 2.
+   Ví dụ nếu link của bạn là: https://wordquiz-backend-1234.onrender.com
+   Thì sửa thành:
+   /api/*  https://wordquiz-backend-1234.onrender.com/api/:splat  200
+   /*  /index.html  200
+
+3. Lưu file và đẩy thay đổi lên GitHub bằng lệnh:
+   git add frontend/public/_redirects
+   git commit -m "Cap nhat dia chi backend API"
+   git push
+
+================================================================================
+BƯỚC 4: DEPLOY PHẦN FRONTEND LÊN CLOUDFLARE PAGES
+================================================================================
+
+1. Đăng ký / Đăng nhập Cloudflare:
+   - Truy cập: https://dash.cloudflare.com
+   - Tạo tài khoản hoặc đăng nhập.
+
+2. Kết nối với GitHub:
+   - Ở thanh menu bên trái, chọn "Workers & Pages".
+   - Nhấn nút "Create application" (Tạo ứng dụng).
+   - Chọn tab "Pages" -> Nhấn "Connect to Git" (Kết nối với Git).
+   - Chọn tài khoản GitHub của bạn và chọn repository dự án.
+   - Nhấn "Begin setup" (Bắt đầu cài đặt).
+
+3. Cấu hình cài đặt Build (Cực kỳ quan trọng):
+   - Project name: wordquiz (hoặc tên bất kỳ bạn thích)
+   - Production branch: main
+   - Framework preset: Chọn "Vite"
+   - Root directory (Đường dẫn gốc): Gõ vào: frontend
+     (RẤT QUAN TRỌNG: Phải gõ chữ "frontend" vì mã nguồn React nằm trong thư mục frontend).
+   - Build command: npm run build
+   - Build output directory: dist
+
+4. Triển khai:
+   - Nhấn nút "Save and Deploy" (Lưu và Triển khai).
+   - Cloudflare Pages sẽ tự động tải source code, cài package, biên dịch Vite và 
+     triển khai ra toàn cầu trong khoảng 1 phút.
+   - Sau khi hoàn thành, bạn sẽ nhận được đường link website chính thức vĩnh viễn:
+     Ví dụ: https://wordquiz.pages.dev
+
+================================================================================
+BƯỚC 5: GẮN TÊN MIỀN RIÊNG (CUSTOM DOMAIN - NẾU BẠN CÓ TÊN MIỀN)
+================================================================================
+
+Nếu bạn sở hữu tên miền riêng (ví dụ: tracnghiem.com hoặc quiz.tenban.vn):
+  1. Trong trang quản lý dự án trên Cloudflare Pages, chọn tab "Custom domains".
+  2. Nhấn "Set up a custom domain".
+  3. Nhập tên miền hoặc subdomain của bạn (ví dụ: quiz.tenban.vn).
+  4. Nhấn "Continue" -> Cloudflare sẽ tự động kích hoạt chứng chỉ bảo mật HTTPS/SSL 
+     hoàn toàn miễn phí cho bạn.
+
+================================================================================
+CÁCH HOẠT ĐỘNG VÀ CẬP NHẬT CODE SAU NÀY (CI/CD TỰ ĐỘNG)
+================================================================================
+
+- Từ nay về sau, bất cứ khi nào bạn chỉnh sửa câu hỏi, màu sắc, tính năng trên máy tính:
+  Bạn chỉ cần gõ 3 lệnh:
+    git add .
+    git commit -m "Mô tả tính năng vừa cập nhật"
+    git push
+
+- Ngay lập tức:
+  + Cloudflare Pages sẽ tự động nhận diện và cập nhật website trong 1 phút.
+  + Render.com sẽ tự động khởi động lại backend phiên bản mới.
+  Bạn không cần phải thao tác thủ công gì thêm!
+
+================================================================================
+CÂU HỎI THƯỜNG GẶP & MẸO SỬ DỤNG MIỄN PHÍ HIỆU QUẢ NHẤT
+================================================================================
+
+1. Gói miễn phí của Render có bị "ngủ" (Sleep) không?
+   - Máy chủ miễn phí của Render sẽ tạm vào chế độ ngủ nếu không có ai truy cập trong 
+     vòng 15 phút. Lần truy cập đầu tiên sau đó sẽ mất khoảng 30 - 45 giây để khởi động lại.
+   - MẸO GIỮ SERVER LUÔN THỨC 24/7 (Miễn phí):
+     Truy cập trang https://cron-job.org hoặc https://uptimerobot.com (miễn phí), 
+     tạo một lịch ping tự động 10 phút một lần tới đường link:
+     https://wordquiz-backend-xxxx.onrender.com/api/health
+     -> Máy chủ backend của bạn sẽ thức liên tục và phản hồi ngay lập tức!
+
+2. Có bị lỗi CORS khi gọi API không?
+   - HOÀN TOÀN KHÔNG. Nhờ cơ chế Reverse Proxy của file "_redirects" trên Cloudflare Pages, 
+     trình duyệt của người dùng gửi yêu cầu tới cùng một domain (ví dụ: wordquiz.pages.dev/api/quizzes),
+     Cloudflare đứng ở giữa chuyển tiếp dữ liệu đến Render nên triệt tiêu 100% lỗi CORS.
+
+3. Dữ liệu đề thi và môn học lưu ở đâu?
+   - Dữ liệu được lưu trong SQLite database (backend/quizizz.db). Mỗi khi tải file Word lên, 
+     hệ thống tự động lưu trữ đề thi và chia theo các môn học bạn đã kéo thả.
+================================================================================
+Chúc bạn triển khai trang web thành công!
+
