@@ -1,6 +1,6 @@
 # Cloudflare Pages Redirects & Reverse Proxy
 # Thay the 'https://YOUR-BACKEND-URL.onrender.com' bang dia chi backend thuc te cua ban:
-/api/*  https://YOUR-BACKEND-URL.onrender.com/api/:splat  200
+/api/*  https://quizzizforyou.onrender.com/api/:splat  200
 
 # SPA Fallback (giup khong bi loi 404 khi tai lai trang web):
 /*  /index.html  200
