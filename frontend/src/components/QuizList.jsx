@@ -16,7 +16,23 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
   const [dragOverTarget, setDragOverTarget] = useState(null);
 
   // Collapse state for subjects: { [subjectId]: boolean }
+  // Mặc định: tất cả các mục môn học ở dạng thu gọn (true) khi mở website và khi load lại
   const [collapsedSubjects, setCollapsedSubjects] = useState({});
+
+  const isSubjectCollapsed = (subjectId) => {
+    return collapsedSubjects[subjectId] !== undefined ? collapsedSubjects[subjectId] : true;
+  };
+
+  // Toggle Collapse/Expand
+  const toggleCollapse = (subjectId) => {
+    setCollapsedSubjects(prev => {
+      const current = prev[subjectId] !== undefined ? prev[subjectId] : true;
+      return {
+        ...prev,
+        [subjectId]: !current
+      };
+    });
+  };
 
   // Subject management state
   const [showAddSubject, setShowAddSubject] = useState(false);
@@ -47,14 +63,6 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
   useEffect(() => {
     fetchData();
   }, [refreshTrigger]);
-
-  // Toggle Collapse/Expand
-  const toggleCollapse = (subjectId) => {
-    setCollapsedSubjects(prev => ({
-      ...prev,
-      [subjectId]: !prev[subjectId]
-    }));
-  };
 
   // Delete Quiz
   const handleDeleteQuiz = async (id, e) => {
@@ -117,6 +125,11 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
 
     // Optimistic UI update
     setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, subject_id: normalizedSubjectId } : q));
+    // Auto-expand destination subject so the quiz is immediately visible
+    setCollapsedSubjects(prev => ({
+      ...prev,
+      [normalizedSubjectId || 'uncategorized']: false
+    }));
 
     try {
       await fetch(apiUrl(`/api/quizzes/${quizId}/subject`), {
@@ -134,6 +147,10 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
   const handleSelectSubject = async (quizId, targetSubjectId) => {
     const normalizedSubjectId = targetSubjectId || '';
     setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, subject_id: normalizedSubjectId } : q));
+    setCollapsedSubjects(prev => ({
+      ...prev,
+      [normalizedSubjectId || 'uncategorized']: false
+    }));
 
     try {
       await fetch(apiUrl(`/api/quizzes/${quizId}/subject`), {
@@ -222,6 +239,19 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
   const validSubjectIds = new Set(subjects.map(s => s.id));
   const uncategorizedQuizzes = quizzes.filter(q => !q.subject_id || !validSubjectIds.has(q.subject_id));
 
+  // Check collapse state across all subjects + uncategorized
+  const allSubjectIds = [...subjects.map(s => s.id), 'uncategorized'];
+  const areAllCollapsed = allSubjectIds.every(id => isSubjectCollapsed(id));
+
+  const toggleAllCollapse = () => {
+    const nextState = !areAllCollapsed;
+    const next = {};
+    allSubjectIds.forEach(id => {
+      next[id] = nextState;
+    });
+    setCollapsedSubjects(next);
+  };
+
   return (
     <div>
       {/* Top Header & Actions */}
@@ -236,14 +266,37 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
           </p>
         </div>
 
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => setShowAddSubject(true)}
-          style={{ padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
-          title="Tạo thêm thư mục môn học mới"
-        >
-          <AddFolder size={17} /> + Thêm môn học
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={toggleAllCollapse}
+            style={{
+              padding: '0.5rem 0.85rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              background: '#ffffff',
+              borderColor: '#e2e8f0',
+              color: '#475569'
+            }}
+            title={areAllCollapsed ? 'Mở rộng tất cả các mục môn học' : 'Thu gọn tất cả các mục môn học'}
+          >
+            {areAllCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+            {areAllCollapsed ? 'Mở rộng tất cả' : 'Thu gọn tất cả'}
+          </button>
+
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowAddSubject(true)}
+            style={{ padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+            title="Tạo thêm thư mục môn học mới"
+          >
+            <AddFolder size={17} /> + Thêm môn học
+          </button>
+        </div>
       </div>
 
       {/* Add Subject Modal / Inline Form */}
@@ -306,7 +359,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       {/* Subject Sections */}
       {subjects.map((subject) => {
         const subjectQuizzes = quizzes.filter(q => q.subject_id === subject.id);
-        const isCollapsed = Boolean(collapsedSubjects[subject.id]);
+        const isCollapsed = isSubjectCollapsed(subject.id);
         const isDragOver = dragOverTarget === subject.id;
         const isEditing = editingSubjectId === subject.id;
 
@@ -321,6 +374,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
             {/* Subject Header */}
             <div
               className="subject-header"
+              style={{ borderBottom: isCollapsed ? 'none' : '1px solid #e2e8f0' }}
               onClick={() => toggleCollapse(subject.id)}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -508,76 +562,79 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       })}
 
       {/* Section for Uncategorized / Outside Quizzes */}
-      <div
-        className={`subject-section ${dragOverTarget === 'uncategorized' ? 'drag-over' : ''}`}
-        style={{
-          border: '1.5px dashed #cbd5e1',
-          background: '#ffffff'
-        }}
-        onDragOver={(e) => handleDragOver(e, 'uncategorized')}
-        onDragLeave={(e) => handleDragLeave(e, 'uncategorized')}
-        onDrop={(e) => handleDropQuiz(e, '')}
-      >
-        {/* Uncategorized Header */}
-        <div
-          className="subject-header"
-          style={{ background: '#f8fafc' }}
-          onClick={() => toggleCollapse('uncategorized')}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <button
-              type="button"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#64748b',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                padding: 0
-              }}
+      {(() => {
+        const isUncategorizedCollapsed = isSubjectCollapsed('uncategorized');
+        return (
+          <div
+            className={`subject-section ${dragOverTarget === 'uncategorized' ? 'drag-over' : ''}`}
+            style={{
+              border: '1.5px dashed #cbd5e1',
+              background: '#ffffff'
+            }}
+            onDragOver={(e) => handleDragOver(e, 'uncategorized')}
+            onDragLeave={(e) => handleDragLeave(e, 'uncategorized')}
+            onDrop={(e) => handleDropQuiz(e, '')}
+          >
+            {/* Uncategorized Header */}
+            <div
+              className="subject-header"
+              style={{ background: '#f8fafc', borderBottom: isUncategorizedCollapsed ? 'none' : '1px solid #cbd5e1' }}
+              onClick={() => toggleCollapse('uncategorized')}
             >
-              {collapsedSubjects['uncategorized'] ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <button
+                  type="button"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0
+                  }}
+                >
+                  {isUncategorizedCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                </button>
 
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#64748b'
-            }}>
-              <FileText size={17} />
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748b'
+                }}>
+                  <FileText size={17} />
+                </div>
+
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#334155', margin: 0 }}>
+                  Đề thi ngoài mục (Chưa phân loại môn)
+                </h4>
+
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  background: '#ffffff',
+                  color: '#64748b',
+                  border: '1px solid #cbd5e1',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}>
+                  {uncategorizedQuizzes.length} đề thi
+                </span>
+              </div>
+
+              <span style={{ fontSize: '0.8rem', color: '#7c3aed', fontWeight: 700 }}>
+                Thả đề thi vào đây để kéo ra ngoài mục
+              </span>
             </div>
 
-            <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#334155', margin: 0 }}>
-              Đề thi ngoài mục (Chưa phân loại môn)
-            </h4>
-
-            <span style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              background: '#ffffff',
-              color: '#64748b',
-              border: '1px solid #cbd5e1',
-              padding: '2px 8px',
-              borderRadius: '12px'
-            }}>
-              {uncategorizedQuizzes.length} đề thi
-            </span>
-          </div>
-
-          <span style={{ fontSize: '0.8rem', color: '#7c3aed', fontWeight: 700 }}>
-            Thả đề thi vào đây để kéo ra ngoài mục
-          </span>
-        </div>
-
-        {/* Uncategorized Dropzone Area */}
-        {!collapsedSubjects['uncategorized'] && (
+            {/* Uncategorized Dropzone Area */}
+            {!isUncategorizedCollapsed && (
           <div className="subject-dropzone">
             {uncategorizedQuizzes.length === 0 ? (
               <div className="empty-zone">
@@ -610,7 +667,9 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
           </div>
         )}
       </div>
-    </div>
+    );
+  })()}
+</div>
   );
 }
 
