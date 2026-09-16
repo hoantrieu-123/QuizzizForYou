@@ -611,18 +611,6 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                 marginBottom: '1.5rem',
                 boxShadow: 'var(--shadow-sm)'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e293b' }}>
-                    📦 HỘP TỪ VỰNG KÉO THẢ (Hỗ trợ kéo nhiều từ vào 1 câu):
-                  </span>
-                  <span style={{ fontSize: '0.8rem', color: '#7c3aed', background: '#f5f3ff', border: '1px solid #ddd6fe', padding: '3px 10px', borderRadius: '20px', fontWeight: 700 }}>
-                    Đang chọn điền: Vị trí {currentActiveBlank}
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.75rem', lineHeight: 1.4 }}>
-                  💡 <strong>Cách làm:</strong> Kéo từ vào ô trống bên dưới, hoặc <em>bấm trực tiếp</em> vào từ để đưa vào <strong>Vị trí {currentActiveBlank}</strong>. Bấm vào từ đã đặt để gỡ ra.
-                </p>
-
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
                   {(currentQ.bank && currentQ.bank.length > 0
                     ? currentQ.bank
