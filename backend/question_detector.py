@@ -482,20 +482,34 @@ def try_detect_single_tf(content_parts: List[str], elements: List[Dict[str, Any]
     return None
 
 
+def split_fill_blank_answers(text: str) -> List[str]:
+    """Split answer string into list of individual blank answers."""
+    cleaned = re.sub(r'^(?:Đáp án|Answer)\s*[:.]\s*', '', text, flags=re.IGNORECASE).strip()
+    # Check if format like "1. A, 2. B" or "1) A 2) B"
+    numbered = re.findall(r'(?:\d+[\.\)]\s*)([^\d\.\);,]+)', cleaned)
+    if len(numbered) >= 2:
+        return [w.strip() for w in numbered if w.strip()]
+    # Split by comma or semicolon
+    tokens = [w.strip() for w in re.split(r'[,;\n\t]+', cleaned) if w.strip()]
+    return tokens if tokens else [cleaned]
+
+
 def try_detect_fill_blank(content_parts: List[str], elements: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """
     Detect Fill in the Blank question:
-    Question contains '___' or '[...]' and has a highlighted answer below.
+    Question contains '___' or '[...]' or '(1)' and has a highlighted answer below.
+    Supports single blank and multiple blanks.
     """
+    BLANK_PATTERN = r'(_{2,}\s*(?:\(\s*\d+\s*\)|\[\s*\d+\s*\])?|\[\s*(?:\.{2,}|blank|ô\s*trống|_+|\d+|\.\.\.)\s*\]|\(\s*(?:\d+|\.{2,})\s*\)|\.{3,})'
     full_content = ' '.join(content_parts)
-    has_blank = bool(re.search(r'(_{2,}|\[\s*blank\s*\]|\.{3,}|\[\s*\.\.\.\s*\])', full_content))
+    has_blank = bool(re.search(BLANK_PATTERN, full_content))
 
     if not has_blank:
         # Check if any element paragraph has blank
         for elem in elements:
-            if elem['type'] == 'paragraph' and re.search(r'(_{2,}|\[\s*blank\s*\]|\.{3,})', elem['text']):
+            if elem['type'] == 'paragraph' and re.search(BLANK_PATTERN, elem['text']):
                 has_blank = True
-                full_content += " " + elem['text']
+                full_content += "\n" + elem['text']
                 break
 
     if not has_blank:
@@ -508,31 +522,54 @@ def try_detect_fill_blank(content_parts: List[str], elements: List[Dict[str, Any
     for elem in elements:
         if elem['type'] == 'paragraph':
             text = elem['text'].strip()
-            # If paragraph itself is highlighted or has highlighted runs
-            if elem['has_highlight']:
+            # Skip complete sentence callouts / explanations
+            if re.match(r'^(?:➔|->|\*)\s*(?:Câu hoàn chỉnh|Giải thích)', text, re.IGNORECASE):
+                continue
+            # If paragraph starts with 'Đáp án:' or 'Answer:'
+            if re.match(r'^(?:Đáp án|Answer)\s*[:.]', text, re.IGNORECASE):
+                if elem['has_highlight']:
+                    hl_text = elem['highlighted_text'].strip()
+                    hl_text = re.sub(r'^(?:Đáp án|Answer)\s*[:.]\s*', '', hl_text, flags=re.IGNORECASE)
+                    if hl_text:
+                        highlighted_words.append(hl_text)
+                else:
+                    m = re.search(r'^(?:Đáp án|Answer)\s*[:.]\s*(.+)$', text, re.IGNORECASE)
+                    if m:
+                        fallback_ans = m.group(1).strip()
+                break  # Stop after reading official answer line
+            elif elem['has_highlight']:
                 hl_text = elem['highlighted_text'].strip()
-                # strip 'Đáp án:' if present
-                hl_text = re.sub(r'^(?:Đáp án|Answer)\s*[:.]\s*', '', hl_text, flags=re.IGNORECASE)
                 if hl_text:
                     highlighted_words.append(hl_text)
-            elif re.search(r'^(?:Đáp án|Answer)\s*[:.]\s*(.+)$', text, re.IGNORECASE):
-                m = re.search(r'^(?:Đáp án|Answer)\s*[:.]\s*(.+)$', text, re.IGNORECASE)
-                fallback_ans = m.group(1).strip()
         elif elem['type'] == 'table':
             for r in elem['rows']:
                 for c in r:
                     if c['has_highlight'] and c['highlighted_text'].strip():
                         highlighted_words.append(c['highlighted_text'].strip())
 
-    if highlighted_words or fallback_ans:
-        correct = highlighted_words if highlighted_words else [fallback_ans]
-        has_hl = len(highlighted_words) > 0
+    if highlighted_words:
+        expanded_hl = []
+        for hw in highlighted_words:
+            expanded_hl.extend(split_fill_blank_answers(hw))
+        correct = expanded_hl if expanded_hl else highlighted_words
+        has_hl = True
+    elif fallback_ans:
+        correct = split_fill_blank_answers(fallback_ans)
+        has_hl = False
+    else:
+        correct = []
+        has_hl = False
+
+    if correct:
+        blanks_found = re.findall(BLANK_PATTERN, full_content)
+        blank_count = max(1, len(blanks_found), len(correct))
         return {
             'id': f"q_{uuid.uuid4().hex[:8]}",
             'type': 'fill_blank',
             'content': full_content,
             'options': [],
             'correctAnswers': correct,
+            'blankCount': blank_count,
             'hasHighlight': has_hl,
             'highlightSource': 'Word highlight' if has_hl else 'Dòng Đáp án:',
             'warning': None if has_hl else "⚠ Nhận diện từ dòng Đáp án: (không có highlight)"

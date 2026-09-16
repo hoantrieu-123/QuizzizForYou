@@ -22,6 +22,23 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+      if (e.key === 'ArrowLeft') {
+        goToQuestion(Math.max(0, currentIndex - 1));
+      } else if (e.key === 'ArrowRight') {
+        if (currentIndex < questions.length - 1) {
+          goToQuestion(currentIndex + 1);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, questions.length]);
+
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -64,6 +81,41 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
   const handleFillBlank = (text) => {
     setAnswers(prev => ({ ...prev, [currentQ.id]: text }));
+  };
+
+  const handleFillBlankSlot = (blankNum, text) => {
+    setAnswers(prev => {
+      const currentMap = typeof prev[currentQ.id] === 'object' && prev[currentQ.id] !== null
+        ? { ...prev[currentQ.id] }
+        : (typeof prev[currentQ.id] === 'string' && prev[currentQ.id] ? { 1: prev[currentQ.id] } : {});
+      currentMap[blankNum] = text;
+      return {
+        ...prev,
+        [currentQ.id]: currentMap
+      };
+    });
+  };
+
+  const getQuestionBlanks = (q) => {
+    if (!q) return [1];
+    if (q.blankCount && q.blankCount > 1) {
+      return Array.from({ length: q.blankCount }, (_, i) => i + 1);
+    }
+    const content = q.content || '';
+    const blankRegex = /(_{2,}\s*(?:\(\s*\d+\s*\)|\[\s*\d+\s*\])?|\[\s*(?:\.{2,}|blank|ô\s*trống|_+|\d+|\.\.\.)\s*\]|\(\s*(?:\d+|\.{2,})\s*\)|\.{3,})/g;
+    const matches = content.match(blankRegex) || [];
+    const count = Math.max(
+      q.blankCount || 0,
+      matches.length,
+      (q.correctAnswers || []).length,
+      1
+    );
+    return Array.from({ length: count }, (_, i) => i + 1);
+  };
+
+  const goToQuestion = (idx) => {
+    setCurrentIndex(idx);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSlotPlace = (blankNum, word) => {
@@ -254,8 +306,15 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
   const isQuestionAnswered = (q) => {
     const ans = answers[q.id];
     if (ans === undefined || ans === null) return false;
-    if (q.type === 'single_choice' || q.type === 'fill_blank') {
+    if (q.type === 'single_choice') {
       return String(ans).trim().length > 0;
+    }
+    if (q.type === 'fill_blank') {
+      if (typeof ans === 'string') return ans.trim().length > 0;
+      if (typeof ans === 'object') {
+        return Object.values(ans).some(v => String(v || '').trim().length > 0);
+      }
+      return Boolean(ans);
     }
     if (q.type === 'multiple_choice') {
       return Array.isArray(ans) && ans.length > 0;
@@ -295,7 +354,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
   };
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto', paddingBottom: '5rem' }}>
+    <div style={{ maxWidth: '960px', margin: '0 auto', paddingBottom: '7.5rem' }}>
       {/* Quiz Top Header */}
       <div style={{
         background: '#ffffff',
@@ -442,7 +501,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           tabSize: 4,
-          fontFamily: (currentQ.content || '').includes('\n')
+          fontFamily: (currentQ.content || '').includes('\n') && /[{};=()<>\[\]]/.test(currentQ.content) && /(?:int|void|public|static|function|class|def|var|let|const|val|package|print|return)/.test(currentQ.content)
             ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
             : 'inherit'
         }}>
@@ -570,29 +629,126 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         )}
 
         {/* 4. FILL BLANK */}
-        {currentQ.type === 'fill_blank' && (
-          <div style={{ marginTop: '1rem' }}>
-            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
-              Nhập câu trả lời của bạn vào ô bên dưới:
-            </label>
-            <input
-              type="text"
-              value={currentAnswer || ''}
-              onChange={(e) => handleFillBlank(e.target.value)}
-              placeholder="Gõ từ hoặc cụm từ đáp án..."
-              style={{
-                width: '100%',
-                padding: '0.85rem 1.15rem',
-                fontSize: '1.1rem',
-                borderRadius: '10px',
-                border: '2px solid #cbd5e1',
-                outline: 'none'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            />
-          </div>
-        )}
+        {currentQ.type === 'fill_blank' && (() => {
+          const blanks = getQuestionBlanks(currentQ);
+          if (blanks.length <= 1) {
+            const singleVal = (typeof currentAnswer === 'object' && currentAnswer !== null)
+              ? (currentAnswer['1'] || currentAnswer[1] || '')
+              : (currentAnswer || '');
+            return (
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
+                  Nhập câu trả lời của bạn vào ô bên dưới:
+                </label>
+                <input
+                  type="text"
+                  value={singleVal}
+                  onChange={(e) => {
+                    handleFillBlank(e.target.value);
+                    handleFillBlankSlot(1, e.target.value);
+                  }}
+                  placeholder="Gõ từ hoặc cụm từ đáp án..."
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1.15rem',
+                    fontSize: '1.1rem',
+                    borderRadius: '10px',
+                    border: '2px solid #cbd5e1',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
+                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                />
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#f5f3ff',
+                padding: '0.65rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid #ddd6fe'
+              }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#6d28d9' }}>
+                  ✍ Câu hỏi có {blanks.length} khoảng trống cần điền theo thứ tự:
+                </span>
+                <span style={{ fontSize: '0.8rem', color: '#7c3aed', fontWeight: 600 }}>
+                  (Ô 1 → Ô {blanks.length})
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {blanks.map((bNum) => {
+                  const val = (typeof currentAnswer === 'object' && currentAnswer !== null)
+                    ? (currentAnswer[bNum] || currentAnswer[String(bNum)] || '')
+                    : (bNum === 1 && typeof currentAnswer === 'string' ? currentAnswer : '');
+
+                  return (
+                    <div
+                      key={bNum}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.85rem',
+                        background: '#f8fafc',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '10px',
+                        border: '1.5px solid #e2e8f0',
+                        transition: 'border-color 0.15s ease'
+                      }}
+                    >
+                      <div style={{
+                        background: '#ede9fe',
+                        color: '#7c3aed',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '8px',
+                        flexShrink: 0,
+                        minWidth: '95px',
+                        textAlign: 'center'
+                      }}>
+                        Ô trống {bNum}
+                      </div>
+                      <input
+                        type="text"
+                        value={val}
+                        onChange={(e) => handleFillBlankSlot(bNum, e.target.value)}
+                        placeholder={`Gõ đáp án cho ô trống ${bNum}...`}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem 1rem',
+                          fontSize: '1rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #cbd5e1',
+                          outline: 'none',
+                          background: '#ffffff',
+                          fontWeight: 500,
+                          transition: 'all 0.15s ease'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#7c3aed';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
+                          e.currentTarget.parentElement.style.borderColor = '#c4b5fd';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#cbd5e1';
+                          e.target.style.boxShadow = 'none';
+                          e.currentTarget.parentElement.style.borderColor = '#e2e8f0';
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 5. DRAG & DROP BLANK */}
         {currentQ.type === 'drag_drop_blank' && (() => {
@@ -836,38 +992,142 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         )}
       </div>
 
-      {/* Bottom Nav */}
-      <div style={{
-        marginTop: '1.5rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <button
-          className="btn btn-secondary"
-          onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-          disabled={currentIndex === 0}
-        >
-          <ArrowLeft size={16} /> Câu trước
-        </button>
+      {/* 2 Nút chuyển câu cố định 2 bên màn hình (Fixed Floating Side Navigation Buttons) */}
+      <button
+        type="button"
+        onClick={() => goToQuestion(Math.max(0, currentIndex - 1))}
+        disabled={currentIndex === 0}
+        style={{
+          position: 'fixed',
+          left: '1.25rem',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 90,
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          background: currentIndex === 0 ? '#f8fafc' : '#ffffff',
+          color: currentIndex === 0 ? '#cbd5e1' : '#7c3aed',
+          border: currentIndex === 0 ? '1.5px solid #e2e8f0' : '2px solid #ddd6fe',
+          boxShadow: currentIndex === 0 ? 'none' : '0 4px 14px rgba(124, 58, 237, 0.15)',
+          cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease'
+        }}
+        title="Câu trước (Phím tắt: ←)"
+      >
+        <ArrowLeft size={22} />
+      </button>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {currentIndex < questions.length - 1 ? (
-            <button
-              className="btn btn-primary"
-              onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
-            >
-              Câu tiếp theo <ArrowRight size={16} />
-            </button>
-          ) : (
-            <button
-              className="btn btn-success"
-              onClick={handleSubmitClick}
-              style={{ padding: '0.65rem 1.75rem' }}
-            >
-              <Send size={16} /> Nộp bài thi
-            </button>
-          )}
+      <button
+        type="button"
+        onClick={() => {
+          if (currentIndex < questions.length - 1) {
+            goToQuestion(currentIndex + 1);
+          } else {
+            handleSubmitClick();
+          }
+        }}
+        style={{
+          position: 'fixed',
+          right: '1.25rem',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 90,
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          background: currentIndex < questions.length - 1 ? '#7c3aed' : '#10b981',
+          color: '#ffffff',
+          border: 'none',
+          boxShadow: currentIndex < questions.length - 1 ? '0 4px 16px rgba(124, 58, 237, 0.35)' : '0 4px 16px rgba(16, 185, 129, 0.35)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease'
+        }}
+        title={currentIndex < questions.length - 1 ? 'Câu tiếp theo (Phím tắt: →)' : 'Nộp bài thi'}
+      >
+        {currentIndex < questions.length - 1 ? <ArrowRight size={22} /> : <Send size={20} />}
+      </button>
+
+      {/* Fixed Bottom Nav */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'blur(8px)',
+        borderTop: '1.5px solid #e2e8f0',
+        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.08)',
+        zIndex: 99,
+        padding: '0.75rem 1.25rem'
+      }}>
+        <div style={{
+          maxWidth: '960px',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '0.75rem'
+        }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => goToQuestion(Math.max(0, currentIndex - 1))}
+            disabled={currentIndex === 0}
+            style={{ minWidth: '120px' }}
+          >
+            <ArrowLeft size={16} /> Câu trước
+          </button>
+
+          {/* Quick Jump / Menu button */}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowNavDrawer(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              background: '#f5f3ff',
+              color: '#7c3aed',
+              border: '1.5px solid #ddd6fe',
+              fontWeight: 700,
+              padding: '0.6rem 1.25rem',
+              borderRadius: '10px'
+            }}
+            title="Mở danh sách toàn bộ câu hỏi để chọn nhanh"
+          >
+            <Grid size={17} style={{ color: '#7c3aed' }} />
+            <span>Câu {currentIndex + 1} / {questions.length}</span>
+            <span style={{ fontSize: '0.8rem', opacity: 0.75, fontWeight: 600 }}>
+              (☰ Chọn câu)
+            </span>
+          </button>
+
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            {currentIndex < questions.length - 1 ? (
+              <button
+                className="btn btn-primary"
+                onClick={() => goToQuestion(Math.min(questions.length - 1, currentIndex + 1))}
+                style={{ minWidth: '135px' }}
+              >
+                Câu tiếp theo <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button
+                className="btn btn-success"
+                onClick={handleSubmitClick}
+                style={{ padding: '0.65rem 1.75rem', minWidth: '135px' }}
+              >
+                <Send size={16} /> Nộp bài thi
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -902,50 +1162,96 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
       {/* Drawer */}
       {showNavDrawer && (
         <div className="modal-backdrop" onClick={() => setShowNavDrawer(false)}>
-          <div className="modal-content" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
-                Bảng câu hỏi ({answeredCount}/{questions.length} đã làm)
-              </h3>
+          <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Danh sách câu hỏi
+                </h3>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                  Đã hoàn thành <strong>{answeredCount}</strong> / <strong>{questions.length}</strong> câu
+                </p>
+              </div>
               <button
                 onClick={() => setShowNavDrawer(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', borderRadius: '8px', padding: '6px' }}
+                title="Đóng bảng câu hỏi"
               >
                 <X size={20} />
               </button>
             </div>
 
+            {/* Legend */}
+            <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#10b981' }} />
+                <span style={{ color: '#047857' }}>Đã làm ({answeredCount})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#f5f3ff', border: '2px solid #7c3aed' }} />
+                <span style={{ color: '#7c3aed' }}>Đang xem (Câu {currentIndex + 1})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#ffffff', border: '1px solid #cbd5e1' }} />
+                <span style={{ color: '#64748b' }}>Chưa làm ({questions.length - answeredCount})</span>
+              </div>
+            </div>
+
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))',
-              gap: '0.5rem',
-              maxHeight: '380px',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))',
+              gap: '0.65rem',
+              maxHeight: '420px',
               overflowY: 'auto',
-              padding: '0.25rem'
+              padding: '0.35rem'
             }}>
               {questions.map((q, idx) => {
                 const isAnswered = isQuestionAnswered(q);
                 const isCurrent = idx === currentIndex;
 
+                let bg = '#ffffff';
+                let border = '1.5px solid #cbd5e1';
+                let textCol = '#475569';
+                let boxShadow = 'none';
+
+                if (isCurrent && isAnswered) {
+                  bg = '#10b981';
+                  border = '3px solid #7c3aed';
+                  textCol = '#ffffff';
+                  boxShadow = '0 0 0 2px #ddd6fe';
+                } else if (isCurrent) {
+                  bg = '#f5f3ff';
+                  border = '2.5px solid #7c3aed';
+                  textCol = '#7c3aed';
+                  boxShadow = '0 0 0 2px #ddd6fe';
+                } else if (isAnswered) {
+                  bg = '#10b981';
+                  border = '1.5px solid #059669';
+                  textCol = '#ffffff';
+                }
+
                 return (
                   <button
-                    key={q.id}
+                    key={q.id || idx}
+                    type="button"
                     onClick={() => {
-                      setCurrentIndex(idx);
+                      goToQuestion(idx);
                       setShowNavDrawer(false);
                     }}
+                    title={`Chuyển tới Câu ${idx + 1}${isAnswered ? ' (Đã làm)' : ' (Chưa làm)'}`}
                     style={{
-                      height: '44px',
-                      borderRadius: '8px',
-                      border: isCurrent ? '2px solid #7c3aed' : '1px solid #ddd6fe',
-                      background: isAnswered ? '#10b981' : isCurrent ? '#f5f3ff' : '#ffffff',
-                      color: isAnswered ? '#ffffff' : isCurrent ? '#7c3aed' : '#334155',
-                      fontWeight: 700,
+                      height: '46px',
+                      borderRadius: '10px',
+                      border: border,
+                      background: bg,
+                      color: textCol,
+                      fontWeight: 800,
                       cursor: 'pointer',
-                      fontSize: '0.9rem',
+                      fontSize: '0.95rem',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      boxShadow: boxShadow,
                       transition: 'all 0.15s ease'
                     }}
                   >

@@ -336,6 +336,14 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
   // -------------------------------------------------------------
   // FILL BLANK
   // -------------------------------------------------------------
+  const getQuestionBlankCount = (q) => {
+    if (q.blankCount && q.blankCount > 1) return q.blankCount;
+    const content = q.content || '';
+    const blankRegex = /(_{2,}\s*(?:\(\s*\d+\s*\)|\[\s*\d+\s*\])?|\[\s*(?:\.{2,}|blank|ô\s*trống|_+|\d+|\.\.\.)\s*\]|\(\s*(?:\d+|\.{2,})\s*\)|\.{3,})/g;
+    const matches = content.match(blankRegex) || [];
+    return Math.max(matches.length, (q.correctAnswers || []).length, 1);
+  };
+
   const handleFillBlankChange = (qIdx, text) => {
     const answers = text.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
     const q = questions[qIdx];
@@ -345,6 +353,38 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
       correctAnswers: answers,
       hasHighlight: answers.length > 0,
       warning: answers.length === 0 ? '⚠ Vui lòng nhập từ đáp án' : null
+    };
+    setQuestions(updated);
+  };
+
+  const handleMultiFillBlankChange = (qIdx, bIdx, text) => {
+    const q = questions[qIdx];
+    const newAnswers = [...(q.correctAnswers || [])];
+    while (newAnswers.length <= bIdx) {
+      newAnswers.push('');
+    }
+    newAnswers[bIdx] = text;
+    const updated = [...questions];
+    updated[qIdx] = {
+      ...q,
+      correctAnswers: newAnswers,
+      hasHighlight: newAnswers.some(a => Boolean(a && a.trim()))
+    };
+    setQuestions(updated);
+  };
+
+  const handleSetBlankCount = (qIdx, newCount) => {
+    const q = questions[qIdx];
+    const count = Math.max(1, newCount);
+    const newAnswers = [...(q.correctAnswers || [])];
+    while (newAnswers.length < count) {
+      newAnswers.push('');
+    }
+    const updated = [...questions];
+    updated[qIdx] = {
+      ...q,
+      blankCount: count,
+      correctAnswers: newAnswers.slice(0, count)
     };
     setQuestions(updated);
   };
@@ -1517,34 +1557,135 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               )}
 
               {/* ---------------- 4. FILL BLANK ---------------- */}
-              {q.type === 'fill_blank' && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', marginBottom: '0.4rem', fontWeight: 700 }}>
-                    ✏ Từ / Cụm từ đáp án đúng (Gõ vào ô để sửa, ngăn cách bằng dấu phẩy nếu có nhiều từ tương đương):
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue={(q.correctAnswers || []).join(', ')}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#cbd5e1';
-                      handleFillBlankChange(qActualIndex, e.target.value);
-                    }}
-                    placeholder="Gõ từ đáp án đúng (ví dụ: Hà Nội, Ha Noi)..."
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 0.95rem',
-                      borderRadius: '8px',
-                      border: '1.5px solid #cbd5e1',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      color: '#18181b',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
-                  />
-                </div>
-              )}
+              {q.type === 'fill_blank' && (() => {
+                const blankCount = getQuestionBlankCount(q);
+                if (blankCount <= 1) {
+                  return (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700, margin: 0 }}>
+                          ✏ Từ / Cụm từ đáp án đúng (Gõ vào ô để sửa, ngăn cách bằng dấu phẩy nếu có nhiều từ tương đương):
+                        </label>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleSetBlankCount(qActualIndex, 2)}
+                          style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#7c3aed', background: '#f5f3ff', borderColor: '#ddd6fe' }}
+                          title="Thêm khoảng trống thứ 2 vào câu hỏi"
+                        >
+                          + Thêm ô trống
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        defaultValue={(q.correctAnswers || []).join(', ')}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#cbd5e1';
+                          handleFillBlankChange(qActualIndex, e.target.value);
+                        }}
+                        placeholder="Gõ từ đáp án đúng (ví dụ: Hà Nội, Ha Noi)..."
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 0.95rem',
+                          borderRadius: '8px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          color: '#18181b',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
+                      />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                        ✏ Đáp án đúng cho từng ô trống ({blankCount} ô trống theo thứ tự):
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleSetBlankCount(qActualIndex, blankCount + 1)}
+                          style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#7c3aed', background: '#f5f3ff', borderColor: '#ddd6fe' }}
+                        >
+                          + Thêm ô trống
+                        </button>
+                        {blankCount > 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleSetBlankCount(qActualIndex, blankCount - 1)}
+                            style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#ef4444' }}
+                          >
+                            - Bớt ô trống
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {Array.from({ length: blankCount }, (_, bIdx) => {
+                        const curAns = (q.correctAnswers || [])[bIdx] || '';
+                        return (
+                          <div
+                            key={bIdx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              background: '#f8fafc',
+                              padding: '0.6rem 0.85rem',
+                              borderRadius: '8px',
+                              border: '1px solid #e2e8f0'
+                            }}
+                          >
+                            <span style={{
+                              background: '#ede9fe',
+                              color: '#7c3aed',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              padding: '0.3rem 0.6rem',
+                              borderRadius: '6px',
+                              minWidth: '85px',
+                              textAlign: 'center'
+                            }}>
+                              Ô trống {bIdx + 1}
+                            </span>
+                            <input
+                              type="text"
+                              defaultValue={curAns}
+                              key={`${qActualIndex}_${bIdx}_${curAns}`}
+                              onBlur={(e) => {
+                                e.target.style.borderColor = '#cbd5e1';
+                                handleMultiFillBlankChange(qActualIndex, bIdx, e.target.value);
+                              }}
+                              placeholder={`Đáp án đúng cho ô trống ${bIdx + 1} (dùng dấu / hoặc , nếu có từ đồng nghĩa)...`}
+                              style={{
+                                flex: 1,
+                                padding: '0.6rem 0.85rem',
+                                borderRadius: '6px',
+                                border: '1.5px solid #cbd5e1',
+                                fontSize: '0.95rem',
+                                fontWeight: 600,
+                                color: '#18181b',
+                                background: '#ffffff',
+                                outline: 'none'
+                              }}
+                              onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ---------------- 5. DRAG & DROP BLANK ---------------- */}
               {q.type === 'drag_drop_blank' && (() => {

@@ -7,10 +7,12 @@ Generates a complete, beautifully-formatted Word document demonstrating ALL supp
 4. True / False (Single question)
 5. True / False (Multi-statement bundle a, b, c, d)
 6. Fill in the Blank (Single slot with answer key)
-7. Drag & Drop into Blanks (Numbered slots 1, 2, 3 with highlighted word bank)
-8. Matching Pairs (2-column Table layout)
-9. Matching Pairs (Arrow notation Left -> Right)
-10. Fallback detection with 'Đáp án: C' (Un-highlighted fallback)
+7. Fill in the Blank (Multiple slots / Paragraph with ordered blanks)
+8. Drag & Drop into Blanks (Numbered slots 1, 2, 3 with highlighted word bank)
+9. Matching Pairs (2-column Table layout)
+10. Fallback detection with 'Đáp án: B' (Un-highlighted fallback)
+11. Multi-line Question (Code Snippet)
+12. Multi-line Options (Code Snippet)
 """
 import os
 import docx
@@ -106,9 +108,10 @@ def create_comprehensive_docx(output_path: str) -> str:
     bullets = [
         "1. Cách đánh dấu đáp án đúng: Dùng công cụ Text Highlight Color trên thanh công cụ Word (màu Vàng, Xanh lá, Cyan...).",
         "2. Nhận diện tự động: Hệ thống đọc trực tiếp mã XML gốc (<w:highlight>), không lo lệch font hay định dạng.",
-        "3. Đa dạng 6 loại câu hỏi: Chọn 1, Chọn nhiều, Đúng/Sai, Điền từ, Kéo thả ô trống, Ghép đôi (Matching).",
-        "4. Tự động sửa & bổ sung: Sau khi tải file lên, bạn hoàn toàn có thể thêm đáp án mới (E, F...) và sửa chữ tùy ý.",
-        "5. Câu hỏi & Đáp án nhiều dòng: Hỗ trợ đoạn mã lập trình (Code), văn bản xuống hàng trong cả đề bài và các phương án A, B, C, D."
+        "3. Đa dạng các loại câu hỏi: Chọn 1, Chọn nhiều, Đúng/Sai, Điền từ (1 ô & nhiều ô theo thứ tự), Kéo thả ô trống, Ghép đôi (Matching).",
+        "4. Điền từ nhiều ô trống (Đoạn văn): Đoạn văn có các chỗ trống ______ (1), ______ (2)... Kèm dòng 'Đáp án: 1. từ_1, 2. từ_2...' tương ứng đúng số ô nhập.",
+        "5. Tự động sửa & bổ sung: Sau khi tải file lên, bạn hoàn toàn có thể thêm đáp án mới (E, F...) và sửa chữ tùy ý.",
+        "6. Câu hỏi & Đáp án nhiều dòng: Hỗ trợ đoạn mã lập trình (Code), văn bản xuống hàng trong cả đề bài và các phương án A, B, C, D."
     ]
     for b in bullets:
         p_b = cell.add_paragraph()
@@ -273,15 +276,44 @@ def create_comprehensive_docx(output_path: str) -> str:
     r_ans6 = p_ans6.add_run("kế thừa")
     add_highlight_to_run(r_ans6, "yellow")
 
+    # Câu 7: Dạng điền từ vào nhiều ô trống (Đoạn văn có 4 khoảng trống cần điền theo thứ tự)
+    p_q7 = doc.add_paragraph()
+    p_q7.paragraph_format.space_before = Pt(8)
+    r = p_q7.add_run("Câu 7: ")
+    r.font.bold = True
+    p_q7.add_run("Điền từ thích hợp vào đoạn văn sau (gồm 4 từ cần điền theo thứ tự):")
+
+    p_q7_body = doc.add_paragraph()
+    p_q7_body.paragraph_format.left_indent = Inches(0.25)
+    p_q7_body.paragraph_format.space_after = Pt(4)
+    r_body = p_q7_body.add_run("Một trong những ______ (1) chính dẫn đến cuộc khủng hoảng ______ (2) là do sản xuất phần mềm mang tính ______ (3) và thiếu tính ______ (4).")
+    r_body.font.italic = True
+
+    p_ans7 = doc.add_paragraph()
+    p_ans7.paragraph_format.left_indent = Inches(0.25)
+    p_ans7.paragraph_format.space_after = Pt(4)
+    p_ans7.add_run("Đáp án: ")
+    r_ans7 = p_ans7.add_run("1. nguyên nhân, 2. phần mềm, 3. cá nhân, 4. công nghiệp")
+    add_highlight_to_run(r_ans7, "yellow")
+
+    p_full7 = doc.add_paragraph()
+    p_full7.paragraph_format.left_indent = Inches(0.25)
+    p_full7.paragraph_format.space_after = Pt(8)
+    r_full_lbl = p_full7.add_run("➔ Câu hoàn chỉnh: ")
+    r_full_lbl.font.bold = True
+    r_full_lbl.font.size = Pt(10)
+    r_full_txt = p_full7.add_run("“Một trong những [nguyên nhân] chính dẫn đến cuộc khủng hoảng [phần mềm] là do sản xuất phần mềm mang tính [cá nhân] và thiếu tính [công nghiệp].”")
+    r_full_txt.font.size = Pt(10)
+
     # =========================================================================
     # DẠNG 6: KÉO THẢ VÀO Ô TRỐNG (DRAG & DROP BLANK)
     # =========================================================================
     add_section_header("VI. Dạng 6: Kéo thả từ thích hợp vào ô trống (Drag & Drop Blank)")
 
-    p_q7 = doc.add_paragraph()
-    r = p_q7.add_run("Câu 7: ")
+    p_q8 = doc.add_paragraph()
+    r = p_q8.add_run("Câu 8: ")
     r.font.bold = True
-    p_q7.add_run("Kéo thả các giao thức và thiết bị thích hợp vào các câu sau (Mỗi câu có thể kéo nhiều đáp án):")
+    p_q8.add_run("Kéo thả các giao thức và thiết bị thích hợp vào các câu sau (Mỗi câu có thể kéo nhiều đáp án):")
 
     drag_items = [
         ("1. Các giao thức hoạt động ở tầng Ứng dụng (Application Layer): _____", ["HTTP", "DNS", "FTP", "SMTP"]),
@@ -316,10 +348,10 @@ def create_comprehensive_docx(output_path: str) -> str:
     # =========================================================================
     add_section_header("VII. Dạng 7: Ghép đôi thuật ngữ & định nghĩa (Matching Pairs)")
 
-    p_q8 = doc.add_paragraph()
-    r = p_q8.add_run("Câu 8: ")
+    p_q9 = doc.add_paragraph()
+    r = p_q9.add_run("Câu 9: ")
     r.font.bold = True
-    p_q8.add_run("Hãy ghép nối từng nguyên tắc thiết kế phần mềm SOLID với ý nghĩa tương ứng:")
+    p_q9.add_run("Hãy ghép nối từng nguyên tắc thiết kế phần mềm SOLID với ý nghĩa tương ứng:")
 
     match_table = doc.add_table(rows=5, cols=2)
     match_table.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -355,38 +387,38 @@ def create_comprehensive_docx(output_path: str) -> str:
     # =========================================================================
     # DẠNG 8: DÒNG ĐÁP ÁN DỰ PHÒNG (KHI KHÔNG CÓ HIGHLIGHT)
     # =========================================================================
-    add_section_header("VIII. Dạng bổ trợ: Tự nhận diện khi không có Highlight (Fallback 'Đáp án: C')")
+    add_section_header("VIII. Dạng bổ trợ: Tự nhận diện khi không có Highlight (Fallback 'Đáp án: B')")
 
-    p_q9 = doc.add_paragraph()
-    r = p_q9.add_run("Câu 9: ")
+    p_q10 = doc.add_paragraph()
+    r = p_q10.add_run("Câu 10: ")
     r.font.bold = True
-    p_q9.add_run("Đơn vị đo lường tốc độ truyền dữ liệu qua mạng thông dụng nhất là gì?")
+    p_q10.add_run("Đơn vị đo lường tốc độ truyền dữ liệu qua mạng thông dụng nhất là gì?")
 
-    opts_9 = ["A. Byte/s", "B. bps (bit per second)", "C. GHz", "D. RPM"]
-    for opt_text in opts_9:
+    opts_10 = ["A. Byte/s", "B. bps (bit per second)", "C. GHz", "D. RPM"]
+    for opt_text in opts_10:
         p_opt = doc.add_paragraph()
         p_opt.paragraph_format.left_indent = Inches(0.25)
         p_opt.paragraph_format.space_after = Pt(2)
         p_opt.add_run(opt_text)
 
-    p_ans9 = doc.add_paragraph()
-    p_ans9.paragraph_format.left_indent = Inches(0.25)
-    p_ans9.paragraph_format.space_after = Pt(4)
-    r_a9 = p_ans9.add_run("Đáp án: B")
-    r_a9.font.bold = True
-    r_a9.font.color.rgb = RGBColor(0x05, 0x96, 0x69)
+    p_ans10 = doc.add_paragraph()
+    p_ans10.paragraph_format.left_indent = Inches(0.25)
+    p_ans10.paragraph_format.space_after = Pt(4)
+    r_a10 = p_ans10.add_run("Đáp án: B")
+    r_a10.font.bold = True
+    r_a10.font.color.rgb = RGBColor(0x05, 0x96, 0x69)
 
     # =========================================================================
     # DẠNG 9: CÂU HỎI NHIỀU DÒNG (ĐOẠN MÃ CODE / LẬP TRÌNH)
     # =========================================================================
     add_section_header("IX. Dạng: Câu hỏi nhiều dòng kèm đoạn mã lập trình (Code Snippet)")
 
-    p_q10 = doc.add_paragraph()
-    r = p_q10.add_run("Câu 10: ")
+    p_q11 = doc.add_paragraph()
+    r = p_q11.add_run("Câu 11: ")
     r.font.bold = True
-    p_q10.add_run("Cho đoạn mã chương trình Kotlin sau:")
+    p_q11.add_run("Cho đoạn mã chương trình Kotlin sau:")
 
-    code_lines_q10 = [
+    code_lines_q11 = [
         "fun main() {",
         "    var sum = 0",
         "    for (i in 1..10) {",
@@ -398,7 +430,7 @@ def create_comprehensive_docx(output_path: str) -> str:
         "        println(sum)",
         "}"
     ]
-    for line in code_lines_q10:
+    for line in code_lines_q11:
         p_code = doc.add_paragraph()
         p_code.paragraph_format.left_indent = Inches(0.35)
         p_code.paragraph_format.space_after = Pt(1)
@@ -407,19 +439,19 @@ def create_comprehensive_docx(output_path: str) -> str:
         r_code.font.size = Pt(10)
         r_code.font.color.rgb = RGBColor(0x0F, 0x17, 0x2A)
 
-    p_q10_suffix = doc.add_paragraph()
-    p_q10_suffix.paragraph_format.space_before = Pt(4)
-    p_q10_suffix.add_run("Sau khi thực hiện đoạn mã trên, biến sum có giá trị bằng bao nhiêu?")
+    p_q11_suffix = doc.add_paragraph()
+    p_q11_suffix.paragraph_format.space_before = Pt(4)
+    p_q11_suffix.add_run("Sau khi thực hiện đoạn mã trên, biến sum có giá trị bằng bao nhiêu?")
 
-    tbl_q10 = doc.add_table(rows=2, cols=2)
-    tbl_q10.alignment = WD_TABLE_ALIGNMENT.CENTER
-    tbl_q10_opts = [
+    tbl_q11 = doc.add_table(rows=2, cols=2)
+    tbl_q11.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_q11_opts = [
         [("A. 40", False), ("B. 30", True)],
         [("C. 20", False), ("D. 50", False)]
     ]
-    for row_idx, row_data in enumerate(tbl_q10_opts):
+    for row_idx, row_data in enumerate(tbl_q11_opts):
         for col_idx, (opt_text, is_correct) in enumerate(row_data):
-            cell_ij = tbl_q10.rows[row_idx].cells[col_idx]
+            cell_ij = tbl_q11.rows[row_idx].cells[col_idx]
             set_cell_margins(cell_ij, top=60, bottom=60, left=100, right=100)
             p_ij = cell_ij.paragraphs[0]
             r_ij = p_ij.add_run(opt_text)
@@ -431,27 +463,27 @@ def create_comprehensive_docx(output_path: str) -> str:
     # =========================================================================
     add_section_header("X. Dạng: Phương án đáp án nhiều dòng (Code hoặc văn bản xuống dòng)")
 
-    p_q11 = doc.add_paragraph()
-    r = p_q11.add_run("Câu 11: ")
+    p_q12 = doc.add_paragraph()
+    r = p_q12.add_run("Câu 12: ")
     r.font.bold = True
-    p_q11.add_run("Trong ngôn ngữ Kotlin, đoạn mã nào sau đây in ra các số từ 1 đến 10 nhưng bỏ qua giá trị 5?")
+    p_q12.add_run("Trong ngôn ngữ Kotlin, đoạn mã nào sau đây in ra các số từ 1 đến 10 nhưng bỏ qua giá trị 5?")
 
-    tbl_q11 = doc.add_table(rows=2, cols=2)
-    tbl_q11.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_q12 = doc.add_table(rows=2, cols=2)
+    tbl_q12.alignment = WD_TABLE_ALIGNMENT.CENTER
 
     opt_a_lines = ["A. for (i in 1..10) {", "    if (i == 5)", "        println(i)", "}"]
     opt_b_lines = ["B. for (i in 1..10 step 5)", "    println(i)"]
     opt_c_lines = ["C. for (i in 1..10) {", "    if (i == 5)", "        continue;", "    println(i)", "}"]
     opt_d_lines = ["D. for (i in 1..10)", "    continue if (i == 5)"]
 
-    grid_q11 = [
+    grid_q12 = [
         [(opt_a_lines, False), (opt_b_lines, False)],
         [(opt_c_lines, True), (opt_d_lines, False)]
     ]
 
-    for row_idx, row_data in enumerate(grid_q11):
+    for row_idx, row_data in enumerate(grid_q12):
         for col_idx, (lines, is_correct) in enumerate(row_data):
-            cell_ij = tbl_q11.rows[row_idx].cells[col_idx]
+            cell_ij = tbl_q12.rows[row_idx].cells[col_idx]
             set_cell_margins(cell_ij, top=60, bottom=60, left=100, right=100)
             for l_idx, l_text in enumerate(lines):
                 p_l = cell_ij.paragraphs[0] if l_idx == 0 else cell_ij.add_paragraph()

@@ -106,11 +106,40 @@ def grade_submission(questions: List[Dict[str, Any]], user_answers: Dict[str, An
                     is_correct = True
 
         elif q_type == 'fill_blank':
-            correct_list = [normalize_str(c) for c in q.get('correctAnswers', [])]
-            user_val = normalize_str(ans)
-            if any(user_val == c for c in correct_list):
-                q_score = 1.0
-                is_correct = True
+            expected_blanks = q.get('correctAnswers', [])
+            content_text = q.get('content', '')
+            BLANK_PATTERN = r'(_{2,}\s*(?:\(\s*\d+\s*\)|\[\s*\d+\s*\])?|\[\s*(?:\.{2,}|blank|ô\s*trống|_+|\d+|\.\.\.)\s*\]|\(\s*(?:\d+|\.{2,})\s*\)|\.{3,})'
+            blanks_found = re.findall(BLANK_PATTERN, content_text)
+            blank_count = q.get('blankCount') or max(1, len(blanks_found), len(expected_blanks))
+
+            if blank_count > 1 and isinstance(ans, dict):
+                correct_count = 0
+                for b_idx in range(1, blank_count + 1):
+                    user_b_ans = normalize_str(ans.get(str(b_idx)) or ans.get(b_idx) or '')
+                    if b_idx - 1 < len(expected_blanks):
+                        expected_raw = str(expected_blanks[b_idx - 1])
+                        variations = [normalize_str(v) for v in re.split(r'[/|;]+', expected_raw) if v.strip()]
+                        if any(user_b_ans == v for v in variations):
+                            correct_count += 1
+                    elif user_b_ans:
+                        correct_count += 1
+
+                q_score = round(correct_count / blank_count, 2)
+                is_correct = (q_score >= 0.99)
+                explanation = f"Đúng {correct_count}/{blank_count} ô trống."
+            else:
+                if isinstance(ans, dict):
+                    user_val = normalize_str(ans.get('1') or ans.get(1) or '')
+                else:
+                    user_val = normalize_str(ans)
+                correct_list = []
+                for c in expected_blanks:
+                    for v in re.split(r'[/|;]+', str(c)):
+                        if v.strip():
+                            correct_list.append(normalize_str(v))
+                if any(user_val == c for c in correct_list):
+                    q_score = 1.0
+                    is_correct = True
 
         elif q_type == 'drag_drop_blank':
             items = q.get('items', [])

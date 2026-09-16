@@ -256,6 +256,9 @@ function renderCorrectAnswer(q) {
       return `Vị trí ${it.blank}: ${answersList}`;
     }).join(' | ');
   }
+  if (q.type === 'fill_blank' && Array.isArray(q.correct_answers) && q.correct_answers.length > 1) {
+    return q.correct_answers.map((ans, idx) => `Ô ${idx + 1}: ${ans || '(trống)'}`).join(' | ');
+  }
   return renderAnswerValue(q.correct_answers, q);
 }
 
@@ -264,10 +267,11 @@ function renderAnswerValue(val, question = null) {
   if (Array.isArray(val)) return val.join(', ');
   if (typeof val === 'object') {
     const isDragDrop = question?.type === 'drag_drop_blank';
+    const isFillBlank = question?.type === 'fill_blank';
     return Object.entries(val).map(([k, v]) => {
       const vStr = Array.isArray(v) ? v.join(', ') : String(v);
       const isNum = !isNaN(Number(k));
-      const prefix = isDragDrop ? `Vị trí ${k}` : (isNum ? `Câu ${k}` : `[${k}]`);
+      const prefix = isDragDrop ? `Vị trí ${k}` : (isFillBlank ? `Ô ${k}` : (isNum ? `Câu ${k}` : `[${k}]`));
       return `${prefix}: ${vStr || '(trống)'}`;
     }).join(' | ');
   }
