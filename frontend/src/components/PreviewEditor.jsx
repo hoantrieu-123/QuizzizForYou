@@ -1142,7 +1142,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                 <textarea
                   value={q.content || ''}
                   onChange={(e) => handleUpdateQuestion(qActualIndex, 'content', e.target.value)}
-                  rows={2}
+                  rows={Math.min(12, Math.max(2, (q.content || '').split('\n').length))}
                   style={{
                     width: '100%',
                     padding: '0.65rem 0.85rem',
@@ -1151,10 +1151,13 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                     fontSize: '1rem',
                     color: '#0f172a',
                     fontWeight: 500,
-                    lineHeight: 1.5,
+                    lineHeight: 1.6,
                     resize: 'vertical',
                     outline: 'none',
-                    background: '#ffffff'
+                    background: '#ffffff',
+                    whiteSpace: 'pre-wrap',
+                    tabSize: 4,
+                    fontFamily: (q.content || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
                   onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
@@ -1216,12 +1219,12 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             {opt.label}
                           </div>
 
-                          {/* Editable Text Box */}
-                          <input
-                            type="text"
+                          {/* Editable Text Area for single choice option */}
+                          <textarea
                             value={opt.text !== undefined ? opt.text : (opt.full_text || '')}
                             onChange={(e) => handleUpdateOptionText(qActualIndex, optIdx, e.target.value)}
                             placeholder={`Gõ nội dung phương án ${opt.label}...`}
+                            rows={Math.min(8, Math.max(1, (opt.text || opt.full_text || '').split('\n').length))}
                             style={{
                               flex: 1,
                               border: '1.5px solid #cbd5e1',
@@ -1231,7 +1234,12 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                               fontWeight: isCorrect ? 700 : 500,
                               background: '#ffffff',
                               outline: 'none',
-                              color: '#0f172a'
+                              color: '#0f172a',
+                              lineHeight: 1.5,
+                              whiteSpace: 'pre-wrap',
+                              tabSize: 4,
+                              resize: 'vertical',
+                              fontFamily: (opt.text || opt.full_text || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
                             }}
                             onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
                             onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
@@ -1340,11 +1348,11 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             {opt.label}
                           </div>
 
-                          <input
-                            type="text"
+                          <textarea
                             value={opt.text !== undefined ? opt.text : (opt.full_text || '')}
                             onChange={(e) => handleUpdateOptionText(qActualIndex, optIdx, e.target.value)}
                             placeholder={`Gõ nội dung phương án ${opt.label}...`}
+                            rows={Math.min(8, Math.max(1, (opt.text || opt.full_text || '').split('\n').length))}
                             style={{
                               flex: 1,
                               border: '1.5px solid #cbd5e1',
@@ -1354,7 +1362,12 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                               fontWeight: isCorrect ? 700 : 500,
                               background: '#ffffff',
                               outline: 'none',
-                              color: '#0f172a'
+                              color: '#0f172a',
+                              lineHeight: 1.5,
+                              whiteSpace: 'pre-wrap',
+                              tabSize: 4,
+                              resize: 'vertical',
+                              fontFamily: (opt.text || opt.full_text || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
                             }}
                             onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
                             onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}

@@ -178,7 +178,17 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                 </div>
               </div>
 
-              <p style={{ fontSize: '1.05rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem', lineHeight: 1.5 }}>
+              <p style={{
+                fontSize: '1.05rem',
+                fontWeight: 600,
+                color: '#0f172a',
+                marginBottom: '1rem',
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                tabSize: 4,
+                fontFamily: (q.content || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' : 'inherit'
+              }}>
                 {q.content}
               </p>
 
@@ -194,14 +204,26 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
               }}>
                 <div>
                   <span style={{ fontWeight: 700, color: '#475569' }}>Lựa chọn của bạn: </span>
-                  <span style={{ color: q.is_correct ? '#059669' : '#dc2626', fontWeight: 600 }}>
+                  <span style={{
+                    color: q.is_correct ? '#059669' : '#dc2626',
+                    fontWeight: 600,
+                    whiteSpace: 'pre-wrap',
+                    tabSize: 4,
+                    fontFamily: String(renderAnswerValue(q.user_answer, q) || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
+                  }}>
                     {renderAnswerValue(q.user_answer, q) || '(Chưa trả lời)'}
                   </span>
                 </div>
 
                 <div>
                   <span style={{ fontWeight: 700, color: '#475569' }}>Đáp án đúng: </span>
-                  <span style={{ color: '#059669', fontWeight: 700 }}>
+                  <span style={{
+                    color: '#059669',
+                    fontWeight: 700,
+                    whiteSpace: 'pre-wrap',
+                    tabSize: 4,
+                    fontFamily: String(renderCorrectAnswer(q) || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
+                  }}>
                     {renderCorrectAnswer(q)}
                   </span>
                 </div>

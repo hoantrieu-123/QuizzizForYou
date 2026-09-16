@@ -74,9 +74,9 @@ def parse_run(r_elem: ET.Element) -> Dict[str, Any]:
     for t in r_elem.findall('.//w:t', NS):
         if t.text:
             text_pieces.append(t.text)
-    # Also handle <w:tab/> as tab or space
+    # Also handle <w:tab/> as 4 spaces
     for _ in r_elem.findall('.//w:tab', NS):
-        text_pieces.append('\t')
+        text_pieces.append('    ')
     # Also handle <w:br/> as newline
     for _ in r_elem.findall('.//w:br', NS):
         text_pieces.append('\n')
@@ -124,7 +124,7 @@ def parse_paragraph(p_elem: ET.Element) -> Dict[str, Any]:
                     if run_data['highlight_color']:
                         highlight_colors.add(run_data['highlight_color'])
 
-    full_text = ''.join(full_text_pieces).strip()
+    full_text = ''.join(full_text_pieces).rstrip()
     highlighted_text = ''.join(highlighted_runs_text).strip()
 
     return {
@@ -173,7 +173,7 @@ def parse_table(tbl_elem: ET.Element) -> Dict[str, Any]:
                     cell_hl_text.append(p_data['highlighted_text'])
                     cell_colors.update(p_data['highlight_colors'])
 
-            full_cell_text = ' '.join(cell_texts).strip()
+            full_cell_text = '\n'.join([t for t in cell_texts if t.strip()]).rstrip()
 
             # If cell has background shading, entire cell text is highlighted
             if tc_has_highlight and not cell_hl_text:
@@ -183,7 +183,7 @@ def parse_table(tbl_elem: ET.Element) -> Dict[str, Any]:
                 'text': full_cell_text,
                 'paragraphs': cell_paragraphs,
                 'has_highlight': cell_has_hl,
-                'highlighted_text': ' '.join(cell_hl_text).strip(),
+                'highlighted_text': '\n'.join([t for t in cell_hl_text if t]).strip(),
                 'highlight_colors': list(cell_colors)
             })
         rows.append(cells)

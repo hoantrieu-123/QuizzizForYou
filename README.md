@@ -25,6 +25,7 @@ Website chạy trên localhost cho phép tải file Word `.docx`, tự động p
 4. **Điền từ vào chỗ trống (`fill_blank`)**: Câu hỏi có `___` hoặc `[...]` và từ đáp án đúng được Highlight ở dưới hoặc trong dòng đáp án.
 5. **Kéo thả từ vào ô trống (`drag_drop_blank`)**: Điền nhiều vị trí trống `[ 1 ]`, `[ 2 ]` tương ứng với các từ trong ngân hàng từ vựng kéo thả.
 6. **Kéo thả ghép đôi (`matching`)**: Bảng hoặc cặp thuật ngữ (cột trái) và định nghĩa tương ứng (cột phải).
+7. **Câu hỏi & Đáp án nhiều dòng (Code lập trình)**: Nhận diện nguyên vẹn các đoạn code (Kotlin, Java, Python, C++...), bảo toàn 100% từng dấu cách lùi dòng (4 spaces, 8 spaces, tabs) và xuống dòng như trong file Word.
 
 ### 4. Giao Diện Sáng (Light Theme) Hiện Đại & Trực Quan
 - Gam màu chủ đạo: Trắng, Xám nhạt (`#f8fafc`), Xanh dương (`#2563eb`).

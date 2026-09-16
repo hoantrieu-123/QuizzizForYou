@@ -107,7 +107,8 @@ def create_comprehensive_docx(output_path: str) -> str:
         "1. Cách đánh dấu đáp án đúng: Dùng công cụ Text Highlight Color trên thanh công cụ Word (màu Vàng, Xanh lá, Cyan...).",
         "2. Nhận diện tự động: Hệ thống đọc trực tiếp mã XML gốc (<w:highlight>), không lo lệch font hay định dạng.",
         "3. Đa dạng 6 loại câu hỏi: Chọn 1, Chọn nhiều, Đúng/Sai, Điền từ, Kéo thả ô trống, Ghép đôi (Matching).",
-        "4. Tự động sửa & bổ sung: Sau khi tải file lên, bạn hoàn toàn có thể thêm đáp án mới (E, F...) và sửa chữ tùy ý."
+        "4. Tự động sửa & bổ sung: Sau khi tải file lên, bạn hoàn toàn có thể thêm đáp án mới (E, F...) và sửa chữ tùy ý.",
+        "5. Câu hỏi & Đáp án nhiều dòng: Hỗ trợ đoạn mã lập trình (Code), văn bản xuống hàng trong cả đề bài và các phương án A, B, C, D."
     ]
     for b in bullets:
         p_b = cell.add_paragraph()
@@ -374,6 +375,92 @@ def create_comprehensive_docx(output_path: str) -> str:
     r_a9 = p_ans9.add_run("Đáp án: B")
     r_a9.font.bold = True
     r_a9.font.color.rgb = RGBColor(0x05, 0x96, 0x69)
+
+    # =========================================================================
+    # DẠNG 9: CÂU HỎI NHIỀU DÒNG (ĐOẠN MÃ CODE / LẬP TRÌNH)
+    # =========================================================================
+    add_section_header("IX. Dạng: Câu hỏi nhiều dòng kèm đoạn mã lập trình (Code Snippet)")
+
+    p_q10 = doc.add_paragraph()
+    r = p_q10.add_run("Câu 10: ")
+    r.font.bold = True
+    p_q10.add_run("Cho đoạn mã chương trình Kotlin sau:")
+
+    code_lines_q10 = [
+        "fun main() {",
+        "    var sum = 0",
+        "    for (i in 1..10) {",
+        "        if (i % 2 == 0) {",
+        "            sum += i",
+        "        }",
+        "    }",
+        "    if (sum % 5 == 0)",
+        "        println(sum)",
+        "}"
+    ]
+    for line in code_lines_q10:
+        p_code = doc.add_paragraph()
+        p_code.paragraph_format.left_indent = Inches(0.35)
+        p_code.paragraph_format.space_after = Pt(1)
+        r_code = p_code.add_run(line)
+        r_code.font.name = 'Consolas'
+        r_code.font.size = Pt(10)
+        r_code.font.color.rgb = RGBColor(0x0F, 0x17, 0x2A)
+
+    p_q10_suffix = doc.add_paragraph()
+    p_q10_suffix.paragraph_format.space_before = Pt(4)
+    p_q10_suffix.add_run("Sau khi thực hiện đoạn mã trên, biến sum có giá trị bằng bao nhiêu?")
+
+    tbl_q10 = doc.add_table(rows=2, cols=2)
+    tbl_q10.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_q10_opts = [
+        [("A. 40", False), ("B. 30", True)],
+        [("C. 20", False), ("D. 50", False)]
+    ]
+    for row_idx, row_data in enumerate(tbl_q10_opts):
+        for col_idx, (opt_text, is_correct) in enumerate(row_data):
+            cell_ij = tbl_q10.rows[row_idx].cells[col_idx]
+            set_cell_margins(cell_ij, top=60, bottom=60, left=100, right=100)
+            p_ij = cell_ij.paragraphs[0]
+            r_ij = p_ij.add_run(opt_text)
+            if is_correct:
+                add_highlight_to_run(r_ij, "yellow")
+
+    # =========================================================================
+    # DẠNG 10: ĐÁP ÁN NHIỀU DÒNG (CODE HOẶC VĂN BẢN XUỐNG DÒNG)
+    # =========================================================================
+    add_section_header("X. Dạng: Phương án đáp án nhiều dòng (Code hoặc văn bản xuống dòng)")
+
+    p_q11 = doc.add_paragraph()
+    r = p_q11.add_run("Câu 11: ")
+    r.font.bold = True
+    p_q11.add_run("Trong ngôn ngữ Kotlin, đoạn mã nào sau đây in ra các số từ 1 đến 10 nhưng bỏ qua giá trị 5?")
+
+    tbl_q11 = doc.add_table(rows=2, cols=2)
+    tbl_q11.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    opt_a_lines = ["A. for (i in 1..10) {", "    if (i == 5)", "        println(i)", "}"]
+    opt_b_lines = ["B. for (i in 1..10 step 5)", "    println(i)"]
+    opt_c_lines = ["C. for (i in 1..10) {", "    if (i == 5)", "        continue;", "    println(i)", "}"]
+    opt_d_lines = ["D. for (i in 1..10)", "    continue if (i == 5)"]
+
+    grid_q11 = [
+        [(opt_a_lines, False), (opt_b_lines, False)],
+        [(opt_c_lines, True), (opt_d_lines, False)]
+    ]
+
+    for row_idx, row_data in enumerate(grid_q11):
+        for col_idx, (lines, is_correct) in enumerate(row_data):
+            cell_ij = tbl_q11.rows[row_idx].cells[col_idx]
+            set_cell_margins(cell_ij, top=60, bottom=60, left=100, right=100)
+            for l_idx, l_text in enumerate(lines):
+                p_l = cell_ij.paragraphs[0] if l_idx == 0 else cell_ij.add_paragraph()
+                p_l.paragraph_format.space_after = Pt(1)
+                r_l = p_l.add_run(l_text)
+                r_l.font.name = 'Consolas'
+                r_l.font.size = Pt(9.5)
+                if is_correct:
+                    add_highlight_to_run(r_l, "yellow")
 
     # Save to path
     doc.save(output_path)

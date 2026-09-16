@@ -435,10 +435,16 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
         <h3 style={{
           fontSize: '1.2rem',
-          fontWeight: 700,
+          fontWeight: (currentQ.content || '').includes('\n') ? 600 : 700,
           color: '#0f172a',
-          lineHeight: 1.5,
-          marginBottom: '1.75rem'
+          lineHeight: 1.6,
+          marginBottom: '1.75rem',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          tabSize: 4,
+          fontFamily: (currentQ.content || '').includes('\n')
+            ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+            : 'inherit'
         }}>
           {currentQ.content}
         </h3>
@@ -457,7 +463,16 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                   <div className="option-badge">
                     {opt.label}
                   </div>
-                  <span style={{ fontSize: '1rem', color: isSelected ? '#1e40af' : '#1e293b', fontWeight: isSelected ? 600 : 400 }}>
+                  <span style={{
+                    fontSize: '1rem',
+                    color: isSelected ? '#7c3aed' : '#1e293b',
+                    fontWeight: isSelected ? 600 : 400,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.5,
+                    tabSize: 4,
+                    fontFamily: (opt.text || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' : 'inherit'
+                  }}>
                     {opt.text || opt.full_text}
                   </span>
                 </div>
@@ -485,7 +500,16 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     <div className="option-badge">
                       {opt.label}
                     </div>
-                    <span style={{ fontSize: '1rem', color: isSelected ? '#1e40af' : '#1e293b', fontWeight: isSelected ? 600 : 400 }}>
+                    <span style={{
+                      fontSize: '1rem',
+                      color: isSelected ? '#7c3aed' : '#1e293b',
+                      fontWeight: isSelected ? 600 : 400,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      lineHeight: 1.5,
+                      tabSize: 4,
+                      fontFamily: (opt.text || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' : 'inherit'
+                    }}>
                       {opt.text || opt.full_text}
                     </span>
                   </div>
@@ -517,7 +541,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     flexWrap: 'wrap'
                   }}
                 >
-                  <span style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 500, flex: 1 }}>
+                  <span style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 500, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
                     {st.content}
                   </span>
 

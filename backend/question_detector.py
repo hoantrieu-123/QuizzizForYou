@@ -29,19 +29,32 @@ def parse_question_header(text: str) -> Tuple[str, str]:
 
 
 def is_option_text(text: str) -> Optional[Tuple[str, str]]:
-    """Check if text starts with option label like 'A.', 'A)', 'A:', '[A]'."""
-    m = re.match(r'^\s*([A-HJ-Z])[\.\)\:\-]\s*(.*)$', text.strip())
+    """Check if text starts with option label like 'A.', 'A)', 'A:', '[A]', '(A)'."""
+    m = re.match(r'^\s*(?:\[([A-Ha-h])\]|\(([A-Ha-h])\)|([A-Ha-h])[\.\)\:\-])(?:\s+(.*)|\s*)$', text, re.DOTALL)
     if m:
-        return m.group(1), m.group(2).strip()
+        label = m.group(1) or m.group(2) or m.group(3)
+        val = m.group(4) or ""
+        return label.upper(), val.rstrip()
     return None
 
 
 def is_statement_header(text: str) -> Optional[Tuple[str, str]]:
     """Check if text is a sub-statement like '1.', '2.', 'a.', 'b.'."""
-    m = re.match(r'^\s*(\d+|[a-h])[\.\)]\s+(.*)$', text.strip())
+    stripped = text.strip()
+    m = re.match(r'^\s*(\d+|[a-h])[\.\)]\s+(.*)$', stripped, re.DOTALL)
     if m:
         return m.group(1), m.group(2).strip()
     return None
+
+
+def is_section_divider(text: str) -> bool:
+    """Check if text is a section divider like 'Phần I', 'Chương 2', 'IX. Dạng: ...'"""
+    stripped = text.strip()
+    if not stripped:
+        return False
+    return bool(re.match(r'^(?:(?:Phần|Chương|Mục|Section|Part|Dạng)\s+[0-9IVXLCDM]+|(?:I{1,3}|IV|VI{0,3}|IX|X{1,3}|XI{1,3}|XIV|XV|XVI{0,3}|XIX|XX)[\.\:\-])\s+', stripped, re.IGNORECASE))
+
+
 
 
 def clean_text(t: str) -> str:
@@ -709,15 +722,27 @@ def detect_choice_question(content_parts: List[str], elements: List[Dict[str, An
     options: List[Dict[str, Any]] = []
     extra_content = []
     fallback_answer_str = None
+    options_from_table = False
 
     for elem in elements:
         if elem['type'] == 'paragraph':
-            text = elem['text'].strip()
+            text = elem['text'].rstrip()
+            stripped_text = text.strip()
+            if not stripped_text:
+                continue
+
+            # If section divider encountered when options already exist, ignore it
+            if is_section_divider(stripped_text) and len(options) > 0:
+                continue
 
             # Check if this is an answer line: "Đáp án: A" or "Answer: A, B"
-            ans_m = re.match(r'^(?:Đáp án|Answer)\s*[:.]\s*([A-HJ-Z\s,;]+)$', text, re.IGNORECASE)
+            ans_m = re.match(r'^(?:Đáp án|Answer)\s*[:.]\s*([A-Ha-h\s,;]+)$', stripped_text, re.IGNORECASE)
             if ans_m:
                 fallback_answer_str = ans_m.group(1).strip()
+                continue
+
+            # Check if this is an explanation line
+            if re.match(r'^(?:Giải thích|Hướng dẫn giải|Explanation)\s*[:.]', stripped_text, re.IGNORECASE):
                 continue
 
             opt = is_option_text(text)
@@ -733,14 +758,22 @@ def detect_choice_question(content_parts: List[str], elements: List[Dict[str, An
                     'highlightColor': hl_color if hl else None
                 })
             elif len(options) == 0:
-                # Question description before options
+                # Question description before options (preserve indentation)
                 extra_content.append(text)
+            else:
+                # Subsequent paragraphs belonging to the previous option ONLY if not from table and not section divider
+                if options and not options_from_table and not is_section_divider(stripped_text):
+                    options[-1]['text'] = f"{options[-1]['text']}\n{text}"
+                    options[-1]['full_text'] = f"{options[-1]['full_text']}\n{text}"
+                    if elem['has_highlight']:
+                        options[-1]['highlighted'] = True
 
         elif elem['type'] == 'table':
             # Extract options from table cells
             cells = [c for row in elem['rows'] for c in row]
+            table_has_options = False
             for c in cells:
-                c_text = c['text'].strip()
+                c_text = c['text'].rstrip()
                 opt = is_option_text(c_text)
                 if opt:
                     label, val = opt
@@ -753,8 +786,11 @@ def detect_choice_question(content_parts: List[str], elements: List[Dict[str, An
                         'highlighted': hl,
                         'highlightColor': hl_color if hl else None
                     })
-                elif len(options) == 0 and c_text:
+                    table_has_options = True
+                elif len(options) == 0 and c_text.strip():
                     extra_content.append(c_text)
+            if table_has_options:
+                options_from_table = True
 
     # Sort options by label A, B, C, D if they have standard labels
     options.sort(key=lambda o: o.get('label', ''))
@@ -784,7 +820,7 @@ def detect_choice_question(content_parts: List[str], elements: List[Dict[str, An
         warning = "⚠ Không tìm thấy đáp án được Highlight - Vui lòng chọn đáp án thủ công."
 
     # Determine question type:
-    full_content = ' '.join(content_parts + extra_content).strip()
+    full_content = '\n'.join([part.rstrip() for part in content_parts + extra_content if part.strip()]).rstrip()
     is_multi_by_text = bool(re.search(r'chọn\s*(?:\d+|nhiều)\s*đáp án', full_content, re.IGNORECASE))
 
     # Rule 7: If >= 2 highlighted -> multiple_choice. If 1 highlighted -> single_choice.

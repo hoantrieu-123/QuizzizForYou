@@ -1,0 +1,130 @@
+================================================================================
+          HƯỚNG DẪN ĐỊNH DẠNG FILE WORD (.DOCX) CHUẨN CHO TOOL QUIZIZZ
+================================================================================
+
+Tài liệu này hướng dẫn chi tiết quy ước soạn thảo file Word (.docx) để Tool Quizizz
+tự động nhận diện chính xác 100% câu hỏi, đáp án, các đoạn mã code nhiều dòng,
+và các phương án trắc nghiệm nhiều dòng (như chuẩn file "Lập Trình Di Động - Tuần 1.docx").
+
+--------------------------------------------------------------------------------
+1. NGUYÊN TẮC NHẬN DIỆN ĐÁP ÁN ĐÚNG
+--------------------------------------------------------------------------------
+Hệ thống sử dụng cơ chế bóc tách XML gốc (<w:highlight>) của Microsoft Word:
+
+- ƯU TIÊN 1 (Khuyên dùng): Bôi màu Highlight (Text Highlight Color) vào đáp án đúng.
+  + Hỗ trợ mọi màu: Vàng (Yellow), Xanh lá (Green), Xanh ngọc (Cyan), Đỏ (Red), v.v.
+  + Hoặc đổ màu nền ô bảng biểu (Cell Shading / Background color).
+  + Chỉ cần bôi highlight vào chữ cái nhãn (VD: "A." hoặc "B.") HOẶC bôi vào toàn bộ nội dung đáp án.
+
+- ƯU TIÊN 2: Dòng chữ "Đáp án: [Chữ cái]" ngay sau câu hỏi.
+  VD: 
+  Đáp án: B
+  (hoặc Đáp án: A, C nếu là câu chọn nhiều đáp án)
+
+- ƯU TIÊN 3: Nếu đề thi không có highlight và không có dòng "Đáp án:", hệ thống vẫn nhận diện
+  đầy đủ câu hỏi và các phương án, đồng thời hiển thị cảnh báo để bạn bấm chọn đáp án
+  trực tiếp trên giao diện Xem trước & Chỉnh sửa của website.
+
+--------------------------------------------------------------------------------
+2. ĐỊNH DẠNG CÂU HỎI NHIỀU DÒNG & CHỨA ĐOẠN MÃ CODE (CODE SNIPPET)
+--------------------------------------------------------------------------------
+(Theo chuẩn cấu trúc file "Lập Trình Di Động - Tuần 1.docx")
+
+Website và bộ phân tích đã được nâng cấp hỗ trợ hoàn hảo các câu hỏi có đoạn mã code:
+- Tiêu đề bắt đầu bằng: "Câu X:", "Question X:", hoặc "Bài X:".
+- Nội dung câu hỏi có thể gồm NHIỀU DÒNG / NHIỀU ĐOẠN VĂN bản tiếp nối nhau.
+- Các dòng mã code được giữ nguyên 100% định dạng xuống dòng, thụt lề thụt dòng.
+- Sau đoạn code có thể có thêm câu hỏi phụ.
+
+Ví dụ mẫu:
+--------------------------------------------------
+Câu 14: Sau khi chạy chương trình sau biến count có giá trị bằng bao nhiêu?
+fun main() {
+    var count = 0
+    for (i in 1 until 5) {
+        if (i % 2 == 0) count++
+    }
+}
+Sau khi thực hiện xong, giá trị biến count là:
+A. 1
+B. 3
+C. 0
+D. 2 (bôi Highlight vào đáp án đúng này)
+--------------------------------------------------
+
+--------------------------------------------------------------------------------
+3. ĐỊNH DẠNG PHƯƠNG ÁN ĐÁP ÁN NHIỀU DÒNG (CODE HOẶC VĂN BẢN XUỐNG DÒNG)
+--------------------------------------------------------------------------------
+(Theo chuẩn Câu 5 trong "Lập Trình Di Động - Tuần 1.docx")
+
+Mỗi phương án trắc nghiệm A, B, C, D có thể chứa nhiều dòng mã hoặc nhiều dòng văn bản:
+
+Cách 1: Trình bày trong Bảng (Table 2x2 hoặc 1 cột) - Khuyên dùng
+- Tạo bảng Word 2 cột x 2 dòng (hoặc 1 cột x 4 dòng).
+- Mỗi ô chứa 1 phương án: bắt đầu bằng "A.", "B.", "C.", "D.".
+- Bên trong mỗi ô, bạn có thể nhấn ENTER hoặc SHIFT+ENTER để xuống dòng viết code thoải mái.
+- Bôi highlight vào phương án đúng.
+
+Ví dụ mẫu:
++------------------------------------+------------------------------------+
+| A. for (i in 1..10) {              | B. for (i in 1..10 step 5)         |
+|        if (i == 5)                 |        println(i)                  |
+|            println(i)              |                                    |
+|    }                               |                                    |
++------------------------------------+------------------------------------+
+| C. for (i in 1..10) { [HIGHLIGHT]  | D. for (i in 1..10)                |
+|        if (i == 5)                 |        continue if (i == 5)        |
+|            continue;               |                                    |
+|        println(i)                  |                                    |
+|    }                               |                                    |
++------------------------------------+------------------------------------+
+
+Cách 2: Trình bày dạng các đoạn văn liên tiếp (Paragraphs)
+- Viết "A. [dòng 1]", các dòng tiếp theo thụt lề hoặc viết tiếp.
+- Sau đó viết "B. [dòng 1]", v.v.
+
+--------------------------------------------------------------------------------
+4. TỔNG HỢP 7 DẠNG CÂU HỎI ĐƯỢC HỖ TRỢ ĐẦY ĐỦ TRÊN WEBSITE
+--------------------------------------------------------------------------------
+
+1. CHỌN 1 ĐÁP ÁN (SINGLE CHOICE)
+- Có 4 phương án A, B, C, D. Bôi highlight đúng 1 phương án.
+- Có thể đặt thẳng hàng từng dòng, hoặc đặt trong bảng 2x2.
+
+2. CHỌN NHIỀU ĐÁP ÁN (MULTIPLE CHOICE)
+- Có từ 2 phương án trở lên được bôi highlight.
+- Hệ thống tự động chuyển sang dạng checkbox (chọn nhiều).
+
+3. ĐÚNG / SAI (TRUE / FALSE)
+- Câu đơn: 2 lựa chọn "Đúng" / "Sai" (hoặc "True" / "False"). Bôi highlight vào ô đúng.
+- Câu chùm: Danh sách phát biểu a, b, c, d với lựa chọn Đúng / Sai riêng cho từng phát biểu.
+
+4. ĐIỀN TỪ VÀO CHỖ TRỐNG (FILL IN THE BLANK)
+- Câu hỏi có dấu gạch dưới: ______ hoặc ô trống [...].
+- Từ cần điền được bôi highlight hoặc ghi ở dòng: "Đáp án: [từ cần điền]".
+
+5. KÉO THẢ VÀO Ô TRỐNG (DRAG & DROP INTO BLANKS)
+- Câu hỏi có các vị trí đánh số: [ 1 ], [ 2 ], [ 3 ].
+- Ngân hàng từ vựng được liệt kê và bôi highlight bên dưới.
+
+6. GHÉP ĐÔI (MATCHING)
+- Bảng 2 cột: Cột trái (Thuật ngữ 1, 2, 3...) ghép với Cột phải (Ý nghĩa A, B, C...).
+- Hoặc dùng ký hiệu mũi tên: "1 -> B", "2 -> A", v.v.
+
+7. CÂU HỎI & ĐÁP ÁN NHIỀU DÒNG (CODE LẬP TRÌNH)
+- Hỗ trợ câu hỏi chứa đoạn mã code nhiều dòng (Kotlin, Java, Python, C++, SQL...).
+- Hỗ trợ đáp án chứa đoạn mã code nhiều dòng (trong ô bảng Word hoặc từng đoạn văn).
+- BẢO TOÀN NGUYÊN BẢN 100% CÁC KHOẢNG LÙI DÒNG: Các dấu cách đầu dòng (4 spaces, 8 spaces), phím Tab, và các dấu xuống dòng (Enter, Shift+Enter) trong Word được giữ chính xác tuyệt đối như khi bạn soạn thảo.
+- Tự động hiển thị bằng font Monospace lập trình, tabSize chuẩn 4 ký tự, không bị xô lệch lề.
+
+--------------------------------------------------------------------------------
+5. CÁCH LẤY FILE WORD MẪU CHUẨN
+--------------------------------------------------------------------------------
+- Ngay trên trang chủ website, nhấn nút "Tải file Word mẫu (.docx)" để tải về
+  file "Mau_De_Thi_Tat_Ca_Dinh_Dang.docx".
+- Hoặc trong thư mục mã nguồn dự án:
+  + "sample_quiz_highlighted.docx"
+  + "Mau_De_Thi_Tat_Ca_Dinh_Dang.docx"
+  + "Lập Trình Di Động - Tuần 1.docx"
+================================================================================
+

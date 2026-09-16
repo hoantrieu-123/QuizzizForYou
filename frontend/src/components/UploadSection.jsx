@@ -182,6 +182,7 @@ export default function UploadSection({ onUploadSuccess }) {
           <span className="badge badge-neutral">4. Điền từ</span>
           <span className="badge badge-neutral">5. Kéo thả vào ô trống</span>
           <span className="badge badge-neutral">6. Ghép đôi (Matching)</span>
+          <span className="badge badge-neutral">7. Câu hỏi & Đáp án nhiều dòng (Code)</span>
         </div>
 
         <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
