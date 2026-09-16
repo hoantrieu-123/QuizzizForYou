@@ -16,8 +16,8 @@ VÌ SAO CẦN PHỐI HỢP CLOUDFLARE PAGES + MÁY CHỦ PYTHON?
 - DO ĐÓ, mô hình chuẩn và tối ưu nhất (Miễn phí 100% vĩnh viễn) là:
     + FRONTEND: Chạy trên Cloudflare Pages (kết nối trực tiếp từ GitHub).
     + BACKEND (Python): Chạy trên Render.com hoặc Railway / Koyeb (kết nối cùng GitHub).
-    + CẦU NỐI: Cloudflare Pages tự động chuyển tiếp các lệnh gọi API (/api/*) sang 
-      Backend thông qua file "_redirects" đã tạo sẵn trong dự án.
+    + CẦU NỐI: Frontend tự động kết nối trực tiếp đến Backend Render đã được cấu hình CORS (*),
+      hoạt động trơn tru trên mọi thiết bị và nền tảng.
 
 Dưới đây là toàn bộ quy trình 5 bước thực hiện từ A đến Z cực kỳ dễ hiểu.
 
@@ -84,25 +84,29 @@ BƯỚC 2: DEPLOY PHẦN BACKEND (PYTHON FASTAPI) LÊN RENDER.COM (MIỄN PHÍ)
    - Nếu màn hình hiện: {"status":"ok","message":"Docx Quiz API is running"} là backend đã sẵn sàng!
 
 ================================================================================
-BƯỚC 3: CẬP NHẬT FILE CẦU NỐI _redirects VÀ PUSH LÊN GITHUB
+BƯỚC 3: CẬP NHẬT ĐỊA CHỈ BACKEND API VÀ PUSH LÊN GITHUB
 ================================================================================
 
-1. Mở file "frontend/public/_redirects" trong thư mục dự án trên máy tính của bạn:
-   Nội dung ban đầu:
-   /api/*  https://YOUR-BACKEND-URL.onrender.com/api/:splat  200
-   /*  /index.html  200
+Backend FastAPI của bạn đã được bật sẵn CORS (*), cho phép Frontend từ bất kỳ đâu 
+kết nối trực tiếp mà không cần cấu hình proxy phức tạp.
 
-2. Hãy thay thế "YOUR-BACKEND-URL.onrender.com" bằng địa chỉ backend Render thực tế
-   của bạn vừa lấy được ở Bước 2.
-   Ví dụ nếu link của bạn là: https://wordquiz-backend-1234.onrender.com
-   Thì sửa thành:
-   /api/*  https://wordquiz-backend-1234.onrender.com/api/:splat  200
-   /*  /index.html  200
+1. Kiểm tra file cấu hình API:
+   - File: "frontend/src/apiConfig.js"
+   - Mặc định đã cấu hình sẵn link backend Render của bạn:
+     https://quizzizforyou.onrender.com
 
-3. Lưu file và đẩy thay đổi lên GitHub bằng lệnh:
-   git add frontend/public/_redirects
-   git commit -m "Cap nhat dia chi backend API"
-   git push
+   - (Tùy chọn) Nếu sau này bạn đổi sang link backend Render khác, chỉ cần mở file:
+     "frontend/src/apiConfig.js" và thay đổi đường link tại dòng:
+     export const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'ĐỊA_CHỈ_RENDER_MỚI' : '');
+
+2. Đẩy các thay đổi mới nhất lên GitHub:
+   Chạy các lệnh sau trong Terminal máy tính của bạn:
+     git add .
+     git commit -m "Fix Cloudflare build: remove _redirects and configure apiConfig"
+     git push
+
+   Ngay khi lệnh git push hoàn tất, Cloudflare Pages sẽ tự động nhận diện và bắt đầu
+   build lại phiên bản mới nhất!
 
 ================================================================================
 BƯỚC 4: DEPLOY PHẦN FRONTEND LÊN CLOUDFLARE PAGES
@@ -136,15 +140,32 @@ BƯỚC 4: DEPLOY PHẦN FRONTEND LÊN CLOUDFLARE PAGES
      Ví dụ: https://wordquiz.pages.dev
 
 ================================================================================
-BƯỚC 5: GẮN TÊN MIỀN RIÊNG (CUSTOM DOMAIN - NẾU BẠN CÓ TÊN MIỀN)
+BƯỚC 5: GẮN TÊN MIỀN RIÊNG (TÙY CHỌN - NẾU BẠN KHÔNG CÓ THÌ BỎ QUA BƯỚC NÀY)
 ================================================================================
 
-Nếu bạn sở hữu tên miền riêng (ví dụ: tracnghiem.com hoặc quiz.tenban.vn):
+TRƯỜNG HỢP 1: BẠN KHÔNG CÓ TÊN MIỀN RIÊNG (Hoàn toàn bình thường!)
+--------------------------------------------------------------------------------
+- Bạn KHÔNG CẦN PHẢI MUA TÊN MIỀN!
+- Sau khi hoàn thành Bước 4, Cloudflare Pages ĐÃ TỰ ĐỘNG CẤP MIỄN PHÍ VĨNH VIỄN
+  cho bạn một tên miền chính thức có đuôi ".pages.dev", ví dụ:
+    https://wordquiz.pages.dev (hoặc tên dự án bạn đặt)
+- Tên miền này:
+    + Đã tích hợp sẵn chứng chỉ bảo mật SSL/HTTPS (ổ khóa xanh an toàn).
+    + Tốc độ truyền tải siêu tốc toàn cầu qua hệ thống CDN của Cloudflare.
+    + Hoạt động vĩnh viễn, không bao giờ hết hạn hay tốn phí duy trì.
+    + Bạn chỉ cần copy đường link này gửi cho học sinh, giáo viên, bạn bè là họ
+      có thể vào làm bài trắc nghiệm ngay trên điện thoại hoặc máy tính!
+- Mẹo: Bạn có thể đổi tiền tố tên miền này tùy thích (ví dụ: https://onthi-tracnghiem.pages.dev)
+  bằng cách vào Cloudflare Pages -> Chọn dự án -> Tab "Settings" -> Nhấn "Change project name".
+
+TRƯỜNG HỢP 2: NẾU BẠN ĐÃ CÓ SẴN TÊN MIỀN RIÊNG (Ví dụ: tracnghiem.vn, quiz.com)
+--------------------------------------------------------------------------------
+Nếu bạn muốn dùng tên miền riêng của mình:
   1. Trong trang quản lý dự án trên Cloudflare Pages, chọn tab "Custom domains".
   2. Nhấn "Set up a custom domain".
-  3. Nhập tên miền hoặc subdomain của bạn (ví dụ: quiz.tenban.vn).
-  4. Nhấn "Continue" -> Cloudflare sẽ tự động kích hoạt chứng chỉ bảo mật HTTPS/SSL 
-     hoàn toàn miễn phí cho bạn.
+  3. Nhập tên miền hoặc subdomain của bạn (ví dụ: quiz.tenmien.vn).
+  4. Nhấn "Continue" -> Cloudflare sẽ tự động trỏ DNS và kích hoạt chứng chỉ HTTPS
+     miễn phí cho bạn.
 
 ================================================================================
 CÁCH HOẠT ĐỘNG VÀ CẬP NHẬT CODE SAU NÀY (CI/CD TỰ ĐỘNG)
@@ -175,9 +196,9 @@ CÂU HỎI THƯỜNG GẶP & MẸO SỬ DỤNG MIỄN PHÍ HIỆU QUẢ NHẤT
      -> Máy chủ backend của bạn sẽ thức liên tục và phản hồi ngay lập tức!
 
 2. Có bị lỗi CORS khi gọi API không?
-   - HOÀN TOÀN KHÔNG. Nhờ cơ chế Reverse Proxy của file "_redirects" trên Cloudflare Pages, 
-     trình duyệt của người dùng gửi yêu cầu tới cùng một domain (ví dụ: wordquiz.pages.dev/api/quizzes),
-     Cloudflare đứng ở giữa chuyển tiếp dữ liệu đến Render nên triệt tiêu 100% lỗi CORS.
+   - HOÀN TOÀN KHÔNG. Backend FastAPI đã được cấu hình CORSMiddleware với allow_origins=["*"], 
+     cho phép Frontend trên Cloudflare Pages gọi trực tiếp đến API trên Render một cách 
+     nhanh chóng và ổn định 100%.
 
 3. Dữ liệu đề thi và môn học lưu ở đâu?
    - Dữ liệu được lưu trong SQLite database (backend/quizizz.db). Mỗi khi tải file Word lên, 

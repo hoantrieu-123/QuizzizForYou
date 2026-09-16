@@ -1,9 +1,10 @@
 import React from 'react';
 import { FileText, Download, Home } from './UIcons';
+import { apiUrl } from '../apiConfig';
 
 export default function Navbar({ currentView, onNavigate }) {
   const handleDownloadSample = () => {
-    window.location.href = '/api/sample-file';
+    window.location.href = apiUrl('/api/sample-file');
   };
 
   return (

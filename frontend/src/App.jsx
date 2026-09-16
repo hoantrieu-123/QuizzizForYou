@@ -5,6 +5,7 @@ import QuizList from './components/QuizList';
 import PreviewEditor from './components/PreviewEditor';
 import QuizPlayer from './components/QuizPlayer';
 import ResultView from './components/ResultView';
+import { apiUrl } from './apiConfig';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -20,7 +21,7 @@ export default function App() {
 
   const handleSelectQuiz = async (quizId) => {
     try {
-      const res = await fetch(`/api/quizzes/${quizId}`);
+      const res = await fetch(apiUrl(`/api/quizzes/${quizId}`));
       const data = await res.json();
       setCurrentQuiz(data.quiz);
       setCurrentView('preview');
@@ -31,7 +32,7 @@ export default function App() {
 
   const handleStartQuiz = async (quizId) => {
     try {
-      const res = await fetch(`/api/quizzes/${quizId}`);
+      const res = await fetch(apiUrl(`/api/quizzes/${quizId}`));
       const data = await res.json();
       setCurrentQuiz(data.quiz);
       setCurrentView('player');
@@ -41,7 +42,7 @@ export default function App() {
   };
 
   const handleSaveQuiz = async (quizId, title, questions) => {
-    const res = await fetch(`/api/quizzes/${quizId}`, {
+    const res = await fetch(apiUrl(`/api/quizzes/${quizId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, questions }),
@@ -54,7 +55,7 @@ export default function App() {
 
   const handleSubmitQuiz = async (answers, questionsToSubmit) => {
     try {
-      const res = await fetch(`/api/quizzes/${currentQuiz.id}/submit`, {
+      const res = await fetch(apiUrl(`/api/quizzes/${currentQuiz.id}/submit`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ answers, questions: questionsToSubmit || currentQuiz.questions }),

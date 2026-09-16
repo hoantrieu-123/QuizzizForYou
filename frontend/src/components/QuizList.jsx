@@ -4,6 +4,7 @@ import {
   FileText, Folders, AddFolder, ChevronDown, ChevronRight,
   GripVertical, Plus, Check, X
 } from './UIcons';
+import { apiUrl } from '../apiConfig';
 
 export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) {
   const [quizzes, setQuizzes] = useState([]);
@@ -27,8 +28,8 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     try {
       setLoading(true);
       const [quizzesRes, subjectsRes] = await Promise.all([
-        fetch('/api/quizzes'),
-        fetch('/api/subjects')
+        fetch(apiUrl('/api/quizzes')),
+        fetch(apiUrl('/api/subjects'))
       ]);
 
       const quizzesData = await quizzesRes.json();
@@ -60,7 +61,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     e.stopPropagation();
     if (!window.confirm('Bạn có chắc chắn muốn xóa bài kiểm tra này không?')) return;
     try {
-      const res = await fetch(`/api/quizzes/${id}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/quizzes/${id}`), { method: 'DELETE' });
       if (res.ok) {
         setQuizzes(prev => prev.filter(q => q.id !== id));
       }
@@ -118,7 +119,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, subject_id: normalizedSubjectId } : q));
 
     try {
-      await fetch(`/api/quizzes/${quizId}/subject`, {
+      await fetch(apiUrl(`/api/quizzes/${quizId}/subject`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject_id: normalizedSubjectId || null })
@@ -135,7 +136,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, subject_id: normalizedSubjectId } : q));
 
     try {
-      await fetch(`/api/quizzes/${quizId}/subject`, {
+      await fetch(apiUrl(`/api/quizzes/${quizId}/subject`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject_id: normalizedSubjectId || null })
@@ -152,7 +153,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     if (!newSubjectName.trim()) return;
 
     try {
-      const res = await fetch('/api/subjects', {
+      const res = await fetch(apiUrl('/api/subjects'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newSubjectName.trim() })
@@ -181,7 +182,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       return;
     }
     try {
-      await fetch(`/api/subjects/${subjectId}`, {
+      await fetch(apiUrl(`/api/subjects/${subjectId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editingSubjectName.trim() })
@@ -199,7 +200,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     if (!window.confirm('Bạn có chắc muốn xóa mục môn này? Các bài thi bên trong sẽ được chuyển an toàn về "Đề thi ngoài mục / Chưa phân loại".')) return;
 
     try {
-      const res = await fetch(`/api/subjects/${subjectId}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), { method: 'DELETE' });
       if (res.ok) {
         setSubjects(prev => prev.filter(s => s.id !== subjectId));
         setQuizzes(prev => prev.map(q => q.subject_id === subjectId ? { ...q, subject_id: '' } : q));

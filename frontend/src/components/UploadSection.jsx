@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, Loader2, Sparkles, AlertCircle, Download } from './UIcons';
+import { apiUrl } from '../apiConfig';
 
 
 export default function UploadSection({ onUploadSuccess }) {
@@ -44,7 +45,7 @@ export default function UploadSection({ onUploadSuccess }) {
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/upload', {
+      const response = await fetch(apiUrl('/api/upload'), {
         method: 'POST',
         body: formData,
       });
@@ -68,7 +69,7 @@ export default function UploadSection({ onUploadSuccess }) {
     setIsUploading(true);
 
     try {
-      const res = await fetch('/api/sample-file');
+      const res = await fetch(apiUrl('/api/sample-file'));
       if (!res.ok) throw new Error('Không thể tải file mẫu');
       const blob = await res.blob();
       const file = new File([blob], 'sample_quiz_highlighted.docx', {
@@ -185,7 +186,7 @@ export default function UploadSection({ onUploadSuccess }) {
 
         <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
           <a
-            href="/api/sample-file"
+            href={apiUrl('/api/sample-file')}
             download="Mau_De_Thi_Tat_Ca_Dinh_Dang.docx"
             className="btn btn-secondary"
             style={{
