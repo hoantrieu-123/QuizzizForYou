@@ -971,68 +971,6 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         )}
       </div>
 
-      {/* 2 Nút chuyển câu cố định 2 bên màn hình (Fixed Floating Side Navigation Buttons) */}
-      <button
-        type="button"
-        onClick={() => goToQuestion(Math.max(0, currentIndex - 1))}
-        disabled={currentIndex === 0}
-        style={{
-          position: 'fixed',
-          left: '1.25rem',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 90,
-          width: '48px',
-          height: '48px',
-          borderRadius: '50%',
-          background: currentIndex === 0 ? '#f8fafc' : '#ffffff',
-          color: currentIndex === 0 ? '#cbd5e1' : '#7c3aed',
-          border: currentIndex === 0 ? '1.5px solid #e2e8f0' : '2px solid #ddd6fe',
-          boxShadow: currentIndex === 0 ? 'none' : '0 4px 14px rgba(124, 58, 237, 0.15)',
-          cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease'
-        }}
-        title="Câu trước (Phím tắt: ←)"
-      >
-        <ArrowLeft size={22} />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => {
-          if (currentIndex < questions.length - 1) {
-            goToQuestion(currentIndex + 1);
-          } else {
-            handleSubmitClick();
-          }
-        }}
-        style={{
-          position: 'fixed',
-          right: '1.25rem',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 90,
-          width: '48px',
-          height: '48px',
-          borderRadius: '50%',
-          background: currentIndex < questions.length - 1 ? '#7c3aed' : '#10b981',
-          color: '#ffffff',
-          border: 'none',
-          boxShadow: currentIndex < questions.length - 1 ? '0 4px 16px rgba(124, 58, 237, 0.35)' : '0 4px 16px rgba(16, 185, 129, 0.35)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease'
-        }}
-        title={currentIndex < questions.length - 1 ? 'Câu tiếp theo (Phím tắt: →)' : 'Nộp bài thi'}
-      >
-        {currentIndex < questions.length - 1 ? <ArrowRight size={22} /> : <Send size={20} />}
-      </button>
-
       {/* Fixed Bottom Nav */}
       <div style={{
         position: 'fixed',
