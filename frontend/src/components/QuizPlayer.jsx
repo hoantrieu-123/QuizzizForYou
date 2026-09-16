@@ -647,7 +647,6 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     handleFillBlank(e.target.value);
                     handleFillBlankSlot(1, e.target.value);
                   }}
-                  placeholder="Gõ từ hoặc cụm từ đáp án..."
                   style={{
                     width: '100%',
                     padding: '0.85rem 1.15rem',
@@ -664,88 +663,68 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
           }
 
           return (
-            <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: '#f5f3ff',
-                padding: '0.65rem 1rem',
-                borderRadius: '8px',
-                border: '1px solid #ddd6fe'
-              }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#6d28d9' }}>
-                  ✍ Câu hỏi có {blanks.length} khoảng trống cần điền theo thứ tự:
-                </span>
-                <span style={{ fontSize: '0.8rem', color: '#7c3aed', fontWeight: 600 }}>
-                  (Ô 1 → Ô {blanks.length})
-                </span>
-              </div>
+            <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {blanks.map((bNum) => {
+                const val = (typeof currentAnswer === 'object' && currentAnswer !== null)
+                  ? (currentAnswer[bNum] || currentAnswer[String(bNum)] || '')
+                  : (bNum === 1 && typeof currentAnswer === 'string' ? currentAnswer : '');
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                {blanks.map((bNum) => {
-                  const val = (typeof currentAnswer === 'object' && currentAnswer !== null)
-                    ? (currentAnswer[bNum] || currentAnswer[String(bNum)] || '')
-                    : (bNum === 1 && typeof currentAnswer === 'string' ? currentAnswer : '');
-
-                  return (
-                    <div
-                      key={bNum}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.85rem',
-                        background: '#f8fafc',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '10px',
-                        border: '1.5px solid #e2e8f0',
-                        transition: 'border-color 0.15s ease'
-                      }}
-                    >
-                      <div style={{
-                        background: '#ede9fe',
-                        color: '#7c3aed',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: '8px',
-                        flexShrink: 0,
-                        minWidth: '95px',
-                        textAlign: 'center'
-                      }}>
-                        Ô trống {bNum}
-                      </div>
-                      <input
-                        type="text"
-                        value={val}
-                        onChange={(e) => handleFillBlankSlot(bNum, e.target.value)}
-                        placeholder={`Gõ đáp án cho ô trống ${bNum}...`}
-                        style={{
-                          flex: 1,
-                          padding: '0.75rem 1rem',
-                          fontSize: '1rem',
-                          borderRadius: '8px',
-                          border: '1.5px solid #cbd5e1',
-                          outline: 'none',
-                          background: '#ffffff',
-                          fontWeight: 500,
-                          transition: 'all 0.15s ease'
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = '#7c3aed';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
-                          e.currentTarget.parentElement.style.borderColor = '#c4b5fd';
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = '#cbd5e1';
-                          e.target.style.boxShadow = 'none';
-                          e.currentTarget.parentElement.style.borderColor = '#e2e8f0';
-                        }}
-                      />
+                return (
+                  <div
+                    key={bNum}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.85rem',
+                      background: '#f8fafc',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '10px',
+                      border: '1.5px solid #e2e8f0',
+                      transition: 'border-color 0.15s ease'
+                    }}
+                  >
+                    <div style={{
+                      background: '#ede9fe',
+                      color: '#7c3aed',
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      padding: '0.4rem 0.75rem',
+                      borderRadius: '8px',
+                      flexShrink: 0,
+                      minWidth: '95px',
+                      textAlign: 'center'
+                    }}>
+                      Ô trống {bNum}
                     </div>
-                  );
-                })}
-              </div>
+                    <input
+                      type="text"
+                      value={val}
+                      onChange={(e) => handleFillBlankSlot(bNum, e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem 1rem',
+                        fontSize: '1rem',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        outline: 'none',
+                        background: '#ffffff',
+                        fontWeight: 500,
+                        transition: 'all 0.15s ease'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#7c3aed';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
+                        e.currentTarget.parentElement.style.borderColor = '#c4b5fd';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#cbd5e1';
+                        e.target.style.boxShadow = 'none';
+                        e.currentTarget.parentElement.style.borderColor = '#e2e8f0';
+                      }}
+                    />
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
