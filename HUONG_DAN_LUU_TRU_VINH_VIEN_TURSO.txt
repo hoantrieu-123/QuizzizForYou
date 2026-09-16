@@ -1,0 +1,76 @@
+================================================================================
+  HƯỚNG DẪN LƯU TRỮ DỮ LIỆU VĨNH VIỄN BẰNG CLOUD DATABASE (TURSO)
+================================================================================
+
+TẠI SAO CẦN LÀM BƯỚC NÀY?
+- Trên gói miễn phí của Render.com, server sẽ tự động "ngủ" nếu sau 15 phút không có 
+  người truy cập. Khi có người vào lại, Render khởi động container mới và xóa sạch ổ cứng tạm.
+- Turso (https://turso.tech) là dịch vụ Cơ sở dữ liệu SQLite trên Đám mây hàng đầu thế giới:
+  + Gói miễn phí vĩnh viễn: 9 GB lưu trữ, 500 database, 1 tỷ lượt đọc dữ liệu.
+  + Dữ liệu nằm độc lập trên đám mây, server Render có tắt hay bật thì đề thi và môn học 
+    của bạn vẫn được bảo toàn 100% vĩnh viễn!
+
+Toàn bộ quá trình chỉ mất 2-3 phút theo 3 bước cực kỳ đơn giản dưới đây:
+
+================================================================================
+BƯỚC 1: TẠO CƠ SỞ DỮ LIỆU MIỄN PHÍ TRÊN TURSO.TECH
+================================================================================
+
+1. Mở trình duyệt và truy cập: https://turso.tech
+2. Nhấn nút "Start Free" hoặc "Sign in" -> Chọn "Continue with GitHub" (đăng nhập nhanh bằng GitHub).
+3. Sau khi vào màn hình quản lý (Dashboard):
+   - Nhấn nút "Create database" (hoặc "New Database").
+   - Name (Tên database): Nhập chữ thường viết liền, ví dụ: wordquiz-db
+   - Location (Vị trí máy chủ): Chọn "Singapore (sin)" (để tốc độ tải từ Việt Nam nhanh nhất).
+   - Nhấn nút "Create database".
+4. Lấy 2 thông số kết nối:
+   - Thông số 1 (Database URL): Bạn sẽ thấy dòng link dạng:
+     libsql://wordquiz-db-[tên-bạn].turso.io
+     -> Hãy nhấn biểu tượng Copy để lưu lại.
+
+   - Thông số 2 (Auth Token): 
+     Nhấn vào nút "Create Token" (hoặc "Generate Token") -> Copy chuỗi token dài hiện ra.
+
+================================================================================
+BƯỚC 2: CẤU HÌNH BIẾN MÔI TRƯỜNG TRÊN RENDER.COM
+================================================================================
+
+1. Truy cập: https://dashboard.render.com
+2. Nhấp vào Web Service Backend của bạn (ví dụ: quizzizforyou).
+3. Ở thanh menu bên trái, nhấp vào mục "Environment".
+4. Nhấn nút "Add Environment Variable" và thêm 2 dòng sau:
+
+   Dòng 1:
+     - Key:   TURSO_DATABASE_URL
+     - Value: [Dán đường link Database URL đã copy ở Bước 1]
+              (Ví dụ: libsql://wordquiz-db-username.turso.io)
+
+   Dòng 2:
+     - Key:   TURSO_AUTH_TOKEN
+     - Value: [Dán chuỗi Auth Token dài đã copy ở Bước 1]
+
+5. Nhấn nút "Save Changes" màu xanh ở cuối bảng.
+
+================================================================================
+BƯỚC 3: ĐẨY CODE ĐÃ CẬP NHẬT LÊN GITHUB
+================================================================================
+
+Hệ thống đã tự động thêm thư viện "libsql" và cập nhật file backend/database.py 
+để tự động kết nối với Turso khi có 2 biến môi trường trên.
+
+Bạn chỉ cần mở Terminal (PowerShell hoặc CMD) trong thư mục dự án và chạy:
+
+  git add .
+  git commit -m "Support Turso Cloud Database for permanent storage"
+  git push
+
+================================================================================
+KẾT QUẢ:
+- Render sẽ tự động build lại trong 1-2 phút, cài đặt "libsql" và kết nối trực tiếp đến Turso.
+- Từ bây giờ:
+  + Mọi đề thi bạn tải lên (.docx), mọi chỉnh sửa câu hỏi, môn học, kéo thả đều được lưu 
+    vĩnh viễn trên Cloud Turso.
+  + Server Render dù có ngủ hay khởi động lại bao nhiêu lần, website của bạn khi mở ra 
+    vẫn giữ nguyên 100% tất cả đề thi đã tạo!
+================================================================================
+

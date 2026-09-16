@@ -8,13 +8,44 @@ import uuid
 import os
 from typing import List, Dict, Any, Optional
 
+try:
+    import libsql
+    HAS_LIBSQL = True
+except ImportError:
+    libsql = None
+    HAS_LIBSQL = False
+
 DB_FILE = os.path.join(os.path.dirname(__file__), "quizizz.db")
+TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "").strip()
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip()
 
 
 def get_connection():
+    if TURSO_DATABASE_URL and HAS_LIBSQL:
+        return libsql.connect(database=TURSO_DATABASE_URL, auth_token=TURSO_AUTH_TOKEN)
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def row_to_dict(cursor, row) -> Optional[Dict[str, Any]]:
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, 'keys'):
+        return dict(row)
+    cols = [col[0] for col in cursor.description]
+    return dict(zip(cols, row))
+
+
+def rows_to_dicts(cursor, rows) -> List[Dict[str, Any]]:
+    if not rows:
+        return []
+    if hasattr(rows[0], 'keys'):
+        return [dict(r) for r in rows]
+    cols = [col[0] for col in cursor.description]
+    return [dict(zip(cols, r)) for r in rows]
 
 
 def init_db():
@@ -150,8 +181,9 @@ def get_quizzes() -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM quizzes ORDER BY created_at DESC")
     rows = cursor.fetchall()
+    result = rows_to_dicts(cursor, rows)
     conn.close()
-    return [dict(r) for r in rows]
+    return result
 
 
 def get_quiz(quiz_id: str) -> Optional[Dict[str, Any]]:
@@ -164,14 +196,14 @@ def get_quiz(quiz_id: str) -> Optional[Dict[str, Any]]:
         conn.close()
         return None
 
-    quiz_data = dict(quiz_row)
+    quiz_data = row_to_dict(cursor, quiz_row)
     cursor.execute("SELECT * FROM questions WHERE quiz_id = ? ORDER BY order_idx ASC", (quiz_id,))
     q_rows = cursor.fetchall()
+    q_dicts = rows_to_dicts(cursor, q_rows)
     conn.close()
 
     questions = []
-    for r in q_rows:
-        d = dict(r)
+    for d in q_dicts:
         questions.append({
             'id': d['id'],
             'order': d['order_idx'],
@@ -272,8 +304,9 @@ def get_subjects() -> List[Dict[str, Any]]:
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM subjects ORDER BY order_idx ASC, created_at ASC")
     rows = cursor.fetchall()
+    result = rows_to_dicts(cursor, rows)
     conn.close()
-    return [dict(r) for r in rows]
+    return result
 
 
 def create_subject(name: str) -> Dict[str, Any]:
@@ -289,7 +322,7 @@ def create_subject(name: str) -> Dict[str, Any]:
     )
     conn.commit()
     cursor.execute("SELECT * FROM subjects WHERE id = ?", (subject_id,))
-    row = dict(cursor.fetchone())
+    row = row_to_dict(cursor, cursor.fetchone())
     conn.close()
     return row
 
