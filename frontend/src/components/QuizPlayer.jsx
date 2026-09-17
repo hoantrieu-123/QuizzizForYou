@@ -4,8 +4,296 @@ import {
   Send, Grid, X, Edit3, Shuffle
 } from './UIcons';
 
+export const cleanQuestionPrompt = (text) => {
+  if (!text) return '';
+  return String(text)
+    .replace(/^(?:(?:Câu|Question|Bài)\s*\d+[\s\:\.\-]*|\d+[\.\)\-])\s*\n?/i, '')
+    .trim();
+};
+
+export const cleanItemText = (text) => {
+  if (!text) return '';
+  return String(text)
+    .replace(/^\s*(?:(?:Câu|Vị trí|Mục|Slot|Item)\s*\d+[\s\:\.\-]*|[a-zA-Z\d]+[\.\)\-])\s*/i, '')
+    .trim();
+};
+
+export const shuffleArray = (arr) => {
+  if (!arr || !Array.isArray(arr)) return [];
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
+
+export const createScrambledRights = (rights) => {
+  if (!rights || !Array.isArray(rights) || rights.length <= 1) return [...(rights || [])];
+  const distinct = new Set(rights).size;
+  if (distinct <= 1) return [...rights];
+
+  let scrambled = shuffleArray([...rights]);
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const hasCollision = scrambled.some((r, idx) => r === rights[idx]);
+    if (!hasCollision) return scrambled;
+    scrambled = shuffleArray([...rights]);
+  }
+
+  // Fallback derangement: cycle shift by 1
+  return rights.map((_, i) => rights[(i + 1) % rights.length]);
+};
+
+export const createScrambledBlanks = (count) => {
+  if (!count || count <= 1) return [1];
+  const original = Array.from({ length: count }, (_, i) => i + 1);
+  let scrambled = shuffleArray([...original]);
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const isIdentical = scrambled.every((v, i) => v === original[i]);
+    if (!isIdentical) return scrambled;
+    scrambled = shuffleArray([...original]);
+  }
+  return original.map((_, i) => original[(i + 1) % original.length]);
+};
+
+export const formatPromptWithNumberedBlanks = (text) => {
+  if (!text) return '';
+  const cleaned = cleanQuestionPrompt(text);
+  if (/(?:_{2,}|\.{3,})\s*[\(\[]\s*\d+\s*[\)\]]|[\(\[]\s*\d+\s*[\)\]]\s*(?:_{2,}|\.{3,})/.test(cleaned)) {
+    return cleaned;
+  }
+  let counter = 1;
+  const blankRegex = /(_{2,}|\[\s*(?:\.{2,}|blank|ô\s*trống|_+|\.\.\.)\s*\]|\.{3,})/g;
+  return cleaned.replace(blankRegex, (match) => {
+    const res = `${match} (${counter})`;
+    counter++;
+    return res;
+  });
+};
+
+export const createRandomizedQuizQuestions = (rawQuestions) => {
+  if (!rawQuestions || !Array.isArray(rawQuestions) || rawQuestions.length === 0) {
+    return [];
+  }
+
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  // 1. Đảo ngẫu nhiên vị trí các câu hỏi
+  const shuffled = shuffleArray(rawQuestions);
+
+  // 2. Đánh số lại thứ tự cố định từ 1 -> N, làm sạch tiền tố "Câu X:", và đảo các phương án đáp án
+  return shuffled.map((q, idx) => {
+    const newOrder = idx + 1;
+    const cleanedContent = cleanQuestionPrompt(q.content);
+
+    const newQ = {
+      ...q,
+      order: newOrder,
+      content: cleanedContent
+    };
+
+    // 1. Đảo đáp án trắc nghiệm A, B, C, D (single_choice & multiple_choice)
+    if (newQ.type === 'single_choice' || newQ.type === 'multiple_choice') {
+      const opts = newQ.options || [];
+      if (opts.length >= 2) {
+        const originalCorrectAnswers = Array.isArray(newQ.correctAnswers)
+          ? newQ.correctAnswers
+          : (newQ.correctAnswers ? [newQ.correctAnswers] : []);
+
+        const optsWithFlag = opts.map(opt => ({
+          ...opt,
+          isOriginallyCorrect: Boolean(
+            opt.highlighted ||
+            originalCorrectAnswers.includes(opt.label)
+          )
+        }));
+
+        const shuffledOpts = shuffleArray(optsWithFlag);
+        const remappedOpts = shuffledOpts.map((opt, optIdx) => {
+          const newLabel = ALPHABET[optIdx] || `Opt${optIdx + 1}`;
+          const rawText = (opt.text !== undefined && opt.text !== null && String(opt.text).trim() !== '')
+            ? String(opt.text).trim()
+            : String(opt.full_text || '').trim();
+
+          const stripped = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+
+          return {
+            ...opt,
+            label: newLabel,
+            text: stripped || opt.label,
+            full_text: `${newLabel}. ${stripped || opt.label}`,
+            highlighted: opt.isOriginallyCorrect
+          };
+        });
+
+        const newCorrect = remappedOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
+        newQ.options = remappedOpts;
+        newQ.correctAnswers = newCorrect;
+      }
+    }
+    // 2. Đảo đáp án Đúng / Sai (true_false)
+    else if (newQ.type === 'true_false') {
+      newQ.shuffledButtons = shuffleArray(['Đúng', 'Sai']);
+
+      // Multi-statement: đảo ngẫu nhiên thứ tự các mệnh đề
+      if (newQ.statements && newQ.statements.length >= 2) {
+        const shuffledStmts = shuffleArray(newQ.statements).map((st, sIdx) => {
+          const stableId = st.id || `st_${sIdx + 1}`;
+          const cleanStContent = String(st.content || '').replace(/^\s*(?:[a-dA-D\d]+[\.\)]\s*)+/, '').trim();
+          return {
+            ...st,
+            id: stableId,
+            order: sIdx + 1,
+            content: cleanStContent || st.content,
+            shuffledButtons: shuffleArray(['Đúng', 'Sai'])
+          };
+        });
+        newQ.statements = shuffledStmts;
+        newQ.correctAnswers = shuffledStmts.map(s => s.correctAnswer);
+      }
+
+      // Single true_false with options (A. Đúng, B. Sai)
+      if (newQ.options && newQ.options.length >= 2) {
+        const originalCorrectAnswers = Array.isArray(newQ.correctAnswers)
+          ? newQ.correctAnswers
+          : (newQ.correctAnswers ? [newQ.correctAnswers] : []);
+
+        const optsWithFlag = newQ.options.map(opt => ({
+          ...opt,
+          isOriginallyCorrect: Boolean(
+            opt.highlighted ||
+            originalCorrectAnswers.includes(opt.label)
+          )
+        }));
+
+        const shuffledOpts = shuffleArray(optsWithFlag);
+        const remappedOpts = shuffledOpts.map((opt, optIdx) => {
+          const newLabel = ALPHABET[optIdx] || `Opt${optIdx + 1}`;
+          const rawText = (opt.text !== undefined && opt.text !== null && String(opt.text).trim() !== '')
+            ? String(opt.text).trim()
+            : String(opt.full_text || '').trim();
+
+          const stripped = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+
+          return {
+            ...opt,
+            label: newLabel,
+            text: stripped || opt.label,
+            full_text: `${newLabel}. ${stripped || opt.label}`,
+            highlighted: opt.isOriginallyCorrect
+          };
+        });
+
+        const newCorrect = remappedOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
+        newQ.options = remappedOpts;
+        newQ.correctAnswers = newCorrect;
+      }
+    }
+    // 3. Đảo từ khóa và xáo trộn các ô câu kéo thả (drag_drop_blank)
+    else if (newQ.type === 'drag_drop_blank') {
+      const existingBank = Array.isArray(newQ.bank) ? newQ.bank : [];
+      const itemWords = (newQ.items || []).flatMap(it => {
+        if (Array.isArray(it.correctAnswers)) return it.correctAnswers;
+        if (it.correctAnswer) return [it.correctAnswer];
+        return [];
+      });
+      const allBankWords = [...new Set([...existingBank, ...itemWords])].filter(Boolean);
+      if (allBankWords.length >= 2) {
+        newQ.bank = shuffleArray(allBankWords);
+      } else if (allBankWords.length === 1) {
+        newQ.bank = allBankWords;
+      }
+
+      // Xáo trộn cả các ô / câu kéo thả (items)
+      const rawItems = newQ.items || [];
+      if (rawItems.length >= 2) {
+        const shuffledItems = shuffleArray(rawItems).map((it, itIdx) => {
+          const newBlank = itIdx + 1;
+          const cleanedText = cleanItemText(it.text);
+          return {
+            ...it,
+            blank: newBlank,
+            text: cleanedText || it.text
+          };
+        });
+        newQ.items = shuffledItems;
+      }
+    }
+    // 4. Đảo ngẫu nhiên cặp ghép nối và xáo trộn Cột B (matching)
+    else if (newQ.type === 'matching') {
+      const rawPairs = newQ.pairs || [];
+      if (rawPairs.length >= 2) {
+        const pairsWithId = rawPairs.map((p, pIdx) => ({
+          ...p,
+          id: p.id || p.left || `pair_${pIdx + 1}`
+        }));
+        const shuffledPairs = shuffleArray(pairsWithId);
+        const rights = shuffledPairs.map(p => p.right);
+        const scrambledRights = createScrambledRights(rights);
+
+        newQ.pairs = shuffledPairs;
+        newQ.shuffledRights = scrambledRights;
+        newQ.correctAnswers = shuffledPairs.map(p => `${p.left} → ${p.right}`);
+      }
+    }
+    // 5. Đảo phương án hoặc ngân hàng từ của câu điền từ (fill_blank)
+    else if (newQ.type === 'fill_blank') {
+      const blankCount = Math.max(
+        newQ.blankCount || 0,
+        (newQ.correctAnswers || []).length,
+        1
+      );
+      if (blankCount >= 2) {
+        newQ.shuffledBlanks = createScrambledBlanks(blankCount);
+      }
+
+      if (newQ.options && newQ.options.length >= 2) {
+        const originalCorrectAnswers = Array.isArray(newQ.correctAnswers)
+          ? newQ.correctAnswers
+          : (newQ.correctAnswers ? [newQ.correctAnswers] : []);
+
+        const optsWithFlag = newQ.options.map(opt => ({
+          ...opt,
+          isOriginallyCorrect: Boolean(
+            opt.highlighted ||
+            originalCorrectAnswers.includes(opt.label)
+          )
+        }));
+
+        const shuffledOpts = shuffleArray(optsWithFlag);
+        const remappedOpts = shuffledOpts.map((opt, optIdx) => {
+          const newLabel = ALPHABET[optIdx] || `Opt${optIdx + 1}`;
+          const rawText = (opt.text !== undefined && opt.text !== null && String(opt.text).trim() !== '')
+            ? String(opt.text).trim()
+            : String(opt.full_text || '').trim();
+
+          const stripped = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+
+          return {
+            ...opt,
+            label: newLabel,
+            text: stripped || opt.label,
+            full_text: `${newLabel}. ${stripped || opt.label}`,
+            highlighted: opt.isOriginallyCorrect
+          };
+        });
+
+        const newCorrect = remappedOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
+        newQ.options = remappedOpts;
+        newQ.correctAnswers = newCorrect;
+      }
+
+      if (newQ.bank && newQ.bank.length >= 2) {
+        newQ.bank = shuffleArray(newQ.bank);
+      }
+    }
+
+    return newQ;
+  });
+};
+
 export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
-  const [questions, setQuestions] = useState(quiz.questions || []);
+  const [questions, setQuestions] = useState(() => createRandomizedQuizQuestions(quiz.questions || []));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [secondsElapsed, setSecondsElapsed] = useState(0);
@@ -14,6 +302,13 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
   const [selectedMatchLeft, setSelectedMatchLeft] = useState(null);
   const [activeBlank, setActiveBlank] = useState(null);
+
+  useEffect(() => {
+    setQuestions(createRandomizedQuizQuestions(quiz.questions || []));
+    setCurrentIndex(0);
+    setAnswers({});
+    setSecondsElapsed(0);
+  }, [quiz]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -197,15 +492,6 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const shuffleArray = (arr) => {
-    const copy = [...arr];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
-  };
-
   // 1. ĐẢO TẤT CẢ CÂU HỎI (Shuffle Questions)
   const handleShuffleQuestions = () => {
     if (questions.length < 2) return;
@@ -213,7 +499,8 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
     const shuffled = shuffleArray(questions);
     const renumbered = shuffled.map((q, idx) => ({
       ...q,
-      order: idx + 1
+      order: idx + 1,
+      content: cleanQuestionPrompt(q.content)
     }));
     setQuestions(renumbered);
     if (currentQId) {
@@ -222,7 +509,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         setCurrentIndex(newIdx);
       }
     }
-    showToast(`🔀 Đã đảo thứ tự tất cả ${questions.length} câu hỏi! Trạng thái được giữ nguyên khi làm bài.`);
+    showToast(`🔀 Đã đảo ngẫu nhiên toàn bộ câu hỏi (thứ tự 1 → ${questions.length})! Trạng thái được giữ nguyên.`);
   };
 
   // 2. ĐẢO TẤT CẢ ĐÁP ÁN (Shuffle All Answers)
@@ -244,17 +531,27 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             selectedTexts = opts.filter(o => userAns.includes(o.label)).map(o => o.text);
           }
 
-          const shuffledOpts = shuffleArray(opts);
+          const originalCorrect = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : (q.correctAnswers ? [q.correctAnswers] : []);
+
+          const optsWithFlag = opts.map(opt => ({
+            ...opt,
+            isOriginallyCorrect: Boolean(opt.highlighted || originalCorrect.includes(opt.label))
+          }));
+
+          const shuffledOpts = shuffleArray(optsWithFlag);
           const newOpts = shuffledOpts.map((opt, idx) => {
             const newLabel = ALPHABET[idx] || `Opt${idx + 1}`;
             return {
               ...opt,
               label: newLabel,
-              full_text: `${newLabel}. ${opt.text || ''}`
+              full_text: `${newLabel}. ${opt.text || ''}`,
+              highlighted: opt.isOriginallyCorrect
             };
           });
 
-          const newCorrect = newOpts.filter(o => o.highlighted).map(o => o.label);
+          const newCorrect = newOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
 
           if (q.type === 'single_choice' && selectedText) {
             const newOpt = newOpts.find(o => o.text === selectedText);
@@ -272,33 +569,207 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             correctAnswers: newCorrect
           };
         }
-      } else if (q.type === 'drag_drop_blank') {
-        const currentBank = (q.bank && q.bank.length > 0)
-          ? q.bank
-          : (q.items || []).map(it => it.correctAnswer).filter(Boolean);
-        if (currentBank.length >= 2) {
+        return q;
+      }
+      // 2. TRUE / FALSE
+      else if (q.type === 'true_false') {
+        const newQ = { ...q, shuffledButtons: shuffleArray(['Đúng', 'Sai']) };
+
+        // Multi-statement
+        if (q.statements && q.statements.length >= 2) {
+          const shuffledStmts = shuffleArray(q.statements).map((st, sIdx) => {
+            const stableId = st.id || `st_${sIdx + 1}`;
+            const cleanStContent = String(st.content || '').replace(/^\s*(?:[a-dA-D\d]+[\.\)]\s*)+/, '').trim();
+            return {
+              ...st,
+              id: stableId,
+              order: sIdx + 1,
+              content: cleanStContent || st.content,
+              shuffledButtons: shuffleArray(['Đúng', 'Sai'])
+            };
+          });
+          newQ.statements = shuffledStmts;
+          newQ.correctAnswers = shuffledStmts.map(s => s.correctAnswer);
+        }
+
+        // Single true_false with options
+        if (q.options && q.options.length >= 2) {
+          const userAns = answers[q.id];
+          let selectedText = null;
+          if (userAns) {
+            const found = q.options.find(o => o.label === userAns);
+            if (found) selectedText = found.text;
+          }
+
+          const originalCorrect = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : (q.correctAnswers ? [q.correctAnswers] : []);
+
+          const optsWithFlag = q.options.map(opt => ({
+            ...opt,
+            isOriginallyCorrect: Boolean(opt.highlighted || originalCorrect.includes(opt.label))
+          }));
+
+          const shuffledOpts = shuffleArray(optsWithFlag);
+          const newOpts = shuffledOpts.map((opt, idx) => {
+            const newLabel = ALPHABET[idx] || `Opt${idx + 1}`;
+            return {
+              ...opt,
+              label: newLabel,
+              full_text: `${newLabel}. ${opt.text || ''}`,
+              highlighted: opt.isOriginallyCorrect
+            };
+          });
+
+          const newCorrect = newOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
+
+          if (selectedText) {
+            const newOpt = newOpts.find(o => o.text === selectedText);
+            if (newOpt) {
+              newAnswers[q.id] = newOpt.label;
+            }
+          }
+
+          newQ.options = newOpts;
+          newQ.correctAnswers = newCorrect;
+        }
+
+        return newQ;
+      }
+      // 3. DRAG & DROP BLANK
+      else if (q.type === 'drag_drop_blank') {
+        const existingBank = Array.isArray(q.bank) ? q.bank : [];
+        const itemWords = (q.items || []).flatMap(it => {
+          if (Array.isArray(it.correctAnswers)) return it.correctAnswers;
+          if (it.correctAnswer) return [it.correctAnswer];
+          return [];
+        });
+        const allBankWords = [...new Set([...existingBank, ...itemWords])].filter(Boolean);
+        const shuffledBank = allBankWords.length >= 2 ? shuffleArray(allBankWords) : allBankWords;
+
+        const rawItems = q.items || [];
+        if (rawItems.length >= 2) {
+          const currentAnsMap = answers[q.id] || {};
+          const itemsWithAnswers = rawItems.map(it => ({
+            ...it,
+            currentPlaced: currentAnsMap[it.blank] || currentAnsMap[String(it.blank)] || []
+          }));
+
+          const shuffledItems = shuffleArray(itemsWithAnswers);
+          const newAnsMap = {};
+
+          const remappedItems = shuffledItems.map((it, idx) => {
+            const newBlank = idx + 1;
+            if (it.currentPlaced && it.currentPlaced.length > 0) {
+              newAnsMap[newBlank] = it.currentPlaced;
+            }
+            const cleanedText = cleanItemText(it.text);
+            return {
+              ...it,
+              blank: newBlank,
+              text: cleanedText || it.text,
+              currentPlaced: undefined
+            };
+          });
+
+          newAnswers[q.id] = newAnsMap;
+
           return {
             ...q,
-            bank: shuffleArray(currentBank)
+            bank: shuffledBank,
+            items: remappedItems
           };
         }
-      } else if (q.type === 'matching') {
-        const pairs = q.pairs || [];
-        if (pairs.length >= 2) {
-          const shuffledPairs = shuffleArray(pairs);
+
+        return {
+          ...q,
+          bank: shuffledBank
+        };
+      }
+      // 4. MATCHING
+      else if (q.type === 'matching') {
+        const rawPairs = q.pairs || [];
+        if (rawPairs.length >= 2) {
+          const pairsWithId = rawPairs.map((p, pIdx) => ({
+            ...p,
+            id: p.id || p.left || `pair_${pIdx + 1}`
+          }));
+          const shuffledPairs = shuffleArray(pairsWithId);
+          const rights = shuffledPairs.map(p => p.right);
+          const scrambledRights = createScrambledRights(rights);
           return {
             ...q,
             pairs: shuffledPairs,
+            shuffledRights: scrambledRights,
             correctAnswers: shuffledPairs.map(p => `${p.left} → ${p.right}`)
           };
         }
+      }
+      // 5. FILL BLANK
+      else if (q.type === 'fill_blank') {
+        const newQ = { ...q };
+        const blankCount = Math.max(
+          q.blankCount || 0,
+          (q.correctAnswers || []).length,
+          1
+        );
+        if (blankCount >= 2) {
+          newQ.shuffledBlanks = createScrambledBlanks(blankCount);
+        }
+
+        if (q.options && q.options.length >= 2) {
+          const userAns = answers[q.id];
+          let selectedText = null;
+          if (typeof userAns === 'string' && userAns) {
+            const found = q.options.find(o => o.label === userAns || o.text === userAns);
+            if (found) selectedText = found.text;
+          }
+
+          const originalCorrect = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : (q.correctAnswers ? [q.correctAnswers] : []);
+
+          const optsWithFlag = q.options.map(opt => ({
+            ...opt,
+            isOriginallyCorrect: Boolean(opt.highlighted || originalCorrect.includes(opt.label))
+          }));
+
+          const shuffledOpts = shuffleArray(optsWithFlag);
+          const newOpts = shuffledOpts.map((opt, idx) => {
+            const newLabel = ALPHABET[idx] || `Opt${idx + 1}`;
+            return {
+              ...opt,
+              label: newLabel,
+              full_text: `${newLabel}. ${opt.text || ''}`,
+              highlighted: opt.isOriginallyCorrect
+            };
+          });
+
+          const newCorrect = newOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
+
+          if (selectedText) {
+            const newOpt = newOpts.find(o => o.text === selectedText);
+            if (newOpt) {
+              newAnswers[q.id] = newOpt.label;
+            }
+          }
+
+          newQ.options = newOpts;
+          newQ.correctAnswers = newCorrect;
+        }
+
+        if (q.bank && q.bank.length >= 2) {
+          newQ.bank = shuffleArray(q.bank);
+        }
+
+        return newQ;
       }
       return q;
     });
 
     setQuestions(updatedQuestions);
     setAnswers(newAnswers);
-    showToast(`Đã đảo ngẫu nhiên toàn bộ đáp án của tất cả câu hỏi! Trạng thái được giữ nguyên khi chuyển câu.`);
+    showToast(`🔀 Đã đảo ngẫu nhiên toàn bộ đáp án của tất cả câu hỏi! Trạng thái được giữ nguyên khi chuyển câu.`);
   };
 
 
@@ -505,7 +976,9 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
             : 'inherit'
         }}>
-          {currentQ.content}
+          {currentQ.type === 'fill_blank' && (currentQ.blankCount > 1 || (currentQ.correctAnswers && currentQ.correctAnswers.length > 1))
+            ? formatPromptWithNumberedBlanks(currentQ.content)
+            : cleanQuestionPrompt(currentQ.content)}
         </h3>
 
         {/* 1. SINGLE CHOICE */}
@@ -581,150 +1054,243 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         {/* 3. TRUE / FALSE */}
         {currentQ.type === 'true_false' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {(currentQ.statements || []).map((st) => {
-              const stKey = st.id || String(st.order);
-              const userStVal = (answers[currentQ.id] || {})[stKey];
-
-              return (
-                <div
-                  key={stKey}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '1rem 1.25rem',
-                    background: '#f8fafc',
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
-                    gap: '1rem',
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <span style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 500, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
-                    {st.content}
-                  </span>
-
-                  <div style={{ display: 'flex', gap: '0.65rem' }}>
-                    <button
-                      type="button"
-                      className={`btn ${userStVal === 'Đúng' ? 'btn-success' : 'btn-secondary'}`}
-                      onClick={() => handleStatementAnswer(stKey, 'Đúng')}
-                      style={{ minWidth: '85px' }}
+            {(!currentQ.statements || currentQ.statements.length === 0) ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {(currentQ.options || []).map(opt => {
+                  const isSelected = currentAnswer === opt.label;
+                  return (
+                    <div
+                      key={opt.label}
+                      onClick={() => handleSingleChoice(opt.label)}
+                      className={`option-item ${isSelected ? 'selected' : ''}`}
                     >
-                      Đúng {userStVal === 'Đúng' && '✓'}
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn ${userStVal === 'Sai' ? 'btn-danger' : 'btn-secondary'}`}
-                      onClick={() => handleStatementAnswer(stKey, 'Sai')}
-                      style={{ minWidth: '85px' }}
-                    >
-                      Sai {userStVal === 'Sai' && '✓'}
-                    </button>
+                      <div className="option-badge">
+                        {opt.label}
+                      </div>
+                      <span style={{
+                        fontSize: '1rem',
+                        color: isSelected ? '#7c3aed' : '#1e293b',
+                        fontWeight: isSelected ? 600 : 400,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        lineHeight: 1.5,
+                        tabSize: 4,
+                        fontFamily: (opt.text || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' : 'inherit'
+                      }}>
+                        {opt.text || opt.full_text}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              (currentQ.statements || []).map((st) => {
+                const stKey = st.id || String(st.order);
+                const userStVal = (answers[currentQ.id] || {})[stKey];
+                const buttons = st.shuffledButtons || currentQ.shuffledButtons || ['Đúng', 'Sai'];
+
+                return (
+                  <div
+                    key={stKey}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '1rem 1.25rem',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      gap: '1rem',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 500, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      {st.content}
+                    </span>
+
+                    <div style={{ display: 'flex', gap: '0.65rem' }}>
+                      {buttons.map(btnVal => (
+                        <button
+                          key={btnVal}
+                          type="button"
+                          className={`btn ${userStVal === btnVal ? (btnVal === 'Đúng' ? 'btn-success' : 'btn-danger') : 'btn-secondary'}`}
+                          onClick={() => handleStatementAnswer(stKey, btnVal)}
+                          style={{ minWidth: '85px' }}
+                        >
+                          {btnVal} {userStVal === btnVal && '✓'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         )}
 
         {/* 4. FILL BLANK */}
         {currentQ.type === 'fill_blank' && (() => {
-          const blanks = getQuestionBlanks(currentQ);
-          if (blanks.length <= 1) {
-            const singleVal = (typeof currentAnswer === 'object' && currentAnswer !== null)
-              ? (currentAnswer['1'] || currentAnswer[1] || '')
-              : (currentAnswer || '');
-            return (
-              <div style={{ marginTop: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
-                  Nhập câu trả lời của bạn vào ô bên dưới:
-                </label>
-                <input
-                  type="text"
-                  value={singleVal}
-                  onChange={(e) => {
-                    handleFillBlank(e.target.value);
-                    handleFillBlankSlot(1, e.target.value);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '0.85rem 1.15rem',
-                    fontSize: '1.1rem',
-                    borderRadius: '10px',
-                    border: '2px solid #cbd5e1',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                />
-              </div>
-            );
-          }
+          const blanks = currentQ.shuffledBlanks || getQuestionBlanks(currentQ);
+          const singleVal = (typeof currentAnswer === 'object' && currentAnswer !== null)
+            ? (currentAnswer['1'] || currentAnswer[1] || '')
+            : (currentAnswer || '');
 
           return (
-            <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {blanks.map((bNum) => {
-                const val = (typeof currentAnswer === 'object' && currentAnswer !== null)
-                  ? (currentAnswer[bNum] || currentAnswer[String(bNum)] || '')
-                  : (bNum === 1 && typeof currentAnswer === 'string' ? currentAnswer : '');
+            <div>
+              {/* If bank words exist for fill blank, show shuffled chips */}
+              {currentQ.bank && currentQ.bank.length > 0 && (
+                <div style={{
+                  background: '#ffffff',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '10px',
+                  border: '1.5px solid #ddd6fe',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6d28d9', marginRight: '0.25rem' }}>
+                    💡 Hộp từ gợi ý (Bấm để điền):
+                  </span>
+                  {currentQ.bank.map((word, wIdx) => (
+                    <button
+                      key={wIdx}
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        if (blanks.length <= 1) {
+                          handleFillBlank(word);
+                          handleFillBlankSlot(1, word);
+                        } else {
+                          const targetSlot = activeBlank || (blanks.length > 0 ? blanks[0] : 1);
+                          handleFillBlankSlot(targetSlot, word);
+                        }
+                      }}
+                      style={{ fontSize: '0.875rem', padding: '0.35rem 0.75rem', borderRadius: '8px' }}
+                    >
+                      {word}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                return (
-                  <div
-                    key={bNum}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                      background: '#f8fafc',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '10px',
-                      border: '1.5px solid #e2e8f0',
-                      transition: 'border-color 0.15s ease'
+              {blanks.length <= 1 ? (
+                <div style={{ marginTop: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
+                    Nhập câu trả lời của bạn vào ô bên dưới:
+                  </label>
+                  <input
+                    type="text"
+                    value={singleVal}
+                    onChange={(e) => {
+                      handleFillBlank(e.target.value);
+                      handleFillBlankSlot(1, e.target.value);
                     }}
-                  >
-                    <div style={{
-                      background: '#ede9fe',
-                      color: '#7c3aed',
-                      fontWeight: 800,
-                      fontSize: '0.85rem',
-                      padding: '0.4rem 0.75rem',
-                      borderRadius: '8px',
-                      flexShrink: 0,
-                      minWidth: '95px',
-                      textAlign: 'center'
-                    }}>
-                      Ô trống {bNum}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1.15rem',
+                      fontSize: '1.1rem',
+                      borderRadius: '10px',
+                      border: '2px solid #cbd5e1',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
+                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                  />
+
+                  {currentQ.options && currentQ.options.length >= 2 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
+                        Hoặc chọn phương án:
+                      </span>
+                      {currentQ.options.map(opt => {
+                        const isSelected = singleVal === opt.label || singleVal === opt.text;
+                        return (
+                          <div
+                            key={opt.label}
+                            onClick={() => {
+                              handleFillBlank(opt.text || opt.label);
+                              handleFillBlankSlot(1, opt.text || opt.label);
+                            }}
+                            className={`option-item ${isSelected ? 'selected' : ''}`}
+                            style={{ padding: '0.65rem 0.85rem' }}
+                          >
+                            <div className="option-badge">{opt.label}</div>
+                            <span>{opt.text || opt.full_text}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <input
-                      type="text"
-                      value={val}
-                      onChange={(e) => handleFillBlankSlot(bNum, e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem 1rem',
-                        fontSize: '1rem',
-                        borderRadius: '8px',
-                        border: '1.5px solid #cbd5e1',
-                        outline: 'none',
-                        background: '#ffffff',
-                        fontWeight: 500,
-                        transition: 'all 0.15s ease'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#7c3aed';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
-                        e.currentTarget.parentElement.style.borderColor = '#c4b5fd';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#cbd5e1';
-                        e.target.style.boxShadow = 'none';
-                        e.currentTarget.parentElement.style.borderColor = '#e2e8f0';
-                      }}
-                    />
-                  </div>
-                );
-              })}
+                  )}
+                </div>
+              ) : (
+                <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {blanks.map((bNum) => {
+                    const val = (typeof currentAnswer === 'object' && currentAnswer !== null)
+                      ? (currentAnswer[bNum] || currentAnswer[String(bNum)] || '')
+                      : (bNum === 1 && typeof currentAnswer === 'string' ? currentAnswer : '');
+
+                    return (
+                      <div
+                        key={bNum}
+                        onClick={() => setActiveBlank(bNum)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.85rem',
+                          background: '#f8fafc',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '10px',
+                          border: activeBlank === bNum ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
+                          transition: 'border-color 0.15s ease'
+                        }}
+                      >
+                        <div style={{
+                          background: '#ede9fe',
+                          color: '#7c3aed',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          padding: '0.4rem 0.75rem',
+                          borderRadius: '8px',
+                          flexShrink: 0,
+                          minWidth: '95px',
+                          textAlign: 'center'
+                        }}>
+                          Ô trống {bNum}
+                        </div>
+                        <input
+                          type="text"
+                          value={val}
+                          onChange={(e) => handleFillBlankSlot(bNum, e.target.value)}
+                          onFocus={() => setActiveBlank(bNum)}
+                          style={{
+                            flex: 1,
+                            padding: '0.75rem 1rem',
+                            fontSize: '1rem',
+                            borderRadius: '8px',
+                            border: '1.5px solid #cbd5e1',
+                            outline: 'none',
+                            background: '#ffffff',
+                            fontWeight: 500,
+                            transition: 'all 0.15s ease'
+                          }}
+                          onFocusCapture={(e) => {
+                            e.target.style.borderColor = '#7c3aed';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
+                            e.currentTarget.parentElement.style.borderColor = '#c4b5fd';
+                          }}
+                          onBlurCapture={(e) => {
+                            e.target.style.borderColor = '#cbd5e1';
+                            e.target.style.boxShadow = 'none';
+                            e.currentTarget.parentElement.style.borderColor = activeBlank === bNum ? '#7c3aed' : '#e2e8f0';
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })()}
@@ -944,8 +1510,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                 <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155' }}>
                   Cột B: Định nghĩa
                 </span>
-                {(currentQ.pairs || []).map((pair, rIdx) => {
-                  const rightText = pair.right;
+                {(currentQ.shuffledRights || (currentQ.pairs || []).map(p => p.right)).map((rightText, rIdx) => {
                   const currentAnswerMap = answers[currentQ.id] || {};
                   const isMatched = Object.values(currentAnswerMap).includes(rightText);
 

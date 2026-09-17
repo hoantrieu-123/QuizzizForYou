@@ -150,7 +150,7 @@ def grade_submission(questions: List[Dict[str, Any]], user_answers: Dict[str, An
 
             for it in items:
                 b_key = str(it.get('blank'))
-                user_raw = ans_dict.get(b_key)
+                user_raw = ans_dict.get(b_key) if b_key in ans_dict else ans_dict.get(it.get('blank'))
 
                 # Extract expected correct answers for this item
                 expected_list = []

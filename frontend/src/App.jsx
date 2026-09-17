@@ -12,6 +12,7 @@ export default function App() {
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [currentResult, setCurrentResult] = useState(null);
   const [refreshListTrigger, setRefreshListTrigger] = useState(0);
+  const [playerSessionKey, setPlayerSessionKey] = useState(0);
 
   const handleUploadSuccess = (quiz) => {
     setCurrentQuiz(quiz);
@@ -30,11 +31,18 @@ export default function App() {
     }
   };
 
-  const handleStartQuiz = async (quizId) => {
+  const handleStartQuiz = async (quizId, customQuestions = null) => {
     try {
+      if (customQuestions && customQuestions.length > 0 && currentQuiz) {
+        setCurrentQuiz({ ...currentQuiz, questions: customQuestions });
+        setPlayerSessionKey(prev => prev + 1);
+        setCurrentView('player');
+        return;
+      }
       const res = await fetch(apiUrl(`/api/quizzes/${quizId}`));
       const data = await res.json();
       setCurrentQuiz(data.quiz);
+      setPlayerSessionKey(prev => prev + 1);
       setCurrentView('player');
     } catch (err) {
       alert('Không thể bắt đầu làm bài: ' + err.message);
@@ -99,6 +107,7 @@ export default function App() {
         {/* VIEW 3: INTERACTIVE QUIZ TAKING */}
         {currentView === 'player' && currentQuiz && (
           <QuizPlayer
+            key={`player_${playerSessionKey}`}
             quiz={currentQuiz}
             onSubmit={handleSubmitQuiz}
             onExit={() => setCurrentView('home')}
@@ -111,7 +120,10 @@ export default function App() {
           <ResultView
             result={currentResult}
             quiz={currentQuiz}
-            onRetake={() => setCurrentView('player')}
+            onRetake={() => {
+              setPlayerSessionKey(prev => prev + 1);
+              setCurrentView('player');
+            }}
             onEdit={() => setCurrentView('preview')}
             onHome={() => setCurrentView('home')}
           />

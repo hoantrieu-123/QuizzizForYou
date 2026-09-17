@@ -4,6 +4,7 @@ import {
   Trophy, CheckCircle2, XCircle, RotateCcw,
   Edit3, Home, Sparkles
 } from './UIcons';
+import { cleanQuestionPrompt } from './QuizPlayer';
 
 export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
   const [filter, setFilter] = useState('all');
@@ -189,7 +190,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                 tabSize: 4,
                 fontFamily: (q.content || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' : 'inherit'
               }}>
-                {q.content}
+                {cleanQuestionPrompt(q.content)}
               </p>
 
               <div style={{
@@ -199,34 +200,62 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                 border: '1px solid #e2e8f0',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.65rem',
+                gap: '0.75rem',
                 fontSize: '0.925rem'
               }}>
-                <div>
-                  <span style={{ fontWeight: 700, color: '#475569' }}>Lựa chọn của bạn: </span>
-                  <span style={{
-                    color: q.is_correct ? '#059669' : '#dc2626',
-                    fontWeight: 600,
-                    whiteSpace: 'pre-wrap',
-                    tabSize: 4,
-                    fontFamily: String(renderAnswerValue(q.user_answer, q) || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
-                  }}>
-                    {renderAnswerValue(q.user_answer, q) || '(Chưa trả lời)'}
-                  </span>
-                </div>
+                {(() => {
+                  const userAnsText = renderAnswerValue(q.user_answer, q, quiz);
+                  const isUserMulti = userAnsText.includes('\n');
+                  const isUserCode = isUserMulti || (q.content || '').includes('\n');
 
-                <div>
-                  <span style={{ fontWeight: 700, color: '#475569' }}>Đáp án đúng: </span>
-                  <span style={{
-                    color: '#059669',
-                    fontWeight: 700,
-                    whiteSpace: 'pre-wrap',
-                    tabSize: 4,
-                    fontFamily: String(renderCorrectAnswer(q) || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
-                  }}>
-                    {renderCorrectAnswer(q)}
-                  </span>
-                </div>
+                  const corrAnsText = renderCorrectAnswer(q, quiz);
+                  const isCorrMulti = corrAnsText.includes('\n');
+                  const isCorrCode = isCorrMulti || (q.content || '').includes('\n');
+
+                  return (
+                    <>
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: isUserMulti ? 'column' : 'row',
+                        alignItems: isUserMulti ? 'flex-start' : 'baseline',
+                        gap: isUserMulti ? '0.35rem' : '0.5rem'
+                      }}>
+                        <span style={{ fontWeight: 700, color: '#475569', flexShrink: 0 }}>Lựa chọn của bạn: </span>
+                        <span style={{
+                          color: q.is_correct ? '#059669' : '#dc2626',
+                          fontWeight: 600,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          lineHeight: 1.5,
+                          tabSize: 4,
+                          fontFamily: isUserCode ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
+                        }}>
+                          {userAnsText || '(Chưa trả lời)'}
+                        </span>
+                      </div>
+
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: isCorrMulti ? 'column' : 'row',
+                        alignItems: isCorrMulti ? 'flex-start' : 'baseline',
+                        gap: isCorrMulti ? '0.35rem' : '0.5rem'
+                      }}>
+                        <span style={{ fontWeight: 700, color: '#475569', flexShrink: 0 }}>Đáp án đúng: </span>
+                        <span style={{
+                          color: '#059669',
+                          fontWeight: 700,
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          lineHeight: 1.5,
+                          tabSize: 4,
+                          fontFamily: isCorrCode ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
+                        }}>
+                          {corrAnsText}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
                   <span className="badge badge-highlight" style={{ fontSize: '0.775rem' }}>
@@ -247,34 +276,103 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
   );
 }
 
-function renderCorrectAnswer(q) {
+function formatOptionWithDetail(label, options) {
+  if (!options || !Array.isArray(options) || options.length === 0) return String(label ?? '');
+  const cleanLabel = String(label ?? '').trim().toUpperCase();
+  const opt = options.find(o => String(o?.label ?? '').trim().toUpperCase() === cleanLabel);
+  if (!opt) return String(label ?? '');
+
+  const rawText = (opt.text !== undefined && opt.text !== null && String(opt.text).trim() !== '')
+    ? String(opt.text).trim()
+    : String(opt.full_text || '').trim();
+
+  if (!rawText) return opt.label || String(label ?? '');
+
+  // Strip leading option prefix like "A.", "A)", "[A]", "(A)" if present to avoid "A. A. Content"
+  const strippedText = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+
+  if (!strippedText) return opt.label || String(label ?? '');
+
+  if (strippedText.includes('\n')) {
+    return `${opt.label}.\n${strippedText}`;
+  }
+  return `${opt.label}. ${strippedText}`;
+}
+
+function renderCorrectAnswer(q, quiz = null) {
+  const options = q?.options || quiz?.questions?.find(qq => qq.id === q?.question_id || qq.order === q?.order)?.options || [];
+
   if (q.type === 'drag_drop_blank' && q.items && q.items.length > 0) {
     return q.items.map(it => {
       const answersList = (it.correctAnswers && it.correctAnswers.length > 0)
         ? it.correctAnswers.join(', ')
         : (it.correctAnswer || '(trống)');
       return `Vị trí ${it.blank}: ${answersList}`;
-    }).join(' | ');
+    }).join('\n');
   }
+
   if (q.type === 'fill_blank' && Array.isArray(q.correct_answers) && q.correct_answers.length > 1) {
     return q.correct_answers.map((ans, idx) => `Ô ${idx + 1}: ${ans || '(trống)'}`).join(' | ');
   }
-  return renderAnswerValue(q.correct_answers, q);
+
+  if (q.type === 'true_false' && q.statements && q.statements.length > 0) {
+    return q.statements.map((st, i) => {
+      const stLabel = st.content ? st.content.trim() : `Mệnh đề ${i + 1}`;
+      return `${stLabel} ➔ ${st.correctAnswer}`;
+    }).join('\n');
+  }
+
+  if (q.type === 'matching' && Array.isArray(q.correct_answers)) {
+    return q.correct_answers.join('\n');
+  }
+
+  return renderAnswerValue(q.correct_answers, q, quiz);
 }
 
-function renderAnswerValue(val, question = null) {
-  if (val === undefined || val === null) return '';
-  if (Array.isArray(val)) return val.join(', ');
+function renderAnswerValue(val, question = null, quiz = null) {
+  if (val === undefined || val === null || val === '') return '';
+
+  const options = question?.options || quiz?.questions?.find(qq => qq.id === question?.question_id || qq.order === question?.order)?.options || [];
+
+  // 1. Array of answers (multiple choice, etc.)
+  if (Array.isArray(val)) {
+    if (val.length === 0) return '';
+    if (options.length > 0) {
+      return val.map(item => formatOptionWithDetail(item, options)).join('\n');
+    }
+    return val.join(', ');
+  }
+
+  // 2. Object values (true_false with statements, matching, drag_drop, multi-fill)
   if (typeof val === 'object') {
+    if (question?.type === 'true_false' && question?.statements && question.statements.length > 0) {
+      return question.statements.map((st, i) => {
+        const stKey = st.id || String(st.order);
+        const uVal = val[stKey] || val[st.id] || val[String(st.order)] || val[st.order] || '(Chưa chọn)';
+        const stLabel = st.content ? st.content.trim() : `Mệnh đề ${i + 1}`;
+        return `${stLabel} ➔ ${uVal}`;
+      }).join('\n');
+    }
+
+    if (question?.type === 'matching') {
+      return Object.entries(val).map(([k, v]) => `${k} → ${v || '(chưa ghép)'}`).join('\n');
+    }
+
     const isDragDrop = question?.type === 'drag_drop_blank';
     const isFillBlank = question?.type === 'fill_blank';
     return Object.entries(val).map(([k, v]) => {
-      const vStr = Array.isArray(v) ? v.join(', ') : String(v);
+      const vStr = Array.isArray(v) ? v.join(', ') : String(v || '');
       const isNum = !isNaN(Number(k));
       const prefix = isDragDrop ? `Vị trí ${k}` : (isFillBlank ? `Ô ${k}` : (isNum ? `Câu ${k}` : `[${k}]`));
       return `${prefix}: ${vStr || '(trống)'}`;
-    }).join(' | ');
+    }).join(isDragDrop ? '\n' : ' | ');
   }
+
+  // 3. Single string answer with options (single choice)
+  if (options.length > 0) {
+    return formatOptionWithDetail(val, options);
+  }
+
   return String(val);
 }
 

@@ -4,6 +4,7 @@ import {
   Edit2, Plus, Trash2, Check, Circle, Sparkles,
   Shuffle, Package, GripVertical, X, Layers, Settings2
 } from './UIcons';
+import { cleanQuestionPrompt, cleanItemText, createScrambledRights, createScrambledBlanks } from './QuizPlayer';
 
 const QUESTION_TYPES = [
   { value: 'single_choice', label: '1. Chọn một đáp án' },
@@ -63,8 +64,32 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
       setQuestions(updated);
       showToast(`🔀 Đã đảo ngẫu nhiên các phương án của Câu ${q.order || qIdx + 1}!`);
     } else if (q.type === 'drag_drop_blank') {
-      handleShuffleBank(qIdx);
-      showToast(`🔀 Đã đảo thứ tự từ trong hộp kéo thả của Câu ${q.order || qIdx + 1}!`);
+      const existingBank = Array.isArray(q.bank) ? q.bank : [];
+      const itemWords = (q.items || []).flatMap(it => {
+        if (Array.isArray(it.correctAnswers)) return it.correctAnswers;
+        if (it.correctAnswer) return [it.correctAnswer];
+        return [];
+      });
+      const allBankWords = [...new Set([...existingBank, ...itemWords])].filter(Boolean);
+      const shuffledBank = allBankWords.length >= 2 ? shuffleArray(allBankWords) : allBankWords;
+
+      let newItems = q.items || [];
+      if (newItems.length >= 2) {
+        newItems = shuffleArray(newItems).map((it, idx) => ({
+          ...it,
+          blank: idx + 1,
+          text: cleanItemText(it.text) || it.text
+        }));
+      }
+
+      const updated = [...questions];
+      updated[qIdx] = {
+        ...q,
+        bank: shuffledBank,
+        items: newItems
+      };
+      setQuestions(updated);
+      showToast(`🔀 Đã đảo thứ tự hộp từ và các ô kéo thả của Câu ${q.order || qIdx + 1}!`);
     } else if (q.type === 'matching') {
       const pairs = q.pairs || [];
       if (pairs.length < 2) return;
@@ -77,25 +102,58 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
       };
       setQuestions(updated);
       showToast(`🔀 Đã đảo thứ tự các cặp ghép nối của Câu ${q.order || qIdx + 1}!`);
+    } else if (q.type === 'fill_blank') {
+      const blankCount = Math.max(
+        q.blankCount || 0,
+        (q.correctAnswers || []).length,
+        1
+      );
+      const newQ = { ...q };
+      let hasChanges = false;
+      if (blankCount >= 2) {
+        newQ.shuffledBlanks = createScrambledBlanks(blankCount);
+        hasChanges = true;
+      }
+      if (q.bank && q.bank.length >= 2) {
+        newQ.bank = shuffleArray(q.bank);
+        hasChanges = true;
+      }
+      if (hasChanges) {
+        const updated = [...questions];
+        updated[qIdx] = newQ;
+        setQuestions(updated);
+        showToast(`🔀 Đã đảo ngẫu nhiên các ô điền từ của Câu ${q.order || qIdx + 1}!`);
+      }
     }
   };
 
   const handleShuffleAllAnswers = () => {
     let count = 0;
     const updated = questions.map((q, qIdx) => {
+      // 1. Single Choice & Multiple Choice
       if (q.type === 'single_choice' || q.type === 'multiple_choice') {
         const opts = q.options || [];
         if (opts.length >= 2) {
-          const shuffled = shuffleArray(opts);
+          const originalCorrect = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : (q.correctAnswers ? [q.correctAnswers] : []);
+
+          const optsWithFlag = opts.map(opt => ({
+            ...opt,
+            isOriginallyCorrect: Boolean(opt.highlighted || originalCorrect.includes(opt.label))
+          }));
+
+          const shuffled = shuffleArray(optsWithFlag);
           const newOpts = shuffled.map((opt, idx) => {
             const newLabel = ALPHABET[idx] || `Opt${idx + 1}`;
             return {
               ...opt,
               label: newLabel,
-              full_text: `${newLabel}. ${opt.text || ''}`
+              full_text: `${newLabel}. ${opt.text || ''}`,
+              highlighted: opt.isOriginallyCorrect
             };
           });
-          const newCorrect = newOpts.filter(o => o.highlighted).map(o => o.label);
+          const newCorrect = newOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
           count++;
           return {
             ...q,
@@ -103,28 +161,158 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
             correctAnswers: newCorrect
           };
         }
-      } else if (q.type === 'drag_drop_blank') {
-        const currentBank = (q.bank && q.bank.length > 0)
-          ? q.bank
-          : (q.items || []).map(it => it.correctAnswer).filter(Boolean);
-        if (currentBank.length >= 2) {
+      }
+      // 2. True / False
+      else if (q.type === 'true_false') {
+        const newQ = { ...q, shuffledButtons: shuffleArray(['Đúng', 'Sai']) };
+        let modified = false;
+
+        if (q.statements && q.statements.length >= 2) {
+          const shuffledStmts = shuffleArray(q.statements).map((st, sIdx) => {
+            const stableId = st.id || `st_${sIdx + 1}`;
+            const cleanStContent = String(st.content || '').replace(/^\s*(?:[a-dA-D\d]+[\.\)]\s*)+/, '').trim();
+            return {
+              ...st,
+              id: stableId,
+              order: sIdx + 1,
+              content: cleanStContent || st.content,
+              shuffledButtons: shuffleArray(['Đúng', 'Sai'])
+            };
+          });
+          newQ.statements = shuffledStmts;
+          newQ.correctAnswers = shuffledStmts.map(s => s.correctAnswer);
+          modified = true;
+        }
+
+        if (q.options && q.options.length >= 2) {
+          const originalCorrect = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : (q.correctAnswers ? [q.correctAnswers] : []);
+
+          const optsWithFlag = q.options.map(opt => ({
+            ...opt,
+            isOriginallyCorrect: Boolean(opt.highlighted || originalCorrect.includes(opt.label))
+          }));
+
+          const shuffledOpts = shuffleArray(optsWithFlag);
+          const newOpts = shuffledOpts.map((opt, idx) => {
+            const newLabel = ALPHABET[idx] || `Opt${idx + 1}`;
+            return {
+              ...opt,
+              label: newLabel,
+              full_text: `${newLabel}. ${opt.text || ''}`,
+              highlighted: opt.isOriginallyCorrect
+            };
+          });
+
+          newQ.options = newOpts;
+          newQ.correctAnswers = newOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
+          modified = true;
+        }
+
+        if (modified) count++;
+        return newQ;
+      }
+      // 3. Drag & Drop
+      else if (q.type === 'drag_drop_blank') {
+        const existingBank = Array.isArray(q.bank) ? q.bank : [];
+        const itemWords = (q.items || []).flatMap(it => {
+          if (Array.isArray(it.correctAnswers)) return it.correctAnswers;
+          if (it.correctAnswer) return [it.correctAnswer];
+          return [];
+        });
+        const allBankWords = [...new Set([...existingBank, ...itemWords])].filter(Boolean);
+        const shuffledBank = allBankWords.length >= 2 ? shuffleArray(allBankWords) : allBankWords;
+
+        const rawItems = q.items || [];
+        if (rawItems.length >= 2) {
+          const shuffledItems = shuffleArray(rawItems).map((it, idx) => ({
+            ...it,
+            blank: idx + 1,
+            text: cleanItemText(it.text) || it.text
+          }));
           count++;
           return {
             ...q,
-            bank: shuffleArray(currentBank)
+            bank: shuffledBank,
+            items: shuffledItems
           };
         }
-      } else if (q.type === 'matching') {
-        const pairs = q.pairs || [];
-        if (pairs.length >= 2) {
-          const shuffledPairs = shuffleArray(pairs);
+
+        count++;
+        return {
+          ...q,
+          bank: shuffledBank
+        };
+      }
+      // 4. Matching
+      else if (q.type === 'matching') {
+        const rawPairs = q.pairs || [];
+        if (rawPairs.length >= 2) {
+          const pairsWithId = rawPairs.map((p, pIdx) => ({
+            ...p,
+            id: p.id || p.left || `pair_${pIdx + 1}`
+          }));
+          const shuffledPairs = shuffleArray(pairsWithId);
+          const rights = shuffledPairs.map(p => p.right);
+          const scrambledRights = createScrambledRights(rights);
           count++;
           return {
             ...q,
             pairs: shuffledPairs,
+            shuffledRights: scrambledRights,
             correctAnswers: shuffledPairs.map(p => `${p.left} → ${p.right}`)
           };
         }
+      }
+      // 5. Fill Blank
+      else if (q.type === 'fill_blank') {
+        const newQ = { ...q };
+        let modified = false;
+
+        const blankCount = Math.max(
+          q.blankCount || 0,
+          (q.correctAnswers || []).length,
+          1
+        );
+        if (blankCount >= 2) {
+          newQ.shuffledBlanks = createScrambledBlanks(blankCount);
+          modified = true;
+        }
+
+        if (q.options && q.options.length >= 2) {
+          const originalCorrect = Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : (q.correctAnswers ? [q.correctAnswers] : []);
+
+          const optsWithFlag = q.options.map(opt => ({
+            ...opt,
+            isOriginallyCorrect: Boolean(opt.highlighted || originalCorrect.includes(opt.label))
+          }));
+
+          const shuffledOpts = shuffleArray(optsWithFlag);
+          const newOpts = shuffledOpts.map((opt, idx) => {
+            const newLabel = ALPHABET[idx] || `Opt${idx + 1}`;
+            return {
+              ...opt,
+              label: newLabel,
+              full_text: `${newLabel}. ${opt.text || ''}`,
+              highlighted: opt.isOriginallyCorrect
+            };
+          });
+
+          newQ.options = newOpts;
+          newQ.correctAnswers = newOpts.filter(o => o.isOriginallyCorrect).map(o => o.label);
+          modified = true;
+        }
+
+        if (q.bank && q.bank.length >= 2) {
+          newQ.bank = shuffleArray(q.bank);
+          modified = true;
+        }
+
+        if (modified) count++;
+        return newQ;
       }
       return q;
     });
@@ -137,10 +325,11 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
     const shuffled = shuffleArray(questions);
     const renumbered = shuffled.map((q, idx) => ({
       ...q,
-      order: idx + 1
+      order: idx + 1,
+      content: cleanQuestionPrompt(q.content)
     }));
     setQuestions(renumbered);
-    showToast(`🔀 Đã đảo ngẫu nhiên thứ tự của tất cả ${questions.length} câu hỏi!`);
+    showToast(`🔀 Đã đảo ngẫu nhiên thứ tự các câu hỏi (thứ tự 1 → ${questions.length})!`);
   };
 
   const filteredQuestions = questions.filter(q => {
