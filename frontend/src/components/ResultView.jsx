@@ -4,7 +4,7 @@ import {
   Trophy, CheckCircle2, XCircle, RotateCcw,
   Edit3, Home, Sparkles
 } from './UIcons';
-import { cleanQuestionPrompt } from './QuizPlayer';
+import { cleanQuestionPrompt, cleanOptionText } from './QuizPlayer';
 
 export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
   const [filter, setFilter] = useState('all');
@@ -289,7 +289,7 @@ function formatOptionWithDetail(label, options) {
   if (!rawText) return opt.label || String(label ?? '');
 
   // Strip leading option prefix like "A.", "A)", "[A]", "(A)" if present to avoid "A. A. Content"
-  const strippedText = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+  const strippedText = cleanOptionText(rawText, opt.label);
 
   if (!strippedText) return opt.label || String(label ?? '');
 

@@ -7,14 +7,33 @@ import {
 export const cleanQuestionPrompt = (text) => {
   if (!text) return '';
   return String(text)
-    .replace(/^(?:(?:Câu|Question|Bài)\s*\d+[\s\:\.\-]*|\d+[\.\)\-])\s*\n?/i, '')
+    .replace(/^(?:(?:Câu|Question|Bài)\s*\d+[\s\:\.\-]*|\d+[\.\)\-]\s+)\s*\n?/i, '')
     .trim();
+};
+
+export const cleanOptionText = (text, label) => {
+  if (!text) return '';
+  const s = String(text).trim();
+  if (!label && !s) return s;
+
+  if (label) {
+    const esc = String(label).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (esc) {
+      const specificRegex = new RegExp(`^(?:\\[\\s*${esc}\\s*\\]|\\(\\s*${esc}\\s*\\)|${esc}\\s*[\\.\\:\\-\\)\\>])[\\.\\:\\-\\)]?\\s*`, 'i');
+      if (specificRegex.test(s)) {
+        return s.replace(specificRegex, '').trim();
+      }
+    }
+  }
+
+  const genericPrefixRegex = /^(?:\[\s*[a-zA-Z\d]{1,2}\s*\]|\(\s*[a-zA-Z\d]{1,2}\s*\)|[a-zA-Z\d]{1,2}\s*[\.\:\-\)\>])[\\.\:\-\)]?\s+/;
+  return s.replace(genericPrefixRegex, '').trim();
 };
 
 export const cleanItemText = (text) => {
   if (!text) return '';
   return String(text)
-    .replace(/^\s*(?:(?:Câu|Vị trí|Mục|Slot|Item)\s*\d+[\s\:\.\-]*|[a-zA-Z\d]+[\.\)\-])\s*/i, '')
+    .replace(/^\s*(?:(?:Câu|Vị trí|Mục|Slot|Item)\s*\d+[\s\:\.\-]*|(?:\([a-zA-Z\d]{1,4}\)|\[[a-zA-Z\d]{1,4}\]|[a-zA-Z\d]{1,4}[\.\)\-])\s+)/i, '')
     .trim();
 };
 
@@ -115,7 +134,7 @@ export const createRandomizedQuizQuestions = (rawQuestions) => {
             ? String(opt.text).trim()
             : String(opt.full_text || '').trim();
 
-          const stripped = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+          const stripped = cleanOptionText(rawText, opt.label);
 
           return {
             ...opt,
@@ -173,7 +192,7 @@ export const createRandomizedQuizQuestions = (rawQuestions) => {
             ? String(opt.text).trim()
             : String(opt.full_text || '').trim();
 
-          const stripped = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+          const stripped = cleanOptionText(rawText, opt.label);
 
           return {
             ...opt,
@@ -267,7 +286,7 @@ export const createRandomizedQuizQuestions = (rawQuestions) => {
             ? String(opt.text).trim()
             : String(opt.full_text || '').trim();
 
-          const stripped = rawText.replace(new RegExp(`^(\\[?${opt.label}\\]?|[\\(]?${opt.label}[\\)]?)[\\.\\:\\-\\)]?\\s*`, 'i'), '').trim();
+          const stripped = cleanOptionText(rawText, opt.label);
 
           return {
             ...opt,
