@@ -507,9 +507,9 @@ button, input, select, textarea {
 /* Subject Folders & Sections Drag & Drop */
 .subject-section {
   background: #ffffff;
-  border-radius: var(--radius-lg);
+  border-radius: 8px;
   border: 1.5px solid var(--border);
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
@@ -525,7 +525,7 @@ button, input, select, textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.9rem 1.25rem;
+  padding: 0.55rem 0.9rem;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -538,8 +538,8 @@ button, input, select, textarea {
 }
 
 .subject-dropzone {
-  min-height: 80px;
-  padding: 1.25rem;
+  min-height: 50px;
+  padding: 0.6rem 0.75rem;
   transition: all 0.2s ease;
 }
 
@@ -549,9 +549,9 @@ button, input, select, textarea {
   align-items: center;
   justify-content: center;
   border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  margin: 0.5rem;
-  padding: 2rem 1.5rem;
+  border-radius: 10px;
+  margin: 0.25rem;
+  padding: 1.5rem 1rem;
   color: var(--text-muted);
   background: #fafafa;
   transition: all 0.2s ease;
