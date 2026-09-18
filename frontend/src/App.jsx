@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
+import SidebarTree from './components/SidebarTree';
 import UploadSection from './components/UploadSection';
 import QuizList from './components/QuizList';
 import PreviewEditor from './components/PreviewEditor';
@@ -12,12 +13,20 @@ export default function App() {
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [currentResult, setCurrentResult] = useState(null);
   const [refreshListTrigger, setRefreshListTrigger] = useState(0);
+  const [refreshTreeTrigger, setRefreshTreeTrigger] = useState(0);
   const [playerSessionKey, setPlayerSessionKey] = useState(0);
+  const [selectedTreeFilter, setSelectedTreeFilter] = useState({
+    type: 'all',
+    id: 'all',
+    name: 'Tất cả đề thi',
+    path: []
+  });
 
   const handleUploadSuccess = (quiz) => {
     setCurrentQuiz(quiz);
     setCurrentView('preview');
     setRefreshListTrigger(prev => prev + 1);
+    setRefreshTreeTrigger(prev => prev + 1);
   };
 
   const handleSelectQuiz = async (quizId) => {
@@ -59,6 +68,7 @@ export default function App() {
     if (!res.ok) throw new Error(data.detail || 'Lỗi lưu bài thi');
     setCurrentQuiz(data.quiz);
     setRefreshListTrigger(prev => prev + 1);
+    setRefreshTreeTrigger(prev => prev + 1);
   };
 
   const handleSubmitQuiz = async (answers, questionsToSubmit) => {
@@ -81,16 +91,32 @@ export default function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navbar currentView={currentView} onNavigate={(view) => setCurrentView(view)} />
 
-      <main className="main-container" style={{ flex: 1 }}>
+      <main className={`main-container ${currentView === 'home' ? 'main-container-wide' : ''}`} style={{ flex: 1 }}>
         {/* VIEW 1: HOME */}
         {currentView === 'home' && (
-          <div>
-            <UploadSection onUploadSuccess={handleUploadSuccess} />
-            <QuizList
-              onSelectQuiz={handleSelectQuiz}
-              onStartQuiz={handleStartQuiz}
-              refreshTrigger={refreshListTrigger}
+          <div className="home-layout">
+            <SidebarTree
+              selectedFilter={selectedTreeFilter}
+              onSelectFilter={setSelectedTreeFilter}
+              refreshTrigger={refreshTreeTrigger}
+              onTreeUpdated={() => {
+                setRefreshListTrigger(prev => prev + 1);
+                setRefreshTreeTrigger(prev => prev + 1);
+              }}
             />
+            <div className="home-main-content">
+              <UploadSection onUploadSuccess={handleUploadSuccess} />
+              <QuizList
+                onSelectQuiz={handleSelectQuiz}
+                onStartQuiz={handleStartQuiz}
+                refreshTrigger={refreshListTrigger}
+                selectedFilter={selectedTreeFilter}
+                onClearFilter={() => setSelectedTreeFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] })}
+                onQuizPlacementChanged={() => {
+                  setRefreshTreeTrigger(prev => prev + 1);
+                }}
+              />
+            </div>
           </div>
         )}
 

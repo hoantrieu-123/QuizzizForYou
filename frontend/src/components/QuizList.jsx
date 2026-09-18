@@ -6,7 +6,24 @@ import {
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
 
-export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) {
+export const naturalCompareQuizzes = (a, b) => {
+  const titleA = (a?.title || a?.filename || '').trim();
+  const titleB = (b?.title || b?.filename || '').trim();
+  const comp = titleA.localeCompare(titleB, 'vi', { numeric: true, sensitivity: 'base' });
+  if (comp !== 0) return comp;
+  const fileComp = (a?.filename || '').trim().localeCompare((b?.filename || '').trim(), 'vi', { numeric: true, sensitivity: 'base' });
+  if (fileComp !== 0) return fileComp;
+  return new Date(a?.created_at || 0) - new Date(b?.created_at || 0);
+};
+
+export default function QuizList({
+  onSelectQuiz,
+  onStartQuiz,
+  refreshTrigger,
+  selectedFilter,
+  onClearFilter,
+  onQuizPlacementChanged
+}) {
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +51,15 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     });
   };
 
+  // Auto-expand when a specific subject or uncategorized is selected from sidebar tree
+  useEffect(() => {
+    if (selectedFilter?.type === 'subject') {
+      setCollapsedSubjects(prev => ({ ...prev, [selectedFilter.id]: false }));
+    } else if (selectedFilter?.type === 'uncategorized') {
+      setCollapsedSubjects(prev => ({ ...prev, uncategorized: false }));
+    }
+  }, [selectedFilter]);
+
   // Subject management state
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
@@ -51,7 +77,9 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       const quizzesData = await quizzesRes.json();
       const subjectsData = await subjectsRes.json();
 
-      setQuizzes(quizzesData.quizzes || []);
+      const rawQuizzes = quizzesData.quizzes || [];
+      rawQuizzes.sort(naturalCompareQuizzes);
+      setQuizzes(rawQuizzes);
       setSubjects(subjectsData.subjects || []);
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu bài kiểm tra & môn học:', err);
@@ -72,6 +100,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       const res = await fetch(apiUrl(`/api/quizzes/${id}`), { method: 'DELETE' });
       if (res.ok) {
         setQuizzes(prev => prev.filter(q => q.id !== id));
+        onQuizPlacementChanged?.();
       }
     } catch (err) {
       alert('Không thể xóa bài thi');
@@ -116,6 +145,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     if (!quizId) return;
 
     const normalizedSubjectId = targetSubjectId || '';
+    const targetSub = subjects.find(s => s.id === normalizedSubjectId);
 
     // Check if unchanged
     const currentQuiz = quizzes.find(q => q.id === quizId);
@@ -124,7 +154,13 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     }
 
     // Optimistic UI update
-    setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, subject_id: normalizedSubjectId } : q));
+    setQuizzes(prev => prev.map(q => q.id === quizId ? {
+      ...q,
+      subject_id: normalizedSubjectId,
+      semester_id: targetSub ? targetSub.semester_id : '',
+      class_id: targetSub ? targetSub.class_id : ''
+    } : q));
+
     // Auto-expand destination subject so the quiz is immediately visible
     setCollapsedSubjects(prev => ({
       ...prev,
@@ -132,11 +168,16 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     }));
 
     try {
-      await fetch(apiUrl(`/api/quizzes/${quizId}/subject`), {
+      await fetch(apiUrl(`/api/quizzes/${quizId}/placement`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject_id: normalizedSubjectId || null })
+        body: JSON.stringify({
+          subject_id: normalizedSubjectId || null,
+          semester_id: targetSub ? targetSub.semester_id : null,
+          class_id: targetSub ? targetSub.class_id : null
+        })
       });
+      onQuizPlacementChanged?.();
     } catch (err) {
       console.error('Lỗi khi cập nhật môn học cho đề thi:', err);
       fetchData();
@@ -146,18 +187,31 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
   // Quick Change Subject via Dropdown
   const handleSelectSubject = async (quizId, targetSubjectId) => {
     const normalizedSubjectId = targetSubjectId || '';
-    setQuizzes(prev => prev.map(q => q.id === quizId ? { ...q, subject_id: normalizedSubjectId } : q));
+    const targetSub = subjects.find(s => s.id === normalizedSubjectId);
+
+    setQuizzes(prev => prev.map(q => q.id === quizId ? {
+      ...q,
+      subject_id: normalizedSubjectId,
+      semester_id: targetSub ? targetSub.semester_id : '',
+      class_id: targetSub ? targetSub.class_id : ''
+    } : q));
+
     setCollapsedSubjects(prev => ({
       ...prev,
       [normalizedSubjectId || 'uncategorized']: false
     }));
 
     try {
-      await fetch(apiUrl(`/api/quizzes/${quizId}/subject`), {
+      await fetch(apiUrl(`/api/quizzes/${quizId}/placement`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject_id: normalizedSubjectId || null })
+        body: JSON.stringify({
+          subject_id: normalizedSubjectId || null,
+          semester_id: targetSub ? targetSub.semester_id : null,
+          class_id: targetSub ? targetSub.class_id : null
+        })
       });
+      onQuizPlacementChanged?.();
     } catch (err) {
       console.error('Lỗi khi chuyển môn học:', err);
       fetchData();
@@ -169,17 +223,30 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     e.preventDefault();
     if (!newSubjectName.trim()) return;
 
+    let semId = '';
+    let clsId = '';
+    if (selectedFilter?.type === 'semester') {
+      semId = selectedFilter.id;
+    } else if (selectedFilter?.type === 'class') {
+      clsId = selectedFilter.id;
+    }
+
     try {
       const res = await fetch(apiUrl('/api/subjects'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSubjectName.trim() })
+        body: JSON.stringify({
+          name: newSubjectName.trim(),
+          semester_id: semId || null,
+          class_id: clsId || null
+        })
       });
       const data = await res.json();
       if (data.subject) {
         setSubjects(prev => [...prev, data.subject]);
         setNewSubjectName('');
         setShowAddSubject(false);
+        onQuizPlacementChanged?.();
       }
     } catch (err) {
       alert('Không thể tạo môn học mới');
@@ -206,6 +273,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       });
       setSubjects(prev => prev.map(s => s.id === subjectId ? { ...s, name: editingSubjectName.trim() } : s));
       setEditingSubjectId(null);
+      onQuizPlacementChanged?.();
     } catch (err) {
       alert('Không thể cập nhật tên môn');
     }
@@ -221,6 +289,7 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       if (res.ok) {
         setSubjects(prev => prev.filter(s => s.id !== subjectId));
         setQuizzes(prev => prev.map(q => q.subject_id === subjectId ? { ...q, subject_id: '' } : q));
+        onQuizPlacementChanged?.();
       }
     } catch (err) {
       alert('Không thể xóa môn học');
@@ -235,13 +304,66 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
     );
   }
 
-  // Quizzes not assigned to any existing subject
+  // Filter subjects and quizzes based on selectedFilter
   const validSubjectIds = new Set(subjects.map(s => s.id));
-  const uncategorizedQuizzes = quizzes.filter(q => !q.subject_id || !validSubjectIds.has(q.subject_id));
+  let filteredSubjects = subjects;
+  let showUncategorized = true;
+  let filterContextTitle = null;
+
+  if (selectedFilter && selectedFilter.type !== 'all') {
+    if (selectedFilter.type === 'class') {
+      filteredSubjects = subjects.filter(s => s.class_id === selectedFilter.id);
+      showUncategorized = false;
+      filterContextTitle = `Lớp: ${selectedFilter.name}`;
+    } else if (selectedFilter.type === 'semester') {
+      filteredSubjects = subjects.filter(s => s.semester_id === selectedFilter.id);
+      showUncategorized = false;
+      filterContextTitle = `Kỳ học: ${selectedFilter.name}`;
+    } else if (selectedFilter.type === 'subject') {
+      filteredSubjects = subjects.filter(s => s.id === selectedFilter.id);
+      showUncategorized = false;
+      filterContextTitle = `Môn: ${selectedFilter.name}`;
+    } else if (selectedFilter.type === 'uncategorized') {
+      filteredSubjects = [];
+      showUncategorized = true;
+      filterContextTitle = `Đề chưa phân loại`;
+    }
+  }
+
+  // Quizzes not assigned to any existing subject
+  const uncategorizedQuizzes = quizzes
+    .filter(q => !q.subject_id || !validSubjectIds.has(q.subject_id))
+    .sort(naturalCompareQuizzes);
+
+  // Quizzes in semester but not in any specific subject
+  const directSemesterQuizzes = (selectedFilter?.type === 'semester')
+    ? quizzes.filter(q => q.semester_id === selectedFilter.id && (!q.subject_id || !validSubjectIds.has(q.subject_id))).sort(naturalCompareQuizzes)
+    : [];
+
+  // Quizzes in class but not in any specific subject
+  const directClassQuizzes = (selectedFilter?.type === 'class')
+    ? quizzes.filter(q => q.class_id === selectedFilter.id && (!q.subject_id || !validSubjectIds.has(q.subject_id))).sort(naturalCompareQuizzes)
+    : [];
+
+  // Calculate total quizzes currently displayed
+  const displayedQuizzesCount = (() => {
+    if (!selectedFilter || selectedFilter.type === 'all') return quizzes.length;
+    if (selectedFilter.type === 'uncategorized') return uncategorizedQuizzes.length;
+    if (selectedFilter.type === 'subject') return quizzes.filter(q => q.subject_id === selectedFilter.id).length;
+    if (selectedFilter.type === 'semester') {
+      const semSubIds = new Set(filteredSubjects.map(s => s.id));
+      return quizzes.filter(q => q.semester_id === selectedFilter.id || semSubIds.has(q.subject_id)).length;
+    }
+    if (selectedFilter.type === 'class') {
+      const clsSubIds = new Set(filteredSubjects.map(s => s.id));
+      return quizzes.filter(q => q.class_id === selectedFilter.id || clsSubIds.has(q.subject_id)).length;
+    }
+    return quizzes.length;
+  })();
 
   // Check collapse state across all subjects + uncategorized
-  const allSubjectIds = [...subjects.map(s => s.id), 'uncategorized'];
-  const areAllCollapsed = allSubjectIds.every(id => isSubjectCollapsed(id));
+  const allSubjectIds = [...filteredSubjects.map(s => s.id), ...(showUncategorized ? ['uncategorized'] : [])];
+  const areAllCollapsed = allSubjectIds.length > 0 && allSubjectIds.every(id => isSubjectCollapsed(id));
 
   const toggleAllCollapse = () => {
     const nextState = !areAllCollapsed;
@@ -254,39 +376,74 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
 
   return (
     <div>
+      {/* Filter Breadcrumb Bar */}
+      {selectedFilter && selectedFilter.type !== 'all' && (
+        <div className="filter-breadcrumb-bar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>Đang xem:</span>
+            <button
+              type="button"
+              className="breadcrumb-chip root"
+              onClick={onClearFilter}
+              title="Xem tất cả đề thi"
+            >
+              Tất cả
+            </button>
+            {(selectedFilter.path || [selectedFilter.name]).map((crumb, idx, arr) => (
+              <React.Fragment key={idx}>
+                <ChevronRight size={13} style={{ color: '#94a3b8' }} />
+                <span className={`breadcrumb-chip ${idx === arr.length - 1 ? 'active' : ''}`}>
+                  {crumb}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn-clear-filter"
+            onClick={onClearFilter}
+            title="Xóa bộ lọc"
+          >
+            <X size={13} /> Xem tất cả
+          </button>
+        </div>
+      )}
+
       {/* Top Header & Actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
             <Folders size={22} style={{ color: '#7c3aed' }} />
-            Danh sách đề thi theo môn ({quizzes.length} đề thi)
+            {filterContextTitle ? filterContextTitle : 'Danh sách đề thi theo môn'} ({displayedQuizzesCount} đề thi)
           </h3>
           <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.2rem 0 0' }}>
-            Kéo thả các đề thi trắc nghiệm vào từng môn để phân loại hoặc kéo ra ngoài mục.
+            Kéo thả các đề thi trắc nghiệm vào từng môn hoặc cây bên trái để phân loại.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={toggleAllCollapse}
-            style={{
-              padding: '0.5rem 0.85rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              background: '#ffffff',
-              borderColor: '#e2e8f0',
-              color: '#475569'
-            }}
-            title={areAllCollapsed ? 'Mở rộng tất cả các mục môn học' : 'Thu gọn tất cả các mục môn học'}
-          >
-            {areAllCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-            {areAllCollapsed ? 'Mở rộng tất cả' : 'Thu gọn tất cả'}
-          </button>
+          {filteredSubjects.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={toggleAllCollapse}
+              style={{
+                padding: '0.5rem 0.85rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                background: '#ffffff',
+                borderColor: '#e2e8f0',
+                color: '#475569'
+              }}
+              title={areAllCollapsed ? 'Mở rộng tất cả các mục môn học' : 'Thu gọn tất cả các mục môn học'}
+            >
+              {areAllCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {areAllCollapsed ? 'Mở rộng tất cả' : 'Thu gọn tất cả'}
+            </button>
+          )}
 
           <button
             className="btn btn-primary btn-sm"
@@ -357,8 +514,10 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
       )}
 
       {/* Subject Sections */}
-      {subjects.map((subject) => {
-        const subjectQuizzes = quizzes.filter(q => q.subject_id === subject.id);
+      {filteredSubjects.map((subject) => {
+        const subjectQuizzes = quizzes
+          .filter(q => q.subject_id === subject.id)
+          .sort(naturalCompareQuizzes);
         const isCollapsed = isSubjectCollapsed(subject.id);
         const isDragOver = dragOverTarget === subject.id;
         const isEditing = editingSubjectId === subject.id;
@@ -561,8 +720,101 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
         );
       })}
 
+      {/* Section for quizzes assigned to semester directly without a specific subject */}
+      {directSemesterQuizzes.length > 0 && (
+        <div className="subject-section" style={{ border: '1.5px dashed #f59e0b', background: '#ffffff', marginBottom: '0.75rem' }}>
+          <div className="subject-header" style={{ background: '#fffbeb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Calendar size={16} />
+              </div>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#92400e', margin: 0 }}>
+                Đề thi gán trong kỳ này (chưa phân vào môn cụ thể)
+              </h4>
+              <span className="badge badge-purple" style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.75rem' }}>
+                {directSemesterQuizzes.length} đề thi
+              </span>
+            </div>
+          </div>
+          <div className="subject-dropzone">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
+              {directSemesterQuizzes.map((quiz) => (
+                <QuizCardItem
+                  key={quiz.id}
+                  quiz={quiz}
+                  subjects={subjects}
+                  isDragging={draggingQuizId === quiz.id}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onSelectSubject={handleSelectSubject}
+                  onSelectQuiz={onSelectQuiz}
+                  onStartQuiz={onStartQuiz}
+                  onDeleteQuiz={handleDeleteQuiz}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section for quizzes assigned to class directly without a specific subject */}
+      {directClassQuizzes.length > 0 && (
+        <div className="subject-section" style={{ border: '1.5px dashed #6366f1', background: '#ffffff', marginBottom: '0.75rem' }}>
+          <div className="subject-header" style={{ background: '#eef2ff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#e0e7ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Layers size={16} />
+              </div>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#3730a3', margin: 0 }}>
+                Đề thi chung của lớp (chưa phân vào môn cụ thể)
+              </h4>
+              <span className="badge badge-blue" style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.75rem' }}>
+                {directClassQuizzes.length} đề thi
+              </span>
+            </div>
+          </div>
+          <div className="subject-dropzone">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
+              {directClassQuizzes.map((quiz) => (
+                <QuizCardItem
+                  key={quiz.id}
+                  quiz={quiz}
+                  subjects={subjects}
+                  isDragging={draggingQuizId === quiz.id}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onSelectSubject={handleSelectSubject}
+                  onSelectQuiz={onSelectQuiz}
+                  onStartQuiz={onStartQuiz}
+                  onDeleteQuiz={handleDeleteQuiz}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State when current filtered view has no subjects or quizzes */}
+      {filteredSubjects.length === 0 && !showUncategorized && directSemesterQuizzes.length === 0 && directClassQuizzes.length === 0 && (
+        <div className="card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem', background: '#fafafa', border: '1.5px dashed #cbd5e1', borderRadius: '12px', margin: '1rem 0' }}>
+          <Folders size={36} style={{ color: '#cbd5e1', marginBottom: '0.6rem' }} />
+          <h4 style={{ fontWeight: 700, color: '#475569', margin: '0 0 0.4rem' }}>Chưa có môn học hoặc đề thi trong mục này</h4>
+          <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 1rem' }}>
+            Bạn có thể tạo môn học mới bên dưới hoặc kéo thả đề thi vào mục này từ cây thư mục bên trái.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowAddSubject(true)}
+            style={{ fontWeight: 700 }}
+          >
+            <AddFolder size={16} /> + Thêm môn học
+          </button>
+        </div>
+      )}
+
       {/* Section for Uncategorized / Outside Quizzes */}
-      {(() => {
+      {showUncategorized && (() => {
         const isUncategorizedCollapsed = isSubjectCollapsed('uncategorized');
         return (
           <div
@@ -618,9 +870,8 @@ export default function QuizList({ onSelectQuiz, onStartQuiz, refreshTrigger }) 
                 <span style={{
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  background: '#ffffff',
+                  background: '#f1f5f9',
                   color: '#64748b',
-                  border: '1px solid #cbd5e1',
                   padding: '2px 8px',
                   borderRadius: '12px'
                 }}>

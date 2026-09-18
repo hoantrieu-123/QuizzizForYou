@@ -16,7 +16,10 @@ from backend.question_detector import detect_questions_from_elements
 from backend.database import (
     init_db, save_quiz, get_quizzes, get_quiz,
     update_quiz_questions, delete_quiz, save_attempt,
-    get_subjects, create_subject, update_subject, delete_subject, update_quiz_subject
+    get_subjects, create_subject, update_subject, delete_subject, update_quiz_subject,
+    get_classes, create_class, update_class, delete_class,
+    get_semesters, create_semester, update_semester, delete_semester,
+    update_quiz_placement, get_full_tree
 )
 from backend.grading import grade_submission
 from backend.sample_generator import create_sample_docx
@@ -49,16 +52,43 @@ class SubmitQuizRequest(BaseModel):
     questions: Optional[List[Dict[str, Any]]] = None
 
 
+class CreateClassRequest(BaseModel):
+    name: str
+
+
+class UpdateClassRequest(BaseModel):
+    name: str
+
+
+class CreateSemesterRequest(BaseModel):
+    class_id: str
+    name: str
+
+
+class UpdateSemesterRequest(BaseModel):
+    name: str
+
+
 class CreateSubjectRequest(BaseModel):
     name: str
+    semester_id: Optional[str] = None
+    class_id: Optional[str] = None
 
 
 class UpdateSubjectRequest(BaseModel):
     name: str
+    semester_id: Optional[str] = None
+    class_id: Optional[str] = None
 
 
 class UpdateQuizSubjectRequest(BaseModel):
     subject_id: Optional[str] = None
+
+
+class UpdateQuizPlacementRequest(BaseModel):
+    subject_id: Optional[str] = None
+    semester_id: Optional[str] = None
+    class_id: Optional[str] = None
 
 
 
@@ -168,6 +198,65 @@ def submit_quiz(quiz_id: str, payload: SubmitQuizRequest):
     }
 
 
+@app.get("/api/tree")
+def get_tree_route():
+    return get_full_tree()
+
+
+@app.get("/api/classes")
+def list_classes_route():
+    return {"classes": get_classes()}
+
+
+@app.post("/api/classes")
+def add_class_route(payload: CreateClassRequest):
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Tên lớp không được để trống")
+    cls = create_class(payload.name)
+    return {"success": True, "class": cls}
+
+
+@app.put("/api/classes/{class_id}")
+def edit_class_route(class_id: str, payload: UpdateClassRequest):
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Tên lớp không được để trống")
+    update_class(class_id, payload.name)
+    return {"success": True, "message": "Cập nhật lớp thành công"}
+
+
+@app.delete("/api/classes/{class_id}")
+def remove_class_route(class_id: str):
+    delete_class(class_id)
+    return {"success": True, "message": "Xóa lớp thành công"}
+
+
+@app.get("/api/semesters")
+def list_semesters_route(class_id: Optional[str] = None):
+    return {"semesters": get_semesters(class_id)}
+
+
+@app.post("/api/semesters")
+def add_semester_route(payload: CreateSemesterRequest):
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Tên kỳ học không được để trống")
+    sem = create_semester(payload.class_id, payload.name)
+    return {"success": True, "semester": sem}
+
+
+@app.put("/api/semesters/{semester_id}")
+def edit_semester_route(semester_id: str, payload: UpdateSemesterRequest):
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Tên kỳ học không được để trống")
+    update_semester(semester_id, payload.name)
+    return {"success": True, "message": "Cập nhật kỳ học thành công"}
+
+
+@app.delete("/api/semesters/{semester_id}")
+def remove_semester_route(semester_id: str):
+    delete_semester(semester_id)
+    return {"success": True, "message": "Xóa kỳ học thành công"}
+
+
 @app.get("/api/subjects")
 def list_subjects():
     return {"subjects": get_subjects()}
@@ -177,7 +266,7 @@ def list_subjects():
 def add_subject(payload: CreateSubjectRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên môn học không được để trống")
-    subj = create_subject(payload.name)
+    subj = create_subject(payload.name, semester_id=payload.semester_id, class_id=payload.class_id)
     return {"success": True, "subject": subj}
 
 
@@ -185,7 +274,7 @@ def add_subject(payload: CreateSubjectRequest):
 def edit_subject(subject_id: str, payload: UpdateSubjectRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên môn học không được để trống")
-    update_subject(subject_id, payload.name)
+    update_subject(subject_id, payload.name, semester_id=payload.semester_id, class_id=payload.class_id)
     return {"success": True, "message": "Cập nhật môn học thành công"}
 
 
@@ -202,6 +291,15 @@ def change_quiz_subject(quiz_id: str, payload: UpdateQuizSubjectRequest):
         raise HTTPException(status_code=404, detail="Không tìm thấy bài thi")
     update_quiz_subject(quiz_id, payload.subject_id)
     return {"success": True, "message": "Cập nhật môn học cho đề thi thành công"}
+
+
+@app.put("/api/quizzes/{quiz_id}/placement")
+def place_quiz_route(quiz_id: str, payload: UpdateQuizPlacementRequest):
+    existing = get_quiz(quiz_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bài thi")
+    update_quiz_placement(quiz_id, subject_id=payload.subject_id, semester_id=payload.semester_id, class_id=payload.class_id)
+    return {"success": True, "message": "Cập nhật vị trí bài thi thành công"}
 
 
 

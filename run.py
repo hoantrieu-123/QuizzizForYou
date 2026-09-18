@@ -36,5 +36,5 @@ if __name__ == "__main__":
     print("=" * 65)
 
     threading.Thread(target=open_browser, daemon=True).start()
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
 
