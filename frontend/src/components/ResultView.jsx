@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Trophy, CheckCircle2, XCircle, RotateCcw,
-  Edit3, Home, Sparkles
+  Edit3, Home
 } from './UIcons';
 import { cleanQuestionPrompt, cleanOptionText } from './QuizPlayer';
 
@@ -257,16 +257,13 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                   );
                 })()}
 
-                <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
-                  <span className="badge badge-highlight" style={{ fontSize: '0.775rem' }}>
-                    <Sparkles size={13} /> Nguồn xác định: {q.highlight_source || 'Đọc thuộc tính Highlight từ file Word .docx'}
-                  </span>
-                  {q.explanation && (
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.825rem', color: '#64748b' }}>
+                {q.explanation && (
+                  <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '0.825rem', color: '#64748b' }}>
                       {q.explanation}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           );
