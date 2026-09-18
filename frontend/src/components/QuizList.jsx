@@ -536,7 +536,29 @@ export default function QuizList({
               style={{ borderBottom: isCollapsed ? 'none' : '1px solid #e2e8f0' }}
               onClick={() => toggleCollapse(subject.id)}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <span
+                  style={{
+                    color: '#94a3b8',
+                    cursor: 'grab',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px',
+                    borderRadius: '4px'
+                  }}
+                  draggable
+                  onDragStart={(e) => {
+                    e.stopPropagation();
+                    e.dataTransfer.setData('text/plain', `subject:${subject.id}`);
+                    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'subject', id: subject.id, name: subject.name }));
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  title="Nắm kéo mục môn này thả vào kỳ học trên thanh bên trái"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <GripVertical size={16} />
+                </span>
+
                 <button
                   type="button"
                   style={{

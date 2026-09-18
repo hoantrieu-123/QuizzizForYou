@@ -20,6 +20,7 @@ export default function SidebarTree({
 
   // Drag over target tracking
   const [dragOverTarget, setDragOverTarget] = useState(null);
+  const [draggingSubjectId, setDraggingSubjectId] = useState(null);
 
   // Inline forms for adding / editing
   // addingType: null | 'class' | { type: 'semester', classId: string } | { type: 'subject', semesterId: string, classId: string }
@@ -87,7 +88,47 @@ export default function SidebarTree({
   const handleDrop = async (e, targetType, targetId, extraMeta = {}) => {
     e.preventDefault();
     setDragOverTarget(null);
-    const quizId = e.dataTransfer.getData('text/plain');
+    setDraggingSubjectId(null);
+
+    const plainData = e.dataTransfer.getData('text/plain') || '';
+    let jsonData = null;
+    try {
+      const rawJson = e.dataTransfer.getData('application/json');
+      if (rawJson) jsonData = JSON.parse(rawJson);
+    } catch (err) {}
+
+    // CASE 1: Dropping a SUBJECT onto a Semester
+    if ((jsonData && jsonData.type === 'subject') || plainData.startsWith('subject:')) {
+      const subjectId = jsonData?.id || plainData.replace('subject:', '');
+      if (targetType === 'semester') {
+        try {
+          const res = await fetch(apiUrl(`/api/subjects/${subjectId}/move`), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              semester_id: targetId,
+              class_id: extraMeta.class_id || null
+            })
+          });
+          if (res.ok) {
+            // Auto expand destination semester
+            setExpandedNodes(prev => ({ ...prev, [`semester_${targetId}`]: true }));
+            await fetchTree();
+            if (onTreeUpdated) onTreeUpdated();
+          } else {
+            const data = await res.json().catch(() => ({}));
+            alert(data.detail || 'Không thể chuyển môn vào kỳ học này');
+          }
+        } catch (err) {
+          console.error('Lỗi khi chuyển môn vào kỳ học:', err);
+          alert('Không thể chuyển môn vào kỳ: ' + err.message);
+        }
+      }
+      return;
+    }
+
+    // CASE 2: Dropping a QUIZ
+    const quizId = plainData;
     if (!quizId) return;
 
     let payload = {};
@@ -118,7 +159,7 @@ export default function SidebarTree({
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        fetchTree();
+        await fetchTree();
         if (onTreeUpdated) onTreeUpdated();
       }
     } catch (err) {
@@ -579,7 +620,7 @@ export default function SidebarTree({
                           onDragOver={(e) => handleDragOver(e, `sem_${sem.id}`)}
                           onDragLeave={(e) => handleDragLeave(e, `sem_${sem.id}`)}
                           onDrop={(e) => handleDrop(e, 'semester', sem.id, { class_id: cls.id })}
-                          title={`Kéo thả đề thi vào đây để gán vào kỳ ${sem.name}`}
+                          title={`Kéo thả môn học hoặc đề thi vào đây để gán vào kỳ ${sem.name}`}
                         >
                           <div className="tree-node-left">
                             <button
@@ -698,7 +739,7 @@ export default function SidebarTree({
                           <div className="tree-branch-subjects ml-tree-2">
                             {sem.subjects && sem.subjects.length === 0 && (
                               <div className="tree-empty-hint">
-                                Chưa có môn. Bấm [+] để thêm môn hoặc thả đề vào kỳ.
+                                Chưa có môn. Bấm [+] để thêm môn hoặc kéo môn vào kỳ.
                               </div>
                             )}
 
@@ -710,7 +751,16 @@ export default function SidebarTree({
                               return (
                                 <div
                                   key={sub.id}
-                                  className={`tree-node tree-node-subject ${isSubActive ? 'active' : ''} ${isSubDragOver ? 'drag-over' : ''}`}
+                                  className={`tree-node tree-node-subject ${isSubActive ? 'active' : ''} ${isSubDragOver ? 'drag-over' : ''} ${draggingSubjectId === sub.id ? 'is-dragging' : ''}`}
+                                  draggable={!isSubEditing}
+                                  onDragStart={(e) => {
+                                    e.stopPropagation();
+                                    e.dataTransfer.setData('text/plain', `subject:${sub.id}`);
+                                    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'subject', id: sub.id, name: sub.name }));
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    setDraggingSubjectId(sub.id);
+                                  }}
+                                  onDragEnd={() => setDraggingSubjectId(null)}
                                   onClick={() => onSelectFilter({
                                     type: 'subject',
                                     id: sub.id,
@@ -720,9 +770,16 @@ export default function SidebarTree({
                                   onDragOver={(e) => handleDragOver(e, `sub_${sub.id}`)}
                                   onDragLeave={(e) => handleDragLeave(e, `sub_${sub.id}`)}
                                   onDrop={(e) => handleDrop(e, 'subject', sub.id, { semester_id: sem.id, class_id: cls.id })}
-                                  title={`Kéo thả đề thi vào môn "${sub.name}"`}
+                                  title={`Nắm kéo để chuyển môn sang kỳ khác, hoặc thả đề thi vào môn "${sub.name}"`}
                                 >
                                   <div className="tree-node-left">
+                                    <span
+                                      style={{ color: '#94a3b8', cursor: 'grab', display: 'inline-flex', alignItems: 'center' }}
+                                      title="Nắm kéo môn này thả vào kỳ học khác"
+                                    >
+                                      <GripVertical size={11} />
+                                    </span>
+
                                     <div className="tree-node-icon" style={{ background: '#ede9fe', color: '#7c3aed' }}>
                                       <Folders size={12} />
                                     </div>

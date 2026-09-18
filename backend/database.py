@@ -369,6 +369,16 @@ def create_subject(name: str, semester_id: Optional[str] = None, class_id: Optio
     return row
 
 
+def get_subject(subject_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM subjects WHERE id = ?", (subject_id,))
+    row = cursor.fetchone()
+    res = row_to_dict(cursor, row) if row else None
+    conn.close()
+    return res
+
+
 def update_subject(subject_id: str, name: str, semester_id: Optional[str] = None, class_id: Optional[str] = None) -> bool:
     """Update subject name and optional semester / class placement."""
     conn = get_connection()
@@ -382,8 +392,27 @@ def update_subject(subject_id: str, name: str, semester_id: Optional[str] = None
             if r:
                 cls_val = r['class_id'] or ''
         cursor.execute("UPDATE subjects SET name = ?, semester_id = ?, class_id = ? WHERE id = ?", (name.strip(), sem_val, cls_val, subject_id))
+        cursor.execute("UPDATE quizzes SET semester_id = ?, class_id = ? WHERE subject_id = ?", (sem_val, cls_val, subject_id))
     else:
         cursor.execute("UPDATE subjects SET name = ? WHERE id = ?", (name.strip(), subject_id))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def move_subject(subject_id: str, semester_id: str, class_id: Optional[str] = None) -> bool:
+    """Move a subject into a new semester (and its class), updating all its quizzes."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    sem_val = semester_id.strip() if semester_id else ''
+    cls_val = class_id.strip() if class_id else ''
+    if sem_val and not cls_val:
+        cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_val,))
+        r = cursor.fetchone()
+        if r:
+            cls_val = r['class_id'] or ''
+    cursor.execute("UPDATE subjects SET semester_id = ?, class_id = ? WHERE id = ?", (sem_val, cls_val, subject_id))
+    cursor.execute("UPDATE quizzes SET semester_id = ?, class_id = ? WHERE subject_id = ?", (sem_val, cls_val, subject_id))
     conn.commit()
     conn.close()
     return True

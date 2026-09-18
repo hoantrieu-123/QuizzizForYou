@@ -19,7 +19,7 @@ from backend.database import (
     get_subjects, create_subject, update_subject, delete_subject, update_quiz_subject,
     get_classes, create_class, update_class, delete_class,
     get_semesters, create_semester, update_semester, delete_semester,
-    update_quiz_placement, get_full_tree
+    update_quiz_placement, get_full_tree, get_subject, move_subject
 )
 from backend.grading import grade_submission
 from backend.sample_generator import create_sample_docx
@@ -78,6 +78,11 @@ class CreateSubjectRequest(BaseModel):
 class UpdateSubjectRequest(BaseModel):
     name: str
     semester_id: Optional[str] = None
+    class_id: Optional[str] = None
+
+
+class MoveSubjectRequest(BaseModel):
+    semester_id: str
     class_id: Optional[str] = None
 
 
@@ -282,6 +287,15 @@ def edit_subject(subject_id: str, payload: UpdateSubjectRequest):
 def remove_subject(subject_id: str):
     delete_subject(subject_id)
     return {"success": True, "message": "Xóa môn học thành công"}
+
+
+@app.put("/api/subjects/{subject_id}/move")
+def move_subject_route(subject_id: str, payload: MoveSubjectRequest):
+    existing = get_subject(subject_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Không tìm thấy môn học")
+    move_subject(subject_id, payload.semester_id, payload.class_id)
+    return {"success": True, "message": "Chuyển môn học vào kỳ thành công"}
 
 
 @app.put("/api/quizzes/{quiz_id}/subject")
