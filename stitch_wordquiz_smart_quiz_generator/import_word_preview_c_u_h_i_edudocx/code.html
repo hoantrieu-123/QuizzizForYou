@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "primary": "#3525cd",
+          "on-secondary-fixed-variant": "#5a00c6",
+          "background": "#faf8ff",
+          "on-primary": "#ffffff",
+          "surface-container-low": "#f2f3ff",
+          "primary-fixed-dim": "#c3c0ff",
+          "on-tertiary": "#ffffff",
+          "secondary": "#712ae2",
+          "error-container": "#ffdad6",
+          "surface-variant": "#dae2fd",
+          "secondary-fixed-dim": "#d2bbff",
+          "on-secondary-container": "#fffbff",
+          "on-background": "#131b2e",
+          "inverse-surface": "#283044",
+          "surface-dim": "#d2d9f4",
+          "surface-tint": "#4d44e3",
+          "surface-container-high": "#e2e7ff",
+          "inverse-on-surface": "#eef0ff",
+          "on-surface": "#131b2e",
+          "surface-bright": "#faf8ff",
+          "on-tertiary-container": "#93e8ff",
+          "primary-fixed": "#e2dfff",
+          "on-surface-variant": "#464555",
+          "on-error": "#ffffff",
+          "surface-container-highest": "#dae2fd",
+          "on-primary-container": "#dad7ff",
+          "on-secondary": "#ffffff",
+          "surface-container": "#eaedff",
+          "tertiary-fixed-dim": "#4cd7f6",
+          "tertiary-fixed": "#acedff",
+          "on-primary-fixed": "#0f0069",
+          "outline": "#777587",
+          "on-error-container": "#93000a",
+          "tertiary": "#00505f",
+          "on-tertiary-fixed": "#001f26",
+          "on-secondary-fixed": "#25005a",
+          "secondary-fixed": "#eaddff",
+          "on-tertiary-fixed-variant": "#004e5c",
+          "surface-container-lowest": "#ffffff",
+          "primary-container": "#4f46e5",
+          "tertiary-container": "#006a7c",
+          "error": "#ba1a1a",
+          "secondary-container": "#8a4cfc",
+          "outline-variant": "#c7c4d8",
+          "on-primary-fixed-variant": "#3323cc",
+          "inverse-primary": "#c3c0ff",
+          "surface": "#faf8ff"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "space-xs": "0.25rem",
+          "space-xl": "2rem",
+          "gutter-mobile": "1rem",
+          "space-md": "1rem",
+          "margin": "2rem",
+          "space-lg": "1.5rem",
+          "gutter": "1.5rem",
+          "margin-mobile": "1rem",
+          "space-sm": "0.5rem"
+        },
+        "fontFamily": {
+          "label-sm": [
+            "Plus Jakarta Sans"
+          ],
+          "label-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "display-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "display-lg-mobile": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-md": [
+            "Plus Jakarta Sans"
+          ],
+          "body-sm": [
+            "Plus Jakarta Sans"
+          ],
+          "label-md": [
+            "Plus Jakarta Sans"
+          ],
+          "body-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "body-md": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-lg": [
+            "Plus Jakarta Sans"
+          ],
+          "headline-sm": [
+            "Plus Jakarta Sans"
+          ]
+        },
+        "fontSize": {
+          "label-sm": [
+            "11px",
+            {
+              "lineHeight": "14px",
+              "letterSpacing": "0.04em",
+              "fontWeight": "700"
+            }
+          ],
+          "label-lg": [
+            "14px",
+            {
+              "lineHeight": "20px",
+              "letterSpacing": "0.01em",
+              "fontWeight": "600"
+            }
+          ],
+          "display-lg": [
+            "40px",
+            {
+              "lineHeight": "48px",
+              "letterSpacing": "-0.03em",
+              "fontWeight": "800"
+            }
+          ],
+          "display-lg-mobile": [
+            "30px",
+            {
+              "lineHeight": "38px",
+              "letterSpacing": "-0.025em",
+              "fontWeight": "800"
+            }
+          ],
+          "headline-md": [
+            "22px",
+            {
+              "lineHeight": "28px",
+              "letterSpacing": "-0.015em",
+              "fontWeight": "700"
+            }
+          ],
+          "body-sm": [
+            "12px",
+            {
+              "lineHeight": "16px",
+              "fontWeight": "400"
+            }
+          ],
+          "label-md": [
+            "12px",
+            {
+              "lineHeight": "16px",
+              "letterSpacing": "0.02em",
+              "fontWeight": "600"
+            }
+          ],
+          "body-lg": [
+            "16px",
+            {
+              "lineHeight": "24px",
+              "fontWeight": "400"
+            }
+          ],
+          "body-md": [
+            "14px",
+            {
+              "lineHeight": "20px",
+              "fontWeight": "400"
+            }
+          ],
+          "headline-lg": [
+            "28px",
+            {
+              "lineHeight": "36px",
+              "letterSpacing": "-0.02em",
+              "fontWeight": "700"
+            }
+          ],
+          "headline-sm": [
+            "18px",
+            {
+              "lineHeight": "24px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "600"
+            }
+          ]
+        }
+      },
+    },
+  }</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between"><div class="flex flex-col"><div class="h-16 px-space-lg flex items-center gap-3"><img alt="EduDocx Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1W_rjLuRiesUzBTjdUfz-IfwZ4SNt4dMqrx9fpRV5w4UKK7jLjcTvneBlshbWeIZM5_XMXp8kviynGrnzMb0DebYNgbAWmGWacDXHZAlZWfTqIgT6oh4kQWJtI0g7whJtQHJs7Zx9pGT8NI0BKCJaQtQymnVDlLNmN_HO1kJuO7R6h4FaGGawrAX1HEyVLmvwNaJ9O5qfVQ0hANPMJXyHunq6YbQWRksn0SZoddyh--z38_Dc5GweTzlo8"/><span class="font-headline-sm text-headline-sm text-primary tracking-tight font-bold">EduDocx</span></div><div class="px-space-md py-space-sm"><a class="group relative flex items-center justify-between px-space-md py-space-sm bg-primary-container text-on-primary rounded-xl shadow-[0_8px_20px_-4px_rgba(79,70,229,0.25)] hover:bg-primary transition-all duration-200" data-path="import-word" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px]">upload_file</span><span class="font-label-lg text-label-lg font-bold">Import Word</span></div><span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm uppercase font-bold tracking-wider">Hot AI</span></a></div><nav class="flex flex-col gap-1 px-space-md mt-space-sm" data-active-classes="bg-surface-container text-primary font-bold rounded-xl"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="trang-chu" href="#"><span class="material-symbols-outlined text-[20px]">home</span><span class="font-label-lg text-label-lg">Trang chủ</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="bai-trac-nghiem" href="#"><span class="material-symbols-outlined text-[20px]">quiz</span><span class="font-label-lg text-label-lg">Bài trắc nghiệm</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="thu-vien-tai-lieu" href="#"><span class="material-symbols-outlined text-[20px]">menu_book</span><span class="font-label-lg text-label-lg">Thư viện tài liệu</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="ngan-hang-cau-hoi" href="#"><span class="material-symbols-outlined text-[20px]">account_balance</span><span class="font-label-lg text-label-lg">Ngân hàng câu hỏi</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="lich-su-ket-qua" href="#"><span class="material-symbols-outlined text-[20px]">bar_chart</span><span class="font-label-lg text-label-lg">Lịch sử &amp; Kết quả</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="tien-do-hoc-tap" href="#"><span class="material-symbols-outlined text-[20px]">trending_up</span><span class="font-label-lg text-label-lg">Tiến độ học tập</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="da-luu" href="#"><span class="material-symbols-outlined text-[20px]">favorite</span><span class="font-label-lg text-label-lg">Đã lưu</span></a></nav></div><div class="px-space-md pb-space-lg"><nav class="flex flex-col gap-1" data-active-classes="bg-surface-container text-primary font-bold rounded-xl"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all" data-path="cai-dat" href="#"><span class="material-symbols-outlined text-[20px]">settings</span><span class="font-label-lg text-label-lg">Cài đặt</span></a></nav></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-xl"><div class="flex-1 max-w-xl"><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[20px] pointer-events-none">search</span><input class="w-full h-10 pl-10 pr-4 bg-surface-container-low rounded-xl font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Tìm kiếm file Word, bài thi, câu hỏi..." type="text"/></div></div><div class="flex items-center gap-space-md ml-space-lg"><button aria-label="Chuyển giao diện tối" class="w-9 h-9 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">dark_mode</span></button><div class="relative"><button aria-label="Thông báo" class="w-9 h-9 rounded-xl flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error ring-2 ring-surface"></span></button></div><div class="h-6 w-px bg-outline-variant/40 mx-space-xs"></div><div class="flex items-center gap-space-sm cursor-pointer"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlEL1gbn9L0xkV6YD1Xfh69qjI4tyCklsBN2caoUiyeqGNjQ3j6BDsuBPwQPVyXrQmO1-alM-D8Zhgv3sFCp4k9Md0_d8NeKi_hk_RotwU1IHglrseCInJoiyiiLzf0wWyX6A0JaZde5SscJoMHJgh2uwDQvEDJdPrxVb7ypDt1c5yucuVc1X6P8IxcL9yB8ZJdzafpQ933pSMd7zg-bgKum5Z3vv_HH3kvOvXgKU7onRycCLKNw0c"/><div class="hidden md:flex flex-col text-left"><span class="font-label-lg text-label-lg text-on-surface leading-tight font-semibold">Hoàng Triều</span><span class="font-label-sm text-label-sm text-on-surface-variant">Giảng viên / Học viên Pro</span></div><span class="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span></div></div></header><main class="w-full pt-16 bg-background min-h-screen px-space-xl py-space-lg"><div class="flex flex-col w-full">
+<!-- Breadcrumb & Page Meta -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm mb-space-lg">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<a class="hover:text-primary transition-colors" href="#">Tài liệu</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-bold">Import Word</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface">Phân tích &amp; Tự động tạo bài trắc nghiệm</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight font-extrabold flex items-center gap-space-sm">
+        Import File Word &amp; Tạo Đề Trắc Nghiệm Tự Động
+        <span class="px-2.5 py-1 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm tracking-wider uppercase">AI Core v2.4</span>
+</h1>
+</div>
+<!-- Quick Stats Pill -->
+<div class="flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-xs rounded-xl self-start md:self-auto">
+<div class="flex items-center gap-1.5 text-tertiary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>Phát hiện: <strong>50 câu</strong></span>
+</div>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<div class="flex items-center gap-1.5 text-primary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">timer</span>
+<span>Thời gian xử lý: <strong>1.4s</strong></span>
+</div>
+</div>
+</div>
+<!-- 4-Step Progress Indicator -->
+<div class="bg-surface-container-lowest p-space-md md:p-space-lg rounded-2xl shadow-sm mb-space-lg">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-space-md relative">
+<!-- Step 1: Upload Complete -->
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-bold text-label-lg shadow-sm">
+<span class="material-symbols-outlined text-[20px]">check</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wide text-primary font-bold">Bước 1</span>
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">Tải file .docx</span>
+</div>
+</div>
+<!-- Step 2: Analysis Complete -->
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-bold text-label-lg shadow-sm">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wide text-primary font-bold">Bước 2</span>
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">AI Phân tích cú pháp</span>
+</div>
+</div>
+<!-- Step 3: Preview Active -->
+<div class="flex items-center gap-space-sm bg-surface-container p-space-xs rounded-xl">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-on-primary flex items-center justify-center font-bold text-label-lg shadow-sm">
+<span class="material-symbols-outlined text-[20px]">rate_review</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wide text-primary font-bold">Bước 3 [Đang thực hiện]</span>
+<span class="font-headline-sm text-headline-sm text-primary font-bold truncate">Kiểm tra &amp; Sửa lỗi</span>
+</div>
+</div>
+<!-- Step 4: Ready -->
+<div class="flex items-center gap-space-sm opacity-60">
+<div class="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface-variant flex items-center justify-center font-bold text-label-lg">
+<span class="material-symbols-outlined text-[20px]">rocket_launch</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Bước 4</span>
+<span class="font-headline-sm text-headline-sm text-on-surface-variant truncate">Cấu hình &amp; Thi</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Workspace Grid (8:4 Desktop Split) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+<!-- LEFT PANE: Document Status, Guidelines & Interactive Editor (8 cols) -->
+<div class="xl:col-span-8 flex flex-col gap-space-lg">
+<!-- Uploaded Document Status & AI Parser Summary -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col gap-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md p-space-md bg-surface-container-low rounded-xl">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-12 h-12 rounded-xl bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-md">
+<span class="material-symbols-outlined text-[26px]">description</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold truncate">De_Thi_Lap_Trinh_C.docx</span>
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold">2.4 MB</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Chuẩn Microsoft Word OpenXML • Phân tích lúc 14:22 hôm nay</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs shrink-0 self-end sm:self-auto">
+<button class="px-space-md py-space-xs bg-surface-container text-on-surface hover:bg-surface-container-highest rounded-xl font-label-sm text-label-sm transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">cached</span>
+              Tải lại file khác
+            </button>
+</div>
+</div>
+<!-- AI Health Status Alert -->
+<div class="flex items-start gap-space-md p-space-md bg-tertiary-fixed/30 rounded-xl">
+<span class="material-symbols-outlined text-tertiary text-[24px] shrink-0 mt-0.5">task_alt</span>
+<div class="flex-1">
+<div class="flex flex-wrap items-center gap-space-xs font-label-lg text-label-lg text-on-surface">
+<span>Đã phân tích toàn bộ <strong>50 câu hỏi</strong> từ file Word!</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-tertiary text-on-tertiary font-bold text-label-sm">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> 48 câu hợp lệ
+              </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-error-container text-on-error-container font-bold text-label-sm">
+<span class="material-symbols-outlined text-[14px]">warning</span> 2 câu cần bạn xác nhận lại
+              </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+              Hệ thống đã nhận diện định dạng phân cấp, bảng mã ký tự Unicode và hình ảnh kiến trúc đính kèm hoàn tất.
+            </p>
+</div>
+</div>
+<!-- Format Standard Guidance Box -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-sm p-space-sm px-space-md bg-surface-container rounded-xl font-body-sm text-body-sm text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary">lightbulb</span>
+<span>Định dạng mẫu chuẩn: <code class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface font-semibold font-mono">Câu 1: ... A. ... B. ... C. ... D. ... Đáp án: A</code></span>
+</div>
+<a class="inline-flex items-center gap-1 text-primary hover:text-primary-container font-label-sm text-label-sm font-bold shrink-0" href="#">
+<span class="material-symbols-outlined text-[16px]">download</span>
+            Tải file Word mẫu .docx
+          </a>
+</div>
+</div>
+<!-- Question List Reviewer Header & Filters -->
+<div class="flex flex-col gap-space-md">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface font-bold">Danh sách câu hỏi trích xuất</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Xem trước dữ liệu, gán lại đáp án khuyết thiếu hoặc tùy chỉnh điểm từng câu.</p>
+</div>
+<!-- Bulk actions -->
+<div class="flex items-center gap-space-xs">
+<button class="px-space-md py-space-xs bg-surface-container-low text-on-surface hover:bg-surface-container-high rounded-xl font-label-sm text-label-sm transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">swap_vert</span>
+              Đảo tất cả câu
+            </button>
+<button class="px-space-md py-space-xs bg-primary text-on-primary rounded-xl font-label-sm text-label-sm transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+              Thêm câu mới
+            </button>
+</div>
+</div>
+<!-- Tabs & Filters -->
+<div class="flex flex-wrap items-center gap-space-xs bg-surface-container-low p-1.5 rounded-xl">
+<button class="px-space-md py-space-xs rounded-lg font-label-sm text-label-sm font-bold bg-surface-container-lowest text-primary shadow-sm" id="filter-all">
+            Tất cả (50)
+          </button>
+<button class="px-space-md py-space-xs rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1" id="filter-valid">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+            Hợp lệ (48)
+          </button>
+<button class="px-space-md py-space-xs rounded-lg font-label-sm text-label-sm text-error hover:bg-error-container/50 transition-colors flex items-center gap-1 font-bold" id="filter-warning">
+<span class="material-symbols-outlined text-[15px]">warning</span>
+            Cần kiểm tra (2)
+          </button>
+<div class="h-4 w-px bg-outline-variant/40 mx-1 hidden sm:block"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant px-2 hidden sm:inline">Phân loại:</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">1 đáp án (42)</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Đúng/Sai (4)</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Có hình ảnh (4)</span>
+</div>
+</div>
+<!-- Question Cards Stream -->
+<div class="flex flex-col gap-space-md">
+<!-- Question Card 1 (Valid - 1 Single Choice) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col gap-space-md transition-all hover:shadow-md">
+<div class="flex items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="w-7 h-7 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center justify-center font-bold">01</span>
+<span class="px-2.5 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Hợp lệ
+              </span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Trắc nghiệm 1 đáp án</span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Chủ đề: C# Cơ bản</span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Sửa nhanh nội dung">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-error transition-colors" title="Xóa câu">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+            C# là gì?
+          </div>
+<!-- Answer Options Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<!-- Option A (Correct) -->
+<div class="p-space-sm px-space-md rounded-xl bg-tertiary-fixed/30 flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-tertiary text-on-tertiary font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">A</span>
+<span class="font-body-md text-body-md text-on-surface font-medium">Ngôn ngữ lập trình hiện đại hướng đối tượng</span>
+</div>
+<span class="material-symbols-outlined text-tertiary text-[20px] shrink-0" title="Đáp án đúng đã nhận diện">check_circle</span>
+</div>
+<!-- Option B -->
+<div class="p-space-sm px-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">B</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Hệ điều hành mã nguồn đóng</span>
+</div>
+<!-- Option C -->
+<div class="p-space-sm px-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">C</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Hệ quản trị cơ sở dữ liệu quan hệ</span>
+</div>
+<!-- Option D -->
+<div class="p-space-sm px-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">D</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Trình duyệt web nhân Chromium</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-xs font-label-sm text-label-sm text-on-surface-variant">
+<span>Khóa đáp án: <strong class="text-tertiary font-bold">A</strong> (Trích xuất tự động)</span>
+<span class="text-outline">Trọng số: 0.2 điểm</span>
+</div>
+</div>
+<!-- Question Card 2 (Valid - True/False) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col gap-space-md transition-all hover:shadow-md">
+<div class="flex items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="w-7 h-7 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center justify-center font-bold">02</span>
+<span class="px-2.5 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Hợp lệ
+              </span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Đúng / Sai</span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Chủ đề: ASP.NET Core</span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Sửa nhanh">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-error transition-colors" title="Xóa">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+            ASP.NET Core có thể xây dựng Web API và chạy đa nền tảng trên Windows, macOS và Linux.
+          </div>
+<!-- True/False Options Row -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<!-- Option True (Correct) -->
+<div class="p-space-sm px-space-md rounded-xl bg-tertiary-fixed/30 flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-tertiary text-on-tertiary font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">A</span>
+<span class="font-body-md text-body-md text-on-surface font-bold">Đúng</span>
+</div>
+<span class="material-symbols-outlined text-tertiary text-[20px] shrink-0">check_circle</span>
+</div>
+<!-- Option False -->
+<div class="p-space-sm px-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">B</span>
+<span class="font-body-md text-body-md text-on-surface-variant font-medium">Sai</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-xs font-label-sm text-label-sm text-on-surface-variant">
+<span>Khóa đáp án: <strong class="text-tertiary font-bold">A (Đúng)</strong></span>
+<span class="text-outline">Trọng số: 0.2 điểm</span>
+</div>
+</div>
+<!-- Question Card 3 (Valid - Image Embedded Question) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col gap-space-md transition-all hover:shadow-md">
+<div class="flex items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="w-7 h-7 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md flex items-center justify-center font-bold">03</span>
+<span class="px-2.5 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Hợp lệ
+              </span>
+<span class="px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">image</span> Có ảnh trích xuất (.png)
+              </span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold">Chủ đề: Kiến trúc phần mềm</span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Sửa nhanh">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-error transition-colors" title="Xóa">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+            Hình ảnh bên dưới mô tả mô hình thiết kế kiến trúc kinh điển nào trong ứng dụng ASP.NET?
+          </div>
+<!-- Embedded Extracted Diagram Image -->
+<div class="relative w-full max-w-lg bg-surface-container-low rounded-xl overflow-hidden shadow-inner">
+<img class="w-full h-48 object-cover" data-alt="A clean technical architectural diagram illustrating the Model View Controller MVC flow for ASP.NET web development, soft modern aesthetic, indigo and violet lines, slate background, hyper-crisp vector typography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-pMBpLggoqiGU4TCn6whR_IlDPlInTSKZM_61hPRkXM_t-uwLMWj02dX6t94rTaRgmcOYhtHg_x68hubVUD8riw5c5CQ6wWZyPNWg1pOTlmZ2VxNe03iM8MHLtWhg0d4-NJo0I2XyNAJPo6zItWOjfOlvY9GuG-wts7vi7SKBq3IN4JubxEgB4kYbD-jV5mmoiiWk_cOkqwG0S78ghZ_LY3bLxHcnztDFUrDMqneUQS9RrLEAg5V1"/>
+<div class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-inverse-surface/80 text-inverse-on-surface font-label-sm text-label-sm backdrop-blur-sm">
+              Ảnh trích từ Word: Paragraph #14
+            </div>
+</div>
+<!-- Choice Options -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<div class="p-space-sm px-space-md rounded-xl bg-tertiary-fixed/30 flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-tertiary text-on-tertiary font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">A</span>
+<span class="font-body-md text-body-md text-on-surface font-bold">MVC (Model - View - Controller)</span>
+</div>
+<span class="material-symbols-outlined text-tertiary text-[20px] shrink-0">check_circle</span>
+</div>
+<div class="p-space-sm px-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">B</span>
+<span class="font-body-md text-body-md text-on-surface-variant">MVVM (Model - View - ViewModel)</span>
+</div>
+<div class="p-space-sm px-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">C</span>
+<span class="font-body-md text-body-md text-on-surface-variant">MVP (Model - View - Presenter)</span>
+</div>
+<div class="p-space-sm px-space-md rounded-xl bg-surface-container-low flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0">D</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Layered Onion Architecture</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-space-xs font-label-sm text-label-sm text-on-surface-variant">
+<span>Khóa đáp án: <strong class="text-tertiary font-bold">A</strong></span>
+<span class="text-outline">Trọng số: 0.2 điểm</span>
+</div>
+</div>
+<!-- Question Card 5 (CRITICAL WARNING / REQUIRE USER ATTENTION) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-md flex flex-col gap-space-md transition-all relative overflow-hidden">
+<!-- Alert Banner Accent Line -->
+<div class="absolute top-0 left-0 right-0 h-1.5 bg-error"></div>
+<div class="flex items-center justify-between gap-space-sm pt-1">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="w-7 h-7 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md flex items-center justify-center font-bold">05</span>
+<span class="px-2.5 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-extrabold flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">warning</span> Cần bổ sung đáp án
+              </span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Trắc nghiệm 1 đáp án</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="px-space-sm py-1 rounded-lg bg-surface-container text-on-surface-variant hover:text-error hover:bg-error-container/40 font-label-sm text-label-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+                Bỏ câu này khỏi đề
+              </button>
+</div>
+</div>
+<!-- Question Prompt -->
+<div class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+            ASP.NET Core được quản lý và phát triển ban đầu bởi tổ chức nào?
+          </div>
+<!-- Highlight Alert Box -->
+<div class="flex items-start gap-space-sm p-space-md rounded-xl bg-error-container/40 text-on-error-container">
+<span class="material-symbols-outlined text-error text-[20px] shrink-0 mt-0.5">error_outline</span>
+<div class="text-body-sm font-body-sm">
+<strong class="font-bold">Lỗi trích xuất:</strong> Không tìm thấy dòng <code class="bg-surface-container-lowest px-1 rounded font-mono font-bold">Đáp án: ...</code> trong đoạn văn bản gốc của file Word. Vui lòng bấm vào 1 trong các lựa chọn bên dưới để chỉ định đáp án đúng ngay lập tức.
+            </div>
+</div>
+<!-- Interactive Quick Choice Buttons -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm" id="fix-options-group">
+<button class="p-space-sm px-space-md rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-all group" onclick="selectOption(this, 'A')">
+<div class="flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0 transition-colors">A</span>
+<span class="font-body-md text-body-md text-on-surface">Microsoft &amp; .NET Foundation</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Chọn làm Đ/A Đúng</span>
+</button>
+<button class="p-space-sm px-space-md rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-all group" onclick="selectOption(this, 'B')">
+<div class="flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0 transition-colors">B</span>
+<span class="font-body-md text-body-md text-on-surface">Oracle Corporation</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Chọn làm Đ/A Đúng</span>
+</button>
+<button class="p-space-sm px-space-md rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-all group" onclick="selectOption(this, 'C')">
+<div class="flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0 transition-colors">C</span>
+<span class="font-body-md text-body-md text-on-surface">Apache Software Foundation</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Chọn làm Đ/A Đúng</span>
+</button>
+<button class="p-space-sm px-space-md rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-all group" onclick="selectOption(this, 'D')">
+<div class="flex items-center gap-space-sm">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface font-label-sm text-label-sm flex items-center justify-center font-bold shrink-0 transition-colors">D</span>
+<span class="font-body-md text-body-md text-on-surface">Google LLC</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Chọn làm Đ/A Đúng</span>
+</button>
+</div>
+<div class="flex items-center justify-between pt-space-xs">
+<span class="font-body-sm text-body-sm text-error font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">priority_high</span> Chưa xác định đáp án chuẩn
+            </span>
+<button class="text-primary hover:text-primary-container font-label-sm text-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">edit_note</span> Sửa toàn bộ văn bản câu
+            </button>
+</div>
+</div>
+</div>
+<!-- Pagination / More indicator -->
+<div class="p-space-md bg-surface-container-lowest rounded-2xl shadow-sm flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+<span>Đang hiển thị 4 trên tổng số 50 câu hỏi</span>
+<div class="flex items-center gap-space-xs">
+<button class="px-3 py-1.5 rounded-lg bg-surface-container font-label-sm text-label-sm hover:bg-surface-container-high transition-colors">Trang trước</button>
+<span class="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm font-bold">1</span>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container font-label-sm text-label-sm hover:bg-surface-container-high transition-colors">2</button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container font-label-sm text-label-sm hover:bg-surface-container-high transition-colors">3</button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container font-label-sm text-label-sm hover:bg-surface-container-high transition-colors">Trang sau</button>
+</div>
+</div>
+</div>
+<!-- RIGHT PANE: Quiz Configuration & Fast Launch Hub (4 cols sticky) -->
+<div class="xl:col-span-4 flex flex-col gap-space-lg xl:sticky xl:top-20">
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="w-8 h-8 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Cấu hình Đề kiểm tra</h3>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">Bước 4/4</span>
+</div>
+<!-- Form fields -->
+<div class="flex flex-col gap-space-sm">
+<label class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">Tên bài thi / Bài tập</span>
+<input class="w-full px-space-md py-2.5 rounded-xl bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest transition-all" type="text" value="Ôn tập Lập trình C# &amp; ASP.NET Core"/>
+</label>
+<!-- Exam duration slider & preset -->
+<div class="flex flex-col gap-1.5 pt-1">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">Thời lượng làm bài</span>
+<span class="font-label-md text-label-md text-primary font-extrabold" id="timer-label">30 phút</span>
+</div>
+<input class="w-full accent-primary cursor-pointer h-2 bg-surface-container rounded-lg" id="timer-range" max="120" min="5" oninput="document.getElementById('timer-label').innerText = this.value + ' phút'" step="5" type="range" value="30"/>
+<div class="flex justify-between text-[11px] font-label-sm text-on-surface-variant">
+<span>5 phút</span>
+<span>45 phút</span>
+<span>90 phút</span>
+<span>120 phút</span>
+</div>
+</div>
+<!-- Question Count Policy -->
+<div class="flex flex-col gap-1.5 pt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">Số câu hỏi đưa vào bài thi</span>
+<div class="grid grid-cols-2 gap-space-xs">
+<label class="flex items-center gap-space-xs p-space-sm bg-surface-container-low rounded-xl cursor-pointer hover:bg-surface-container transition-colors">
+<input checked="" class="accent-primary w-4 h-4" name="question-count-type" type="radio"/>
+<span class="font-label-sm text-label-sm text-on-surface font-bold">Tất cả 48 câu</span>
+</label>
+<label class="flex items-center gap-space-xs p-space-sm bg-surface-container-low rounded-xl cursor-pointer hover:bg-surface-container transition-colors">
+<input class="accent-primary w-4 h-4" name="question-count-type" type="radio"/>
+<span class="font-label-sm text-label-sm text-on-surface">Random 20 câu</span>
+</label>
+</div>
+</div>
+<!-- Shuffle toggles -->
+<div class="flex flex-col gap-space-xs pt-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold mb-1">Quy chế &amp; Chống gian lận</span>
+<label class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-xl cursor-pointer hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">shuffle</span>
+<span class="font-body-sm text-body-sm text-on-surface">Đảo thứ tự câu hỏi</span>
+</div>
+<input checked="" class="accent-primary w-4 h-4 rounded" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-xl cursor-pointer hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[18px]">reorder</span>
+<span class="font-body-sm text-body-sm text-on-surface">Đảo vị trí đáp án (A/B/C/D)</span>
+</div>
+<input checked="" class="accent-primary w-4 h-4 rounded" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-xl cursor-pointer hover:bg-surface-container transition-colors">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-tertiary text-[18px]">visibility</span>
+<span class="font-body-sm text-body-sm text-on-surface">Hiện giải thích sau khi nộp</span>
+</div>
+<input checked="" class="accent-primary w-4 h-4 rounded" type="checkbox"/>
+</label>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<button class="w-full py-3.5 px-space-md rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-md hover:bg-primary-container transition-all flex items-center justify-center gap-2" id="btn-create-quiz">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+            Xác nhận &amp; Bắt đầu làm bài
+          </button>
+<button class="w-full py-2.5 px-space-md rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm font-semibold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">account_balance</span>
+            Lưu vào Ngân hàng câu hỏi
+          </button>
+<button class="w-full py-2 px-space-md rounded-xl text-outline hover:text-on-surface font-label-sm text-label-sm transition-colors text-center">
+            Xuất ngược ra file PDF đề thi &amp; đáp án
+          </button>
+</div>
+</div>
+<!-- Quick AI Tips Card -->
+<div class="bg-surface-container-low p-space-md rounded-2xl flex flex-col gap-space-xs">
+<div class="flex items-center gap-space-xs text-primary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+          Mẹo tối ưu AI Parser
+        </div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+          Nếu file Word có công thức Toán học / Hóa học (MathType hoặc LaTeX), hệ thống sẽ tự chuyển thành ký hiệu SVG tương thích cao.
+        </p>
+</div>
+</div>
+</div>
+</div>
+<script>
+  function selectOption(buttonElement, optionKey) {
+    const parentGroup = buttonElement.closest('#fix-options-group');
+    if (!parentGroup) return;
+
+    // Reset all buttons in this group
+    const allButtons = parentGroup.querySelectorAll('button');
+    allButtons.forEach(btn => {
+      btn.className = 'p-space-sm px-space-md rounded-xl bg-surface-container-low hover:bg-surface-container text-left flex items-center justify-between transition-all group';
+      const badge = btn.querySelector('span:last-child');
+      if (badge) {
+        badge.innerText = 'Chọn làm Đ/A Đúng';
+        badge.className = 'px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm';
+      }
+    });
+
+    // Mark current selected
+    buttonElement.className = 'p-space-sm px-space-md rounded-xl bg-tertiary-fixed/40 text-left flex items-center justify-between transition-all';
+    const activeBadge = buttonElement.querySelector('span:last-child');
+    if (activeBadge) {
+      activeBadge.innerText = '✓ Đã chọn đáp án đúng (' + optionKey + ')';
+      activeBadge.className = 'px-2 py-0.5 rounded bg-tertiary text-on-tertiary font-label-sm text-label-sm font-bold';
+    }
+  }
+
+  // Simple feedback on quiz creation
+  document.getElementById('btn-create-quiz')?.addEventListener('click', function() {
+    alert('Khởi tạo bài thi "Ôn tập Lập trình C# & ASP.NET Core" thành công! Đang chuyển hướng vào phòng thi...');
+  });
+</script></main></div></body></html>

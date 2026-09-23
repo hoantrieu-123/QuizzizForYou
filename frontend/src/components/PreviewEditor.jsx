@@ -26,6 +26,13 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
   const [toastMessage, setToastMessage] = useState(null);
   const [activeMultiWord, setActiveMultiWord] = useState(null);
 
+  // EduDocx Quiz Configuration Hub states
+  const [durationMinutes, setDurationMinutes] = useState(30);
+  const [questionCountType, setQuestionCountType] = useState('all');
+  const [shuffleQuestionsToggle, setShuffleQuestionsToggle] = useState(true);
+  const [shuffleOptionsToggle, setShuffleOptionsToggle] = useState(true);
+  const [showExplanationToggle, setShowExplanationToggle] = useState(true);
+
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
@@ -1052,218 +1059,159 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
 
   const warningCount = questions.filter(q => !q.hasHighlight || q.warning).length;
 
+  const handleLaunchWithConfig = () => {
+    let pool = [...questions];
+    if (shuffleQuestionsToggle) {
+      pool = shuffleArray(pool);
+    }
+    if (questionCountType === 'random20' && pool.length > 20) {
+      pool = pool.slice(0, 20);
+    }
+    quiz.durationMinutes = durationMinutes;
+    quiz.showExplanation = showExplanationToggle;
+    onStartQuiz(quiz.id, pool);
+  };
+
   return (
     <div style={{ paddingBottom: '4rem' }}>
-      {/* Top Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        marginBottom: '1.25rem',
-        background: '#ffffff',
-        padding: '1.25rem 1.5rem',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="btn btn-secondary btn-sm" onClick={onBack}>
-            <ArrowLeft size={16} /> Về trang chủ
-          </button>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                style={{
-                  fontSize: '1.35rem',
-                  fontWeight: 800,
-                  color: '#0f172a',
-                  border: '1px solid transparent',
-                  borderRadius: '6px',
-                  padding: '2px 8px',
-                  background: 'transparent',
-                  outline: 'none',
-                  width: '100%',
-                  maxWidth: '500px'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
-                onBlur={(e) => e.target.style.borderColor = 'transparent'}
-                title="Bấm để đổi tên bài thi"
-              />
-              <Edit2 size={16} style={{ color: '#94a3b8' }} />
-            </div>
-            <p style={{ color: '#64748b', fontSize: '0.85rem', paddingLeft: '8px' }}>
-              Tổng số câu hỏi: <strong>{questions.length}</strong> câu &bull; Đã mở tính năng sửa chữ & thêm đáp án
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
-            className="btn btn-secondary"
-            onClick={handleShuffleAllQuestions}
-            style={{ borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 600 }}
-            title="Đảo ngẫu nhiên thứ tự các câu hỏi trong đề thi"
-          >
-            <Shuffle size={16} style={{ color: '#7c3aed' }} /> Đảo câu hỏi
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={handleShuffleAllAnswers}
-            style={{ borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 600 }}
-            title="Đảo ngẫu nhiên vị trí các đáp án trong toàn bộ đề thi"
-          >
-            <Shuffle size={16} style={{ color: '#7c3aed' }} /> Đảo tất cả đáp án
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={handleAddQuestion}
-            style={{ borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 600 }}
-          >
-            <Plus size={16} /> + Thêm câu hỏi mới
-          </button>
-          <button
-            className="btn btn-secondary"
-            onClick={handleSaveAll}
-            disabled={isSaving}
-          >
-            <Save size={16} /> {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => onStartQuiz(quiz.id)}
-            style={{ padding: '0.65rem 1.4rem' }}
-          >
-            <Play size={16} /> Bắt đầu làm bài thi
-          </button>
-        </div>
-      </div>
-
-      {toastMessage && (
-        <div style={{
-          background: '#f5f3ff',
-          border: '1.5px solid #ddd6fe',
-          color: '#6d28d9',
-          padding: '0.85rem 1.25rem',
-          borderRadius: '12px',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          fontWeight: 700,
-          boxShadow: 'var(--shadow-sm)'
-        }}>
-          <Shuffle size={18} style={{ color: '#7c3aed' }} /> {toastMessage}
-        </div>
-      )}
-
-      {/* Guide Banner */}
-      <div style={{
-        background: '#f5f3ff',
-        border: '1px solid #ddd6fe',
-        padding: '1rem 1.25rem',
-        borderRadius: '12px',
-        marginBottom: '1.25rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        fontSize: '0.925rem',
-        lineHeight: 1.5
-      }}>
-        <Sparkles size={22} style={{ color: '#7c3aed', flexShrink: 0 }} />
+      {/* 1. Header & File Info */}
+      <div className="card" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <strong style={{ color: '#6d28d9' }}>Mẹo chỉnh sửa trước khi kiểm tra:</strong>
-          <span style={{ marginLeft: '0.35rem', color: '#334155' }}>
-            Bạn có thể <strong>gõ trực tiếp vào các ô chữ</strong> để sửa câu hỏi và phương án, bấm nút <strong>"+ Thêm phương án"</strong> ở mỗi câu để tạo thêm đáp án mới (E, F...), bấm <strong>"Chọn làm đáp án đúng"</strong> để thay đổi đáp án, hoặc bấm biểu tượng <strong>Thùng rác</strong> để xóa!
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#222222', margin: 0 }}>
+            {quiz.title || quiz.filename || 'Chỉnh sửa đề thi'}
+          </h1>
+          <span style={{ fontSize: '0.8rem', color: '#555555' }}>
+            File: {quiz.filename} • {questions.length} câu hỏi
           </span>
         </div>
+
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={onBack}
+          style={{ borderRadius: '6px' }}
+        >
+          ← Quay lại danh sách
+        </button>
       </div>
 
-      {saveSuccess && (
-        <div style={{
-          background: '#ecfdf5',
-          border: '1px solid #a7f3d0',
-          color: '#065f46',
-          padding: '0.75rem 1.25rem',
-          borderRadius: '10px',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          fontWeight: 600
-        }}>
-          <CheckCircle2 size={18} /> Đã lưu thành công các chỉnh sửa vào cơ sở dữ liệu!
-        </div>
-      )}
+      {/* 2-Column Split Workspace */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: '1.5rem', alignItems: 'start' }}>
+        {/* LEFT COLUMN: Question Stream & Interactive Editors */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
+          {/* Bulk Action Buttons & Filter Tabs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#222222', margin: 0 }}>
+                  Danh sách câu hỏi trích xuất
+                </h3>
+              </div>
 
-      {/* Filter Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '0.5rem',
-        overflowX: 'auto',
-        paddingBottom: '0.5rem',
-        marginBottom: '1.25rem'
-      }}>
-        <button
-          className={`btn btn-sm ${filterType === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setFilterType('all')}
-        >
-          Tất cả ({questions.length})
-        </button>
-        <button
-          className={`btn btn-sm ${filterType === 'single_choice' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setFilterType('single_choice')}
-        >
-          Chọn 1 ({questions.filter(q => q.type === 'single_choice').length})
-        </button>
-        <button
-          className={`btn btn-sm ${filterType === 'multiple_choice' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setFilterType('multiple_choice')}
-        >
-          Chọn nhiều ({questions.filter(q => q.type === 'multiple_choice').length})
-        </button>
-        <button
-          className={`btn btn-sm ${filterType === 'true_false' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setFilterType('true_false')}
-        >
-          Đúng / Sai ({questions.filter(q => q.type === 'true_false').length})
-        </button>
-        <button
-          className={`btn btn-sm ${filterType === 'fill_blank' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setFilterType('fill_blank')}
-        >
-          Điền từ ({questions.filter(q => q.type === 'fill_blank').length})
-        </button>
-        <button
-          className={`btn btn-sm ${filterType === 'drag_drop_blank' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setFilterType('drag_drop_blank')}
-        >
-          Kéo thả ô ({questions.filter(q => q.type === 'drag_drop_blank').length})
-        </button>
-        <button
-          className={`btn btn-sm ${filterType === 'matching' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setFilterType('matching')}
-        >
-          Ghép đôi ({questions.filter(q => q.type === 'matching').length})
-        </button>
-        {warningCount > 0 && (
-          <button
-            className={`btn btn-sm ${filterType === 'warning' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{
-              borderColor: '#fde68a',
-              background: filterType === 'warning' ? '#d97706' : '#fffbeb',
-              color: filterType === 'warning' ? '#ffffff' : '#92400e'
-            }}
-            onClick={() => setFilterType('warning')}
-          >
-            <AlertTriangle size={14} /> Cần kiểm tra ({warningCount})
-          </button>
-        )}
-      </div>
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleShuffleAllQuestions}
+                  style={{ fontSize: '0.8rem', borderRadius: '6px' }}
+                  title="Đảo ngẫu nhiên thứ tự các câu hỏi"
+                >
+                  Đảo câu
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleShuffleAllAnswers}
+                  style={{ fontSize: '0.8rem', borderRadius: '6px' }}
+                  title="Đảo ngẫu nhiên vị trí các đáp án A/B/C/D"
+                >
+                  Đảo đáp án
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={handleAddQuestion}
+                  style={{ fontSize: '0.8rem', borderRadius: '6px' }}
+                >
+                  <Plus size={14} /> Thêm câu
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div style={{
+              display: 'flex',
+              gap: '0.35rem',
+              overflowX: 'auto',
+              padding: '4px',
+              background: '#ffffff'
+            }}>
+              <button
+                className={`btn btn-sm ${filterType === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+                onClick={() => setFilterType('all')}
+              >
+                Tất cả ({questions.length})
+              </button>
+              <button
+                className={`btn btn-sm ${filterType === 'single_choice' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+                onClick={() => setFilterType('single_choice')}
+              >
+                1 đáp án ({questions.filter(q => q.type === 'single_choice').length})
+              </button>
+              <button
+                className={`btn btn-sm ${filterType === 'multiple_choice' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+                onClick={() => setFilterType('multiple_choice')}
+              >
+                Nhiều Đ/A ({questions.filter(q => q.type === 'multiple_choice').length})
+              </button>
+              <button
+                className={`btn btn-sm ${filterType === 'true_false' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+                onClick={() => setFilterType('true_false')}
+              >
+                Đúng/Sai ({questions.filter(q => q.type === 'true_false').length})
+              </button>
+              <button
+                className={`btn btn-sm ${filterType === 'fill_blank' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+                onClick={() => setFilterType('fill_blank')}
+              >
+                Điền từ ({questions.filter(q => q.type === 'fill_blank').length})
+              </button>
+              <button
+                className={`btn btn-sm ${filterType === 'drag_drop_blank' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+                onClick={() => setFilterType('drag_drop_blank')}
+              >
+                Kéo thả ({questions.filter(q => q.type === 'drag_drop_blank').length})
+              </button>
+              <button
+                className={`btn btn-sm ${filterType === 'matching' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+                onClick={() => setFilterType('matching')}
+              >
+                Ghép đôi ({questions.filter(q => q.type === 'matching').length})
+              </button>
+              {warningCount > 0 && (
+                <button
+                  className="btn btn-sm"
+                  style={{
+                    fontSize: '0.78rem',
+                    padding: '0.35rem 0.65rem',
+                    background: filterType === 'warning' ? '#ef4444' : '#ffdad6',
+                    color: filterType === 'warning' ? '#ffffff' : '#93000a',
+                    fontWeight: 700
+                  }}
+                  onClick={() => setFilterType('warning')}
+                >
+                  <AlertTriangle size={13} /> Cần sửa ({warningCount})
+                </button>
+              )}
+            </div>
+          </div>
 
       {/* Question Cards List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -2441,41 +2389,279 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
           );
         })}
       </div>
+    </div>
 
-      {/* Floating Save & Start bar */}
-      <div style={{
-        position: 'sticky',
-        bottom: '1.5rem',
-        marginTop: '2rem',
-        background: '#ffffff',
-        padding: '1rem 1.5rem',
-        borderRadius: '14px',
-        border: '1px solid #cbd5e1',
-        boxShadow: 'var(--shadow-lg)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        zIndex: 40
-      }}>
-        <div>
-          <span style={{ fontWeight: 800, color: '#0f172a' }}>{title}</span>
-          <span style={{ color: '#64748b', fontSize: '0.85rem', marginLeft: '0.5rem' }}>
-            ({questions.length} câu hỏi)
-          </span>
+    {/* RIGHT COLUMN: Sticky Quiz Configuration & Fast Launch Hub */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'sticky', top: '5rem' }}>
+      {/* Main Config Card */}
+      <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#222222', margin: 0 }}>Cấu hình bài thi</h3>
+
+        {/* Form Fields */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#222222', marginBottom: '0.35rem' }}>
+              Tên bài thi
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Nhập tên bài thi..."
+              style={{
+                width: '100%',
+                padding: '0.55rem 0.75rem',
+                borderRadius: '6px',
+                border: '1px solid #eeeeee',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                outline: 'none',
+                color: '#222222',
+                background: '#ffffff'
+              }}
+            />
+          </div>
+
+          {/* Duration Slider */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#222222' }}>Thời lượng</span>
+              <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#222222' }}>{durationMinutes} phút</span>
+            </div>
+            <input
+              type="range"
+              min="5"
+              max="120"
+              step="5"
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              style={{ width: '100%', accentColor: '#222222', cursor: 'pointer', height: '5px' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#666666', marginTop: '2px' }}>
+              <span>5p</span>
+              <span>30p</span>
+              <span>60p</span>
+              <span>90p</span>
+              <span>120p</span>
+            </div>
+          </div>
+
+          {/* Question Count Policy */}
+          <div>
+            <span style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#222222', marginBottom: '0.35rem' }}>
+              Số câu hỏi
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.55rem 0.65rem',
+                  borderRadius: '6px',
+                  background: '#ffffff',
+                  border: questionCountType === 'all' ? '2px solid #222222' : '1px solid #eeeeee',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: questionCountType === 'all' ? 700 : 500,
+                  color: '#222222'
+                }}
+              >
+                <input
+                  type="radio"
+                  name="q-count-type"
+                  checked={questionCountType === 'all'}
+                  onChange={() => setQuestionCountType('all')}
+                  style={{ accentColor: '#222222' }}
+                />
+                Tất cả {questions.length} câu
+              </label>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  padding: '0.55rem 0.65rem',
+                  borderRadius: '6px',
+                  background: '#ffffff',
+                  border: questionCountType === 'random20' ? '2px solid #222222' : '1px solid #eeeeee',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: questionCountType === 'random20' ? 700 : 500,
+                  color: '#222222'
+                }}
+              >
+                <input
+                  type="radio"
+                  name="q-count-type"
+                  checked={questionCountType === 'random20'}
+                  onChange={() => setQuestionCountType('random20')}
+                  style={{ accentColor: '#222222' }}
+                />
+                20 câu ngẫu nhiên
+              </label>
+            </div>
+          </div>
+
+          {/* Exam Rules & Anti-cheat Toggles */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#222222', marginBottom: '2px' }}>
+              Tùy chọn hiển thị
+            </span>
+
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.55rem 0.65rem',
+              borderRadius: '6px',
+              background: '#ffffff',
+              border: '1px solid #eeeeee',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              color: '#222222'
+            }}>
+              <span>Đảo ngẫu nhiên thứ tự câu hỏi</span>
+              <input
+                type="checkbox"
+                checked={shuffleQuestionsToggle}
+                onChange={(e) => setShuffleQuestionsToggle(e.target.checked)}
+                style={{ accentColor: '#222222', width: '15px', height: '15px' }}
+              />
+            </label>
+
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.55rem 0.65rem',
+              borderRadius: '6px',
+              background: '#ffffff',
+              border: '1px solid #eeeeee',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              color: '#222222'
+            }}>
+              <span>Đảo ngẫu nhiên các đáp án</span>
+              <input
+                type="checkbox"
+                checked={shuffleOptionsToggle}
+                onChange={(e) => {
+                  setShuffleOptionsToggle(e.target.checked);
+                  if (e.target.checked) handleShuffleAllAnswers();
+                }}
+                style={{ accentColor: '#222222', width: '15px', height: '15px' }}
+              />
+            </label>
+
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.55rem 0.65rem',
+              borderRadius: '6px',
+              background: '#ffffff',
+              border: '1px solid #eeeeee',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              color: '#222222'
+            }}>
+              <span>Hiện đáp án sau khi nộp</span>
+              <input
+                type="checkbox"
+                checked={showExplanationToggle}
+                onChange={(e) => setShowExplanationToggle(e.target.checked)}
+                style={{ accentColor: '#222222', width: '15px', height: '15px' }}
+              />
+            </label>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-secondary" onClick={handleAddQuestion}>
-            <Plus size={16} /> Thêm câu hỏi mới
+        {/* Launch & Save Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', paddingTop: '0.5rem' }}>
+          <button
+            className="btn btn-primary"
+            onClick={handleLaunchWithConfig}
+            style={{
+              width: '100%',
+              padding: '0.85rem 1rem',
+              fontSize: '0.95rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              borderRadius: '12px',
+              boxShadow: 'var(--shadow-md)'
+            }}
+          >
+            <Play size={18} />
+            Xác nhận & Bắt đầu làm bài
           </button>
-          <button className="btn btn-secondary" onClick={handleSaveAll} disabled={isSaving}>
-            <Save size={16} /> Lưu thay đổi
+
+          <button
+            className="btn btn-secondary"
+            onClick={handleSaveAll}
+            disabled={isSaving}
+            style={{
+              width: '100%',
+              padding: '0.65rem 1rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              borderRadius: '12px'
+            }}
+          >
+            <Save size={16} />
+            {isSaving ? 'Đang lưu vào ngân hàng...' : 'Lưu vào Ngân hàng câu hỏi'}
           </button>
-          <button className="btn btn-primary" onClick={() => onStartQuiz(quiz.id)}>
-            <Play size={16} /> Bắt đầu làm bài thi
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleAddQuestion}
+            style={{
+              width: '100%',
+              padding: '0.65rem 1rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              borderRadius: '12px'
+            }}
+          >
+            <Plus size={16} /> Thêm câu hỏi thủ công
+          </button>
+
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              fontSize: '0.825rem',
+              color: '#64748b',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'center',
+              fontWeight: 600
+            }}
+            onMouseEnter={(e) => e.target.style.color = '#1e293b'}
+            onMouseLeave={(e) => e.target.style.color = '#64748b'}
+          >
+            ← Quay lại danh sách bài kiểm tra
           </button>
         </div>
       </div>
     </div>
+  </div>
+</div>
   );
 }

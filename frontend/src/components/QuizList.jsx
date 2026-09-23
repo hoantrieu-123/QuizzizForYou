@@ -22,7 +22,8 @@ export default function QuizList({
   refreshTrigger,
   selectedFilter,
   onClearFilter,
-  onQuizPlacementChanged
+  onQuizPlacementChanged,
+  searchQuery = ''
 }) {
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -304,6 +305,14 @@ export default function QuizList({
     );
   }
 
+  // Search Query filter
+  const effectiveQuizzes = (searchQuery && searchQuery.trim())
+    ? quizzes.filter(q => 
+        (q.title || '').toLowerCase().includes(searchQuery.toLowerCase().trim()) || 
+        (q.filename || '').toLowerCase().includes(searchQuery.toLowerCase().trim())
+      )
+    : quizzes;
+
   // Filter subjects and quizzes based on selectedFilter
   const validSubjectIds = new Set(subjects.map(s => s.id));
   let filteredSubjects = subjects;
@@ -331,18 +340,18 @@ export default function QuizList({
   }
 
   // Quizzes not assigned to any existing subject
-  const uncategorizedQuizzes = quizzes
+  const uncategorizedQuizzes = effectiveQuizzes
     .filter(q => !q.subject_id || !validSubjectIds.has(q.subject_id))
     .sort(naturalCompareQuizzes);
 
   // Quizzes in semester but not in any specific subject
   const directSemesterQuizzes = (selectedFilter?.type === 'semester')
-    ? quizzes.filter(q => q.semester_id === selectedFilter.id && (!q.subject_id || !validSubjectIds.has(q.subject_id))).sort(naturalCompareQuizzes)
+    ? effectiveQuizzes.filter(q => q.semester_id === selectedFilter.id && (!q.subject_id || !validSubjectIds.has(q.subject_id))).sort(naturalCompareQuizzes)
     : [];
 
   // Quizzes in class but not in any specific subject
   const directClassQuizzes = (selectedFilter?.type === 'class')
-    ? quizzes.filter(q => q.class_id === selectedFilter.id && (!q.subject_id || !validSubjectIds.has(q.subject_id))).sort(naturalCompareQuizzes)
+    ? effectiveQuizzes.filter(q => q.class_id === selectedFilter.id && (!q.subject_id || !validSubjectIds.has(q.subject_id))).sort(naturalCompareQuizzes)
     : [];
 
   // Calculate total quizzes currently displayed
@@ -410,15 +419,19 @@ export default function QuizList({
       )}
 
       {/* Top Header & Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+      <div className="card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <Folders size={22} style={{ color: '#7c3aed' }} />
-            {filterContextTitle ? filterContextTitle : 'Danh sách đề thi theo môn'} ({displayedQuizzesCount} đề thi)
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#222222', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {filterContextTitle ? filterContextTitle : 'Danh sách đề thi'}
+            <span className="badge">
+              {displayedQuizzesCount} đề thi
+            </span>
           </h3>
-          <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.2rem 0 0' }}>
-            Kéo thả các đề thi trắc nghiệm vào từng môn hoặc cây bên trái để phân loại.
-          </p>
+          {searchQuery && (
+            <p style={{ fontSize: '0.8rem', color: '#555555', margin: '2px 0 0' }}>
+              Tìm kiếm: "{searchQuery}"
+            </p>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -427,20 +440,9 @@ export default function QuizList({
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={toggleAllCollapse}
-              style={{
-                padding: '0.5rem 0.85rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                background: '#ffffff',
-                borderColor: '#e2e8f0',
-                color: '#475569'
-              }}
               title={areAllCollapsed ? 'Mở rộng tất cả các mục môn học' : 'Thu gọn tất cả các mục môn học'}
             >
-              {areAllCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {areAllCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
               {areAllCollapsed ? 'Mở rộng tất cả' : 'Thu gọn tất cả'}
             </button>
           )}
@@ -448,10 +450,9 @@ export default function QuizList({
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setShowAddSubject(true)}
-            style={{ padding: '0.5rem 1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
             title="Tạo thêm thư mục môn học mới"
           >
-            <AddFolder size={17} /> + Thêm môn học
+            <AddFolder size={14} /> Thêm môn học
           </button>
         </div>
       </div>
@@ -461,43 +462,43 @@ export default function QuizList({
         <form
           onSubmit={handleCreateSubjectSubmit}
           style={{
-            background: '#f5f3ff',
-            border: '1.5px solid #ddd6fe',
-            borderRadius: '12px',
-            padding: '1rem 1.25rem',
-            marginBottom: '1.5rem',
+            background: '#ffffff',
+            border: '1px solid #eeeeee',
+            borderRadius: '8px',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.25rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.75rem',
-            flexWrap: 'wrap',
-            boxShadow: 'var(--shadow-sm)'
+            flexWrap: 'wrap'
           }}
         >
-          <Folders size={20} style={{ color: '#7c3aed', flexShrink: 0 }} />
-          <span style={{ fontWeight: 700, color: '#7c3aed', fontSize: '0.9rem' }}>
-            Tạo mục môn học mới:
+          <Folders size={18} style={{ color: '#222222', flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, color: '#222222', fontSize: '0.875rem' }}>
+            Tên môn học mới:
           </span>
           <input
             type="text"
             value={newSubjectName}
             onChange={(e) => setNewSubjectName(e.target.value)}
-            placeholder="Nhập tên môn học (ví dụ: Môn Lịch sử, Tin học, Đề thi Học kì 1...)"
+            placeholder="Nhập tên môn học..."
             autoFocus
             style={{
               flex: 1,
-              minWidth: '220px',
-              padding: '0.5rem 0.85rem',
-              borderRadius: '8px',
-              border: '1.5px solid #ddd6fe',
+              minWidth: '200px',
+              padding: '0.45rem 0.75rem',
+              borderRadius: '6px',
+              border: '1px solid #eeeeee',
               outline: 'none',
-              fontSize: '0.9rem',
+              fontSize: '0.875rem',
               fontWeight: 600,
-              background: '#ffffff'
+              background: '#ffffff',
+              color: '#222222'
             }}
           />
           <div style={{ display: 'flex', gap: '0.4rem' }}>
-            <button type="submit" className="btn btn-primary btn-sm" style={{ fontWeight: 700 }}>
-              <Check size={15} /> Lưu môn
+            <button type="submit" className="btn btn-primary btn-sm">
+              <Check size={14} /> Lưu môn
             </button>
             <button
               type="button"
@@ -507,7 +508,7 @@ export default function QuizList({
                 setNewSubjectName('');
               }}
             >
-              <X size={15} /> Hủy
+              <X size={14} /> Hủy
             </button>
           </div>
         </form>
@@ -515,7 +516,7 @@ export default function QuizList({
 
       {/* Subject Sections */}
       {filteredSubjects.map((subject) => {
-        const subjectQuizzes = quizzes
+        const subjectQuizzes = effectiveQuizzes
           .filter(q => q.subject_id === subject.id)
           .sort(naturalCompareQuizzes);
         const isCollapsed = isSubjectCollapsed(subject.id);
@@ -564,7 +565,7 @@ export default function QuizList({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#7c3aed',
+                    color: '#222222',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -572,21 +573,21 @@ export default function QuizList({
                   }}
                   title={isCollapsed ? 'Mở rộng mục môn này' : 'Thu gọn mục môn này'}
                 >
-                  {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                  {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                 </button>
 
                 <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: '#f5f3ff',
-                  border: '1px solid #ddd6fe',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '6px',
+                  background: '#ffffff',
+                  border: '1px solid #eeeeee',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#7c3aed'
+                  color: '#222222'
                 }}>
-                  <Folders size={17} />
+                  <Folders size={15} />
                 </div>
 
                 {isEditing ? (
@@ -606,11 +607,12 @@ export default function QuizList({
                       style={{
                         padding: '3px 8px',
                         borderRadius: '6px',
-                        border: '1.5px solid #7c3aed',
-                        fontSize: '1rem',
+                        border: '1px solid #eeeeee',
+                        fontSize: '0.95rem',
                         fontWeight: 700,
-                        color: '#0f172a',
-                        outline: 'none'
+                        color: '#222222',
+                        outline: 'none',
+                        background: '#ffffff'
                       }}
                     />
                     <button
@@ -633,9 +635,9 @@ export default function QuizList({
                 ) : (
                   <h4
                     style={{
-                      fontSize: '1.05rem',
+                      fontSize: '1rem',
                       fontWeight: 800,
-                      color: '#0f172a',
+                      color: '#222222',
                       margin: 0,
                       display: 'flex',
                       alignItems: 'center',
@@ -647,15 +649,7 @@ export default function QuizList({
                   </h4>
                 )}
 
-                <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  background: '#f5f3ff',
-                  color: '#7c3aed',
-                  border: '1px solid #ddd6fe',
-                  padding: '2px 8px',
-                  borderRadius: '12px'
-                }}>
+                <span className="badge">
                   {subjectQuizzes.length} đề thi
                 </span>
               </div>
@@ -719,7 +713,7 @@ export default function QuizList({
                     </span>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '0.75rem' }}>
                     {subjectQuizzes.map((quiz) => (
                       <QuizCardItem
                         key={quiz.id}
@@ -744,22 +738,22 @@ export default function QuizList({
 
       {/* Section for quizzes assigned to semester directly without a specific subject */}
       {directSemesterQuizzes.length > 0 && (
-        <div className="subject-section" style={{ border: '1.5px dashed #f59e0b', background: '#ffffff', marginBottom: '0.75rem' }}>
-          <div className="subject-header" style={{ background: '#fffbeb' }}>
+        <div className="subject-section" style={{ border: '1px solid #eeeeee', background: '#ffffff', marginBottom: '0.75rem' }}>
+          <div className="subject-header" style={{ background: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Calendar size={16} />
+              <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#ffffff', border: '1px solid #eeeeee', color: '#222222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Calendar size={15} />
               </div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#92400e', margin: 0 }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#222222', margin: 0 }}>
                 Đề thi gán trong kỳ này (chưa phân vào môn cụ thể)
               </h4>
-              <span className="badge badge-purple" style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.75rem' }}>
+              <span className="badge">
                 {directSemesterQuizzes.length} đề thi
               </span>
             </div>
           </div>
           <div className="subject-dropzone">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '0.75rem' }}>
               {directSemesterQuizzes.map((quiz) => (
                 <QuizCardItem
                   key={quiz.id}
@@ -781,22 +775,22 @@ export default function QuizList({
 
       {/* Section for quizzes assigned to class directly without a specific subject */}
       {directClassQuizzes.length > 0 && (
-        <div className="subject-section" style={{ border: '1.5px dashed #6366f1', background: '#ffffff', marginBottom: '0.75rem' }}>
-          <div className="subject-header" style={{ background: '#eef2ff' }}>
+        <div className="subject-section" style={{ border: '1px solid #eeeeee', background: '#ffffff', marginBottom: '0.75rem' }}>
+          <div className="subject-header" style={{ background: '#ffffff' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#e0e7ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Layers size={16} />
+              <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#ffffff', border: '1px solid #eeeeee', color: '#222222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Layers size={15} />
               </div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#3730a3', margin: 0 }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#222222', margin: 0 }}>
                 Đề thi chung của lớp (chưa phân vào môn cụ thể)
               </h4>
-              <span className="badge badge-blue" style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.75rem' }}>
+              <span className="badge">
                 {directClassQuizzes.length} đề thi
               </span>
             </div>
           </div>
           <div className="subject-dropzone">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '0.75rem' }}>
               {directClassQuizzes.map((quiz) => (
                 <QuizCardItem
                   key={quiz.id}
@@ -818,10 +812,10 @@ export default function QuizList({
 
       {/* Empty State when current filtered view has no subjects or quizzes */}
       {filteredSubjects.length === 0 && !showUncategorized && directSemesterQuizzes.length === 0 && directClassQuizzes.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem', background: '#fafafa', border: '1.5px dashed #cbd5e1', borderRadius: '12px', margin: '1rem 0' }}>
-          <Folders size={36} style={{ color: '#cbd5e1', marginBottom: '0.6rem' }} />
-          <h4 style={{ fontWeight: 700, color: '#475569', margin: '0 0 0.4rem' }}>Chưa có môn học hoặc đề thi trong mục này</h4>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 1rem' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem', background: '#fafafa', border: '1.5px dashed #eeeeee', borderRadius: '12px', margin: '1rem 0' }}>
+          <Folders size={36} style={{ color: '#cccccc', marginBottom: '0.6rem' }} />
+          <h4 style={{ fontWeight: 700, color: '#222222', margin: '0 0 0.4rem' }}>Chưa có môn học hoặc đề thi trong mục này</h4>
+          <p style={{ fontSize: '0.85rem', color: '#555555', margin: '0 0 1rem' }}>
             Bạn có thể tạo môn học mới bên dưới hoặc kéo thả đề thi vào mục này từ cây thư mục bên trái.
           </p>
           <button
@@ -842,7 +836,7 @@ export default function QuizList({
           <div
             className={`subject-section ${dragOverTarget === 'uncategorized' ? 'drag-over' : ''}`}
             style={{
-              border: '1.5px dashed #cbd5e1',
+              border: '1px solid #eeeeee',
               background: '#ffffff'
             }}
             onDragOver={(e) => handleDragOver(e, 'uncategorized')}
@@ -852,7 +846,7 @@ export default function QuizList({
             {/* Uncategorized Header */}
             <div
               className="subject-header"
-              style={{ background: '#f8fafc', borderBottom: isUncategorizedCollapsed ? 'none' : '1px solid #cbd5e1' }}
+              style={{ background: '#ffffff', borderBottom: isUncategorizedCollapsed ? 'none' : '1px solid #eeeeee' }}
               onClick={() => toggleCollapse('uncategorized')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -861,48 +855,41 @@ export default function QuizList({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: '#222222',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     padding: 0
                   }}
                 >
-                  {isUncategorizedCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                  {isUncategorizedCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                 </button>
 
                 <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '6px',
                   background: '#ffffff',
-                  border: '1px solid #cbd5e1',
+                  border: '1px solid #eeeeee',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#64748b'
+                  color: '#222222'
                 }}>
-                  <FileText size={17} />
+                  <FileText size={15} />
                 </div>
 
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#334155', margin: 0 }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#222222', margin: 0 }}>
                   Đề thi ngoài mục (Chưa phân loại môn)
                 </h4>
 
-                <span style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  background: '#f1f5f9',
-                  color: '#64748b',
-                  padding: '2px 8px',
-                  borderRadius: '12px'
-                }}>
+                <span className="badge">
                   {uncategorizedQuizzes.length} đề thi
                 </span>
               </div>
 
-              <span style={{ fontSize: '0.8rem', color: '#7c3aed', fontWeight: 700 }}>
-                Thả đề thi vào đây để kéo ra ngoài mục
+              <span style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 600 }}>
+                Kéo thả đề thi vào đây để gỡ khỏi môn
               </span>
             </div>
 
@@ -915,12 +902,12 @@ export default function QuizList({
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: '#10b981' }}>
                   Tất cả các đề thi đã được phân loại vào các mục môn học!
                 </p>
-                <span style={{ fontSize: '0.775rem', color: '#94a3b8', marginTop: '0.2rem' }}>
+                <span style={{ fontSize: '0.775rem', color: '#555555', marginTop: '0.2rem' }}>
                   Nếu muốn gỡ bài thi ra khỏi môn, bạn chỉ cần nắm kéo thẻ bài thi thả vào khu vực này.
                 </span>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.6rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '0.75rem' }}>
                 {uncategorizedQuizzes.map((quiz) => (
                   <QuizCardItem
                     key={quiz.id}
@@ -971,49 +958,39 @@ function QuizCardItem({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        border: '1px solid #e2e8f0',
-        padding: '0.55rem 0.7rem',
+        border: '1px solid #eeeeee',
+        padding: '0.85rem',
         borderRadius: '8px',
         position: 'relative',
         background: '#ffffff',
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
         transition: 'all 0.15s ease'
       }}
     >
       <div>
-        {/* Card Header: Grip handle + Question count + Date + Delete */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', overflow: 'hidden' }}>
+        {/* Card Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden' }}>
             <span
               style={{
-                color: '#94a3b8',
+                color: '#222222',
                 cursor: 'grab',
                 display: 'flex',
                 alignItems: 'center',
-                padding: '1px'
+                padding: '2px'
               }}
-              title="Nắm kéo thả đề thi này vào môn khác hoặc ra ngoài mục"
+              title="Kéo thả đề thi này vào môn khác hoặc ra ngoài mục"
             >
-              <GripVertical size={13} />
+              <GripVertical size={14} />
             </span>
 
-            <span
-              className="badge badge-blue"
-              style={{
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                padding: '0.1rem 0.4rem',
-                borderRadius: '4px',
-                whiteSpace: 'nowrap'
-              }}
-            >
+            <span className="badge" style={{ fontSize: '0.72rem' }}>
               {quiz.question_count} câu
             </span>
 
             <span
               style={{
-                fontSize: '0.65rem',
-                color: '#94a3b8',
+                fontSize: '0.68rem',
+                color: '#555555',
                 whiteSpace: 'nowrap'
               }}
               title={`Ngày tạo: ${new Date(quiz.created_at).toLocaleDateString('vi-VN')}`}
@@ -1027,7 +1004,7 @@ function QuizCardItem({
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#cbd5e1',
+              color: '#71717a',
               cursor: 'pointer',
               padding: '2px',
               borderRadius: '4px',
@@ -1035,21 +1012,21 @@ function QuizCardItem({
               alignItems: 'center'
             }}
             title="Xóa bài thi này"
-            onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#cbd5e1'}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#b91c1c'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#71717a'}
           >
-            <Trash2 size={13} />
+            <Trash2 size={14} />
           </button>
         </div>
 
         {/* Title */}
         <h4
           style={{
-            fontSize: '0.835rem',
+            fontSize: '0.885rem',
             fontWeight: 700,
-            color: '#0f172a',
-            marginBottom: '0.25rem',
-            lineHeight: 1.25,
+            color: '#222222',
+            marginBottom: '0.35rem',
+            lineHeight: 1.3,
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -1063,19 +1040,19 @@ function QuizCardItem({
         {/* Word Filename */}
         <p
           style={{
-            fontSize: '0.68rem',
-            color: '#64748b',
+            fontSize: '0.72rem',
+            color: '#555555',
             display: 'flex',
             alignItems: 'center',
             gap: '0.25rem',
-            marginBottom: '0.35rem',
+            marginBottom: '0.5rem',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap'
           }}
           title={quiz.filename}
         >
-          <FileText size={11} style={{ flexShrink: 0 }} />
+          <FileText size={12} style={{ flexShrink: 0, color: '#222222' }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {quiz.filename}
           </span>
@@ -1083,7 +1060,7 @@ function QuizCardItem({
 
         {/* Quick Subject Select Dropdown */}
         <div
-          style={{ marginBottom: '0.4rem' }}
+          style={{ marginBottom: '0.65rem' }}
           onClick={(e) => e.stopPropagation()}
         >
           <select
@@ -1091,19 +1068,19 @@ function QuizCardItem({
             onChange={(e) => onSelectSubject(quiz.id, e.target.value)}
             style={{
               width: '100%',
-              fontSize: '0.68rem',
+              fontSize: '0.72rem',
               fontWeight: 600,
-              padding: '1px 5px',
-              borderRadius: '4px',
-              border: '1px solid #e2e8f0',
-              background: quiz.subject_id ? '#f5f3ff' : '#f8fafc',
-              color: quiz.subject_id ? '#7c3aed' : '#64748b',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: '1px solid #eeeeee',
+              background: '#ffffff',
+              color: '#222222',
               cursor: 'pointer',
               outline: 'none',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              height: '21px'
+              height: '26px'
             }}
             title="Chuyển mục môn học"
           >
@@ -1119,9 +1096,9 @@ function QuizCardItem({
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.3rem',
-        paddingTop: '0.35rem',
-        borderTop: '1px solid #f1f5f9'
+        gap: '0.4rem',
+        paddingTop: '0.5rem',
+        borderTop: '1px solid #eeeeee'
       }}>
         <button
           className="btn btn-primary"
@@ -1131,10 +1108,10 @@ function QuizCardItem({
           }}
           style={{
             flex: 1,
-            padding: '0.26rem 0.4rem',
-            fontSize: '0.74rem',
+            padding: '0.35rem 0.5rem',
+            fontSize: '0.78rem',
             fontWeight: 700,
-            borderRadius: '5px',
+            borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1142,7 +1119,7 @@ function QuizCardItem({
           }}
           title="Bắt đầu làm bài thi ngay"
         >
-          <Play size={11} /> Làm bài
+          <Play size={12} /> Làm bài
         </button>
 
         <button
@@ -1152,21 +1129,17 @@ function QuizCardItem({
             onSelectQuiz(quiz.id);
           }}
           style={{
-            background: '#f5f3ff',
-            borderColor: '#ddd6fe',
-            color: '#7c3aed',
-            fontWeight: 700,
-            padding: '0.26rem 0.45rem',
-            fontSize: '0.74rem',
-            borderRadius: '5px',
+            padding: '0.35rem 0.6rem',
+            fontSize: '0.78rem',
+            borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.2rem'
+            gap: '0.25rem'
           }}
-          title="Chỉnh sửa câu hỏi, thêm đáp án trước khi làm bài"
+          title="Chỉnh sửa câu hỏi"
         >
-          <Edit3 size={11} /> Sửa
+          <Edit3 size={12} /> Sửa
         </button>
       </div>
     </div>

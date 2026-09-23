@@ -318,6 +318,10 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
   const [secondsElapsed, setSecondsElapsed] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showNavDrawer, setShowNavDrawer] = useState(false);
+  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set());
+  const initialDuration = (quiz.durationMinutes || 30) * 60;
+  const [timeLeft, setTimeLeft] = useState(initialDuration);
+  const [isPaused, setIsPaused] = useState(false);
 
   const [selectedMatchLeft, setSelectedMatchLeft] = useState(null);
   const [activeBlank, setActiveBlank] = useState(null);
@@ -327,14 +331,33 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
     setCurrentIndex(0);
     setAnswers({});
     setSecondsElapsed(0);
+    setTimeLeft((quiz.durationMinutes || 30) * 60);
+    setFlaggedQuestions(new Set());
   }, [quiz]);
 
   useEffect(() => {
+    if (isPaused) return;
     const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
       setSecondsElapsed(prev => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isPaused]);
+
+  const toggleFlag = (qId) => {
+    setFlaggedQuestions(prev => {
+      const next = new Set(prev);
+      if (next.has(qId)) next.delete(qId);
+      else next.add(qId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -347,15 +370,24 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         if (currentIndex < questions.length - 1) {
           goToQuestion(currentIndex + 1);
         }
+      } else if (e.key === 'f' || e.key === 'F') {
+        const curQ = questions[currentIndex];
+        if (curQ?.id) toggleFlag(curQ.id);
+      } else if (['1', '2', '3', '4'].includes(e.key)) {
+        const num = parseInt(e.key, 10);
+        const curQ = questions[currentIndex];
+        if (curQ && curQ.type === 'single_choice' && curQ.options && curQ.options[num - 1]) {
+          handleSingleChoice(curQ.options[num - 1].label);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, questions.length]);
+  }, [currentIndex, questions]);
 
   const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
+    const m = Math.floor(Math.max(0, secs) / 60);
+    const s = Math.max(0, secs) % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
@@ -834,6 +866,21 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
   const answeredCount = questions.filter(isQuestionAnswered).length;
   const progressPercent = Math.round((answeredCount / questions.length) * 100);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('edudocx_saved_progress', JSON.stringify({
+        quizId: quiz.id,
+        quizTitle: quiz.title,
+        answeredCount,
+        totalCount: questions.length,
+        answers,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // ignore
+    }
+  }, [answers, answeredCount, questions.length, quiz.id, quiz.title]);
+
   const handleSubmitClick = () => {
     setShowConfirmModal(true);
   };
@@ -844,148 +891,260 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
   };
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto', paddingBottom: '7.5rem' }}>
-      {/* Quiz Top Header */}
-      <div style={{
+    <div style={{ maxWidth: '1800px', margin: '0 auto', paddingBottom: '7.5rem' }}>
+      {/* 1. Top Exam Pinned Status Bar */}
+      <header style={{
+        position: 'sticky',
+        top: '4.5rem',
+        zIndex: 30,
         background: '#ffffff',
-        borderRadius: '16px',
-        padding: '1.25rem 1.75rem',
-        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '1rem 1.5rem',
         marginBottom: '1.5rem',
-        boxShadow: 'var(--shadow-sm)'
+        border: '1px solid #eeeeee'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Bài kiểm tra trực tuyến
-            </span>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0.15rem 0' }}>
-              {quiz.title}
-            </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          {/* Title & tags */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', color: '#222222', fontWeight: 700 }}>
+                  Mã đề: {String(quiz.id || 'QUIZ').slice(0, 8).toUpperCase()}
+                </span>
+              </div>
+              <h1 style={{
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                color: '#222222',
+                margin: '2px 0 0',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '420px'
+              }}>
+                {quiz.title}
+              </h1>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          {/* Center & Right Metrics */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* Progress pill */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
+              gap: '0.5rem',
               background: '#ffffff',
-              border: '1px solid #ddd6fe',
               padding: '0.45rem 0.85rem',
-              borderRadius: '10px',
-              fontWeight: 700,
-              color: '#7c3aed',
-              fontSize: '0.95rem'
+              borderRadius: '6px',
+              border: '1px solid #eeeeee'
             }}>
-              <Clock size={18} style={{ color: '#7c3aed' }} />
-              {formatTime(secondsElapsed)}
+              <div>
+                <div style={{ fontSize: '10px', color: '#555555', fontWeight: 700, textTransform: 'uppercase' }}>Tiến độ</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#222222' }}>
+                  {answeredCount} / {questions.length} ({progressPercent}%)
+                </div>
+              </div>
             </div>
 
-            {onEdit && (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={onEdit}
-                style={{ background: '#f5f3ff', borderColor: '#ddd6fe', color: '#7c3aed', fontWeight: 600 }}
-                title="Quay lại màn hình chỉnh sửa câu hỏi và đáp án"
-              >
-                <Edit3 size={15} /> Sửa câu & đáp án
-              </button>
-            )}
+            {/* Cloud Auto-save indicator */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: '#ffffff',
+              padding: '0.45rem 0.85rem',
+              borderRadius: '6px',
+              border: '1px solid #eeeeee'
+            }}>
+              <div>
+                <div style={{ fontSize: '10px', color: '#555555', fontWeight: 700, textTransform: 'uppercase' }}>Trạng thái</div>
+                <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#222222' }}>Đã lưu tự động</div>
+              </div>
+            </div>
 
+            {/* Timer countdown card */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: '#ffffff',
+              border: '1px solid #eeeeee',
+              padding: '0.45rem 0.95rem',
+              borderRadius: '6px'
+            }}>
+              <div>
+                <div style={{ fontSize: '10px', color: '#555555', fontWeight: 700, textTransform: 'uppercase' }}>
+                  Thời gian còn lại
+                </div>
+                <div style={{
+                  fontSize: '1rem',
+                  fontWeight: 800,
+                  color: timeLeft < 300 ? '#b91c1c' : '#222222',
+                  fontVariantNumeric: 'tabular-nums'
+                }}>
+                  {formatTime(timeLeft)}
+                </div>
+              </div>
+            </div>
+
+            {/* Pause / Resume */}
             <button
+              type="button"
               className="btn btn-secondary btn-sm"
-              onClick={handleShuffleQuestions}
-              style={{ background: '#f5f3ff', borderColor: '#ddd6fe', color: '#7c3aed', fontWeight: 600 }}
-              title="Đảo ngẫu nhiên thứ tự các câu hỏi trong đề thi"
+              onClick={() => setIsPaused(prev => !prev)}
+              style={{
+                borderRadius: '6px',
+                padding: '0.6rem 0.95rem',
+                fontSize: '0.85rem',
+                fontWeight: 700
+              }}
             >
-              <Shuffle size={15} style={{ color: '#7c3aed' }} /> Đảo câu hỏi
+              <span>{isPaused ? 'Tiếp tục' : 'Tạm dừng'}</span>
             </button>
 
+            {/* Submit button */}
             <button
-              className="btn btn-secondary btn-sm"
-              onClick={handleShuffleAllAnswers}
-              style={{ background: '#f5f3ff', borderColor: '#ddd6fe', color: '#7c3aed', fontWeight: 600 }}
-              title="Đảo ngẫu nhiên toàn bộ đáp án của tất cả câu hỏi (giữ nguyên khi chuyển câu)"
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleSubmitClick}
+              style={{
+                borderRadius: '6px',
+                padding: '0.6rem 1.25rem',
+                fontSize: '0.875rem',
+                fontWeight: 800
+              }}
             >
-              <Shuffle size={15} style={{ color: '#7c3aed' }} /> Đảo tất cả đáp án
-            </button>
-
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => setShowNavDrawer(true)}
-              title="Danh sách câu hỏi"
-            >
-              <Grid size={16} /> Bảng câu hỏi ({answeredCount}/{questions.length})
+              <Send size={16} />
+              <span>Nộp bài</span>
             </button>
           </div>
         </div>
 
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#64748b', marginBottom: '0.35rem' }}>
-            <span>Tiến độ làm bài: {answeredCount}/{questions.length} câu</span>
-            <span>{progressPercent}%</span>
-          </div>
-          <div className="progress-bar-bg">
-            <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }} />
-          </div>
+        {/* Linear Progress Track */}
+        <div style={{
+          width: '100%',
+          height: '6px',
+          background: '#ffffff',
+          borderRadius: '3px',
+          overflow: 'hidden',
+          display: 'flex',
+          marginTop: '1rem',
+          border: '1px solid #eeeeee'
+        }}>
+          <div style={{
+            width: `${progressPercent}%`,
+            background: '#222222',
+            transition: 'width 0.3s ease'
+          }} />
         </div>
-      </div>
+      </header>
 
       {toastMessage && (
         <div style={{
-          background: '#f5f3ff',
-          border: '1.5px solid #c4b5fd',
-          color: '#5b21b6',
-          padding: '0.85rem 1.25rem',
-          borderRadius: '12px',
+          background: '#ffffff',
+          border: '1px solid #eeeeee',
+          color: '#222222',
+          padding: '0.75rem 1.25rem',
+          borderRadius: '6px',
           marginBottom: '1.25rem',
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',
-          fontWeight: 700,
-          boxShadow: 'var(--shadow-sm)'
+          fontWeight: 700
         }}>
-          <Shuffle size={18} style={{ color: '#7c3aed', flexShrink: 0 }} /> {toastMessage}
+          {toastMessage}
         </div>
       )}
 
-      {/* Main Question Card */}
-      <div className="card" style={{ padding: '2rem', minHeight: '380px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <span style={{
-              background: '#f5f3ff',
-              color: '#7c3aed',
-              fontWeight: 800,
-              fontSize: '1rem',
-              padding: '0.3rem 0.75rem',
-              borderRadius: '8px',
-              border: '1px solid #ddd6fe'
-            }}>
-              Câu {currentIndex + 1} / {questions.length}
-            </span>
+      {/* 2. 2-Column Split Testing Canvas */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: '1.5rem', alignItems: 'start' }}>
+        {/* LEFT COLUMN: Main Question Focus Arena */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0 }}>
+          {/* Main Question Card */}
+          <div className="card" style={{ padding: '2rem', position: 'relative', overflow: 'hidden' }}>
+            {/* Question Meta Chips */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  background: '#222222',
+                  color: '#ffffff',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  border: '1px solid #222222'
+                }}>
+                  CÂU HỎI {currentIndex + 1}
+                </span>
 
-            <span className="badge badge-neutral" style={{ fontSize: '0.8rem' }}>
-              {currentQ.type === 'single_choice' && 'Chọn 1 đáp án'}
-              {currentQ.type === 'multiple_choice' && 'Chọn nhiều đáp án'}
-              {currentQ.type === 'true_false' && 'Đúng / Sai'}
-              {currentQ.type === 'fill_blank' && 'Điền từ vào chỗ trống'}
-              {currentQ.type === 'drag_drop_blank' && 'Kéo thả từ vào ô trống'}
-              {currentQ.type === 'matching' && 'Ghép đôi thuật ngữ - định nghĩa'}
-            </span>
-          </div>
+                <span style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: '#ffffff',
+                  border: '1px solid #eeeeee',
+                  color: '#222222',
+                  fontSize: '0.78rem',
+                  fontWeight: 700
+                }}>
+                  {currentQ.type === 'single_choice' && '1 đáp án đúng'}
+                  {currentQ.type === 'multiple_choice' && 'Nhiều đáp án đúng'}
+                  {currentQ.type === 'true_false' && 'Đúng / Sai'}
+                  {currentQ.type === 'fill_blank' && 'Điền khuyết'}
+                  {currentQ.type === 'drag_drop_blank' && 'Kéo thả từ'}
+                  {currentQ.type === 'matching' && 'Ghép đôi thuật ngữ'}
+                </span>
 
-          {isQuestionAnswered(currentQ) && (
-            <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>
-              <CheckCircle2 size={13} /> Đã trả lời
-            </span>
-          )}
-        </div>
+                <span style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: '#ffffff',
+                  border: '1px solid #eeeeee',
+                  color: '#222222',
+                  fontSize: '0.78rem',
+                  fontWeight: 700
+                }}>
+                  {(10 / Math.max(1, questions.length)).toFixed(2)} điểm
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {isQuestionAnswered(currentQ) && (
+                  <span style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    background: '#ffffff',
+                    border: '1px solid #eeeeee',
+                    color: '#222222',
+                    fontSize: '0.75rem',
+                    fontWeight: 700
+                  }}>
+                    ✓ Đã trả lời
+                  </span>
+                )}
+                {flaggedQuestions.has(currentQ.id) && (
+                  <span style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    background: '#222222',
+                    color: '#ffffff',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    border: '1px solid #222222'
+                  }}>
+                    ★ Đang xem lại
+                  </span>
+                )}
+              </div>
+            </div>
 
         <h3 style={{
           fontSize: '1.2rem',
           fontWeight: (currentQ.content || '').includes('\n') ? 600 : 700,
-          color: '#0f172a',
+          color: '#222222',
           lineHeight: 1.6,
           marginBottom: '1.75rem',
           whiteSpace: 'pre-wrap',
@@ -1016,8 +1175,8 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                   </div>
                   <span style={{
                     fontSize: '1rem',
-                    color: isSelected ? '#7c3aed' : '#1e293b',
-                    fontWeight: isSelected ? 600 : 400,
+                    color: '#222222',
+                    fontWeight: isSelected ? 700 : 400,
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
                     lineHeight: 1.5,
@@ -1035,7 +1194,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         {/* 2. MULTIPLE CHOICE */}
         {currentQ.type === 'multiple_choice' && (
           <div>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.75rem', fontStyle: 'italic' }}>
+            <p style={{ fontSize: '0.85rem', color: '#555555', marginBottom: '0.75rem', fontStyle: 'italic' }}>
               * Chọn tất cả các phương án bạn cho là đúng
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1053,8 +1212,8 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     </div>
                     <span style={{
                       fontSize: '1rem',
-                      color: isSelected ? '#7c3aed' : '#1e293b',
-                      fontWeight: isSelected ? 600 : 400,
+                      color: '#222222',
+                      fontWeight: isSelected ? 700 : 400,
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       lineHeight: 1.5,
@@ -1088,8 +1247,8 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                       </div>
                       <span style={{
                         fontSize: '1rem',
-                        color: isSelected ? '#7c3aed' : '#1e293b',
-                        fontWeight: isSelected ? 600 : 400,
+                        color: '#222222',
+                        fontWeight: isSelected ? 700 : 400,
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
                         lineHeight: 1.5,
@@ -1116,14 +1275,14 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '1rem 1.25rem',
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      borderRadius: '6px',
+                      border: '1px solid #eeeeee',
                       gap: '1rem',
                       flexWrap: 'wrap'
                     }}
                   >
-                    <span style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 500, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                    <span style={{ fontSize: '1rem', color: '#222222', fontWeight: 500, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
                       {st.content}
                     </span>
 
@@ -1132,9 +1291,9 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                         <button
                           key={btnVal}
                           type="button"
-                          className={`btn ${userStVal === btnVal ? (btnVal === 'Đúng' ? 'btn-success' : 'btn-danger') : 'btn-secondary'}`}
+                          className={`btn ${userStVal === btnVal ? 'btn-primary' : 'btn-secondary'}`}
                           onClick={() => handleStatementAnswer(stKey, btnVal)}
-                          style={{ minWidth: '85px' }}
+                          style={{ minWidth: '85px', borderRadius: '6px' }}
                         >
                           {btnVal} {userStVal === btnVal && '✓'}
                         </button>
@@ -1156,21 +1315,21 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
           return (
             <div>
-              {/* If bank words exist for fill blank, show shuffled chips */}
+              {/* If bank words exist for fill blank, show chips */}
               {currentQ.bank && currentQ.bank.length > 0 && (
                 <div style={{
                   background: '#ffffff',
                   padding: '0.85rem 1rem',
-                  borderRadius: '10px',
-                  border: '1.5px solid #ddd6fe',
+                  borderRadius: '6px',
+                  border: '1px solid #eeeeee',
                   marginBottom: '1.25rem',
                   display: 'flex',
                   flexWrap: 'wrap',
                   gap: '0.5rem',
                   alignItems: 'center'
                 }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6d28d9', marginRight: '0.25rem' }}>
-                    💡 Hộp từ gợi ý (Bấm để điền):
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#222222', marginRight: '0.25rem' }}>
+                    Từ gợi ý (Bấm để điền):
                   </span>
                   {currentQ.bank.map((word, wIdx) => (
                     <button
@@ -1186,7 +1345,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                           handleFillBlankSlot(targetSlot, word);
                         }
                       }}
-                      style={{ fontSize: '0.875rem', padding: '0.35rem 0.75rem', borderRadius: '8px' }}
+                      style={{ fontSize: '0.875rem', padding: '0.35rem 0.75rem', borderRadius: '4px' }}
                     >
                       {word}
                     </button>
@@ -1196,8 +1355,8 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
               {blanks.length <= 1 ? (
                 <div style={{ marginTop: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
-                    Nhập câu trả lời của bạn vào ô bên dưới:
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#222222', marginBottom: '0.5rem' }}>
+                    Nhập câu trả lời của bạn:
                   </label>
                   <input
                     type="text"
@@ -1209,18 +1368,18 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     style={{
                       width: '100%',
                       padding: '0.85rem 1.15rem',
-                      fontSize: '1.1rem',
-                      borderRadius: '10px',
-                      border: '2px solid #cbd5e1',
-                      outline: 'none'
+                      fontSize: '1rem',
+                      borderRadius: '6px',
+                      border: '1px solid #eeeeee',
+                      outline: 'none',
+                      background: '#ffffff',
+                      color: '#222222'
                     }}
-                    onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
-                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                   />
 
                   {currentQ.options && currentQ.options.length >= 2 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#222222' }}>
                         Hoặc chọn phương án:
                       </span>
                       {currentQ.options.map(opt => {
@@ -1258,20 +1417,19 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.85rem',
-                          background: '#f8fafc',
+                          background: '#ffffff',
                           padding: '0.75rem 1rem',
-                          borderRadius: '10px',
-                          border: activeBlank === bNum ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
-                          transition: 'border-color 0.15s ease'
+                          borderRadius: '6px',
+                          border: activeBlank === bNum ? '2px solid #222222' : '1px solid #eeeeee'
                         }}
                       >
                         <div style={{
-                          background: '#ede9fe',
-                          color: '#7c3aed',
+                          background: '#222222',
+                          color: '#ffffff',
                           fontWeight: 800,
                           fontSize: '0.85rem',
                           padding: '0.4rem 0.75rem',
-                          borderRadius: '8px',
+                          borderRadius: '4px',
                           flexShrink: 0,
                           minWidth: '95px',
                           textAlign: 'center'
@@ -1287,22 +1445,12 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                             flex: 1,
                             padding: '0.75rem 1rem',
                             fontSize: '1rem',
-                            borderRadius: '8px',
-                            border: '1.5px solid #cbd5e1',
+                            borderRadius: '4px',
+                            border: '1px solid #eeeeee',
                             outline: 'none',
                             background: '#ffffff',
-                            fontWeight: 500,
-                            transition: 'all 0.15s ease'
-                          }}
-                          onFocusCapture={(e) => {
-                            e.target.style.borderColor = '#7c3aed';
-                            e.target.style.boxShadow = '0 0 0 3px rgba(124, 58, 237, 0.1)';
-                            e.currentTarget.parentElement.style.borderColor = '#c4b5fd';
-                          }}
-                          onBlurCapture={(e) => {
-                            e.target.style.borderColor = '#cbd5e1';
-                            e.target.style.boxShadow = 'none';
-                            e.currentTarget.parentElement.style.borderColor = activeBlank === bNum ? '#7c3aed' : '#e2e8f0';
+                            color: '#222222',
+                            fontWeight: 500
                           }}
                         />
                       </div>
@@ -1326,10 +1474,9 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               <div style={{
                 background: '#ffffff',
                 padding: '1.15rem',
-                borderRadius: '14px',
-                border: '1.5px solid #ddd6fe',
-                marginBottom: '1.5rem',
-                boxShadow: 'var(--shadow-sm)'
+                borderRadius: '6px',
+                border: '1px solid #eeeeee',
+                marginBottom: '1.5rem'
               }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
                   {(currentQ.bank && currentQ.bank.length > 0
@@ -1382,25 +1529,26 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                         flexDirection: 'column',
                         gap: '0.85rem',
                         padding: '1.15rem 1.25rem',
-                        background: isActive ? '#f5f3ff' : '#ffffff',
-                        borderRadius: '12px',
-                        border: isActive ? '2px solid #7c3aed' : '1.5px solid #ddd6fe',
-                        boxShadow: isActive ? '0 0 0 3px rgba(124, 58, 237, 0.15)' : 'var(--shadow-sm)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        background: '#ffffff',
+                        borderRadius: '6px',
+                        border: isActive ? '2px solid #222222' : '1px solid #eeeeee',
+                        cursor: 'pointer'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                          <span className={`badge ${isActive ? 'badge-blue' : 'badge-gray'}`} style={{ fontWeight: 800 }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            background: isActive ? '#222222' : '#ffffff',
+                            color: isActive ? '#ffffff' : '#222222',
+                            border: '1px solid #222222',
+                            borderRadius: '4px',
+                            fontWeight: 800,
+                            fontSize: '0.8rem'
+                          }}>
                             Vị trí {it.blank}
                           </span>
-                          {isActive && (
-                            <span style={{ fontSize: '0.75rem', color: '#7c3aed', fontWeight: 700, background: '#ffffff', border: '1px solid #ddd6fe', padding: '2px 8px', borderRadius: '6px' }}>
-                              Đang nhận từ
-                            </span>
-                          )}
-                          <span style={{ fontSize: '0.975rem', color: '#1e293b', fontWeight: 600 }}>
+                          <span style={{ fontSize: '0.975rem', color: '#222222', fontWeight: 600 }}>
                             {it.text || `Chỗ trống số ${it.blank}`}
                           </span>
                         </div>
@@ -1412,7 +1560,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                               e.stopPropagation();
                               handleSlotClear(it.blank);
                             }}
-                            style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#64748b' }}
+                            style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px' }}
                             title="Xóa toàn bộ các từ trong câu này"
                           >
                             Xóa tất cả ({filledWords.length})
@@ -1459,7 +1607,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
                         <span style={{
                           fontSize: '0.825rem',
-                          color: filledWords.length > 0 ? '#7c3aed' : '#94a3b8',
+                          color: '#555555',
                           fontStyle: 'italic',
                           padding: '0 4px',
                           userSelect: 'none'
@@ -1478,14 +1626,14 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         {/* 6. MATCHING */}
         {currentQ.type === 'matching' && (
           <div>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1rem', fontStyle: 'italic' }}>
+            <p style={{ fontSize: '0.85rem', color: '#555555', marginBottom: '1rem', fontStyle: 'italic' }}>
               * Chọn một thuật ngữ ở cột trái, sau đó chọn định nghĩa tương ứng ở cột phải để ghép cặp.
             </p>
 
             <div className="match-grid">
               {/* Left Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#222222' }}>
                   Cột A: Thuật ngữ
                 </span>
                 {(currentQ.pairs || []).map((pair) => {
@@ -1502,7 +1650,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                       <div>
                         <div>{pair.left}</div>
                         {matchedRight && (
-                          <div style={{ fontSize: '0.775rem', color: '#059669', marginTop: '0.2rem', fontWeight: 500 }}>
+                          <div style={{ fontSize: '0.775rem', color: '#555555', marginTop: '0.2rem', fontWeight: 600 }}>
                             ✓ Đã ghép với: {matchedRight.substring(0, 32)}...
                           </div>
                         )}
@@ -1513,7 +1661,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                             e.stopPropagation();
                             handleClearMatch(pairId);
                           }}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                          style={{ background: 'none', border: 'none', color: '#222222', cursor: 'pointer' }}
                           title="Hủy ghép"
                         >
                           <X size={16} />
@@ -1526,7 +1674,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
               {/* Right Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#222222' }}>
                   Cột B: Định nghĩa
                 </span>
                 {(currentQ.shuffledRights || (currentQ.pairs || []).map(p => p.right)).map((rightText, rIdx) => {
@@ -1543,7 +1691,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                      <span style={{ fontSize: '0.9rem', color: '#222222' }}>
                         {rightText}
                       </span>
                     </div>
@@ -1553,79 +1701,299 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             </div>
           </div>
         )}
+          </div>
+
+          {/* Keyboard Accessibility Hint Box */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            padding: '0.75rem 1rem',
+            background: '#ffffff',
+            borderRadius: '6px',
+            border: '1px solid #eeeeee',
+            fontSize: '0.8rem',
+            color: '#555555'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}>
+              <span>Phím tắt:</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <span><kbd style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #eeeeee', fontWeight: 700 }}>1</kbd>-<kbd style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #eeeeee', fontWeight: 700 }}>4</kbd> Chọn đáp án</span>
+              <span><kbd style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #eeeeee', fontWeight: 700 }}>F</kbd> Đặt cờ xem lại</span>
+              <span><kbd style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #eeeeee', fontWeight: 700 }}>←</kbd> <kbd style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #eeeeee', fontWeight: 700 }}>→</kbd> Chuyển câu</span>
+            </div>
+          </div>
+
+          {/* Quick Shuffle Tools */}
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleShuffleQuestions}
+              style={{ fontSize: '0.78rem', borderRadius: '6px' }}
+              title="Đảo thứ tự câu hỏi"
+            >
+              Đảo câu hỏi
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleShuffleAllAnswers}
+              style={{ fontSize: '0.78rem', borderRadius: '6px' }}
+              title="Đảo tất cả đáp án"
+            >
+              Đảo tất cả đáp án
+            </button>
+            {onEdit && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={onEdit}
+                style={{ fontSize: '0.78rem', borderRadius: '6px' }}
+              >
+                Chỉnh sửa đề thi
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Question Palette */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: '5rem' }}>
+          <div className="card" style={{ padding: '1.25rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#222222', margin: 0 }}>Bảng câu hỏi</h3>
+              <span style={{ fontSize: '11px', fontWeight: 700, background: '#ffffff', color: '#555555', border: '1px solid #eeeeee', padding: '2px 8px', borderRadius: '4px' }}>
+                {questions.length} câu
+              </span>
+            </div>
+
+            {/* Status Metrics Bar */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gap: '6px',
+              padding: '8px',
+              background: '#ffffff',
+              borderRadius: '6px',
+              border: '1px solid #eeeeee',
+              textAlign: 'center',
+              marginBottom: '1rem'
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#222222' }}>{answeredCount}</div>
+                <div style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>Đã làm</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#222222' }}>{flaggedQuestions.size}</div>
+                <div style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>Xem lại</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#222222' }}>{questions.length - answeredCount}</div>
+                <div style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>Chưa làm</div>
+              </div>
+            </div>
+
+            {/* Question Palette Matrix */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '8px',
+              maxHeight: '380px',
+              overflowY: 'auto',
+              padding: '2px'
+            }}>
+              {questions.map((q, idx) => {
+                const isAnswered = isQuestionAnswered(q);
+                const isFlagged = flaggedQuestions.has(q.id);
+                const isCurrent = idx === currentIndex;
+
+                let bg = '#ffffff';
+                let color = '#222222';
+                let border = '1px solid #eeeeee';
+
+                if (isCurrent) {
+                  border = '2px solid #222222';
+                  bg = '#222222';
+                  color = '#ffffff';
+                } else if (isFlagged) {
+                  bg = '#ffffff';
+                  color = '#222222';
+                  border = '2px dashed #222222';
+                } else if (isAnswered) {
+                  bg = '#f4f4f5';
+                  color = '#222222';
+                  border = '1px solid #eeeeee';
+                }
+
+                return (
+                  <button
+                    key={q.id || idx}
+                    type="button"
+                    onClick={() => goToQuestion(idx)}
+                    style={{
+                      height: '38px',
+                      borderRadius: '4px',
+                      background: bg,
+                      color: color,
+                      border: border,
+                      fontWeight: 800,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative'
+                    }}
+                    title={`Câu ${idx + 1}`}
+                  >
+                    <span>{idx + 1}</span>
+                    {isFlagged && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          position: 'absolute',
+                          top: '1px',
+                          right: '3px',
+                          color: isCurrent ? '#ffffff' : '#222222'
+                        }}
+                      >
+                        ★
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Legends */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid #eeeeee', fontSize: '11px', color: '#555555' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#f4f4f5', border: '1px solid #eeeeee' }} />
+                <span>Đã trả lời ({answeredCount})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#222222', border: '1px solid #222222' }} />
+                <span>Đang xem (Câu {currentIndex + 1})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ffffff', border: '2px dashed #222222' }} />
+                <span>Cần xem lại ({flaggedQuestions.size})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ffffff', border: '1px solid #eeeeee' }} />
+                <span>Chưa làm ({questions.length - answeredCount})</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Fixed Bottom Nav */}
+      {/* 3. Fixed Bottom Navigation Bar (Cố định chuyển câu tiếp theo & câu trước) */}
       <div style={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
-        background: 'rgba(255, 255, 255, 0.98)',
-        backdropFilter: 'blur(8px)',
-        borderTop: '1.5px solid #e2e8f0',
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.08)',
-        zIndex: 99,
-        padding: '0.75rem 1.25rem'
+        background: '#ffffff',
+        borderTop: '1px solid #eeeeee',
+        zIndex: 45,
+        padding: '0.85rem 1.5rem'
       }}>
         <div style={{
-          maxWidth: '960px',
+          maxWidth: '1800px',
           margin: '0 auto',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '0.75rem'
+          gap: '1rem',
+          flexWrap: 'wrap'
         }}>
-          <button
-            className="btn btn-secondary"
-            onClick={() => goToQuestion(Math.max(0, currentIndex - 1))}
-            disabled={currentIndex === 0}
-            style={{ minWidth: '120px' }}
-          >
-            <ArrowLeft size={16} /> Câu trước
-          </button>
-
-          {/* Quick Jump / Menu button */}
+          {/* Nút Câu trước */}
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => setShowNavDrawer(true)}
+            onClick={() => goToQuestion(Math.max(0, currentIndex - 1))}
+            disabled={currentIndex === 0}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.55rem',
-              background: '#f5f3ff',
-              color: '#7c3aed',
-              border: '1.5px solid #ddd6fe',
+              padding: '0.65rem 1.4rem',
+              fontSize: '0.9rem',
               fontWeight: 700,
-              padding: '0.6rem 1.25rem',
-              borderRadius: '10px'
+              minWidth: '135px',
+              borderRadius: '6px'
             }}
-            title="Mở danh sách toàn bộ câu hỏi để chọn nhanh"
           >
-            <Grid size={17} style={{ color: '#7c3aed' }} />
-            <span>Câu {currentIndex + 1} / {questions.length}</span>
-            <span style={{ fontSize: '0.8rem', opacity: 0.75, fontWeight: 600 }}>
-              (☰ Chọn câu)
-            </span>
+            <ArrowLeft size={18} /> Câu trước
           </button>
 
+          {/* Vị trí câu hiện tại & Đánh dấu xem lại */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <span style={{
+              padding: '0.45rem 1.1rem',
+              borderRadius: '6px',
+              background: '#ffffff',
+              border: '1px solid #eeeeee',
+              fontSize: '0.875rem',
+              fontWeight: 800,
+              color: '#222222'
+            }}>
+              Câu {currentIndex + 1} / {questions.length}
+            </span>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => toggleFlag(currentQ.id)}
+              style={{
+                padding: '0.55rem 1.15rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                background: flaggedQuestions.has(currentQ.id) ? '#222222' : '#ffffff',
+                borderColor: flaggedQuestions.has(currentQ.id) ? '#222222' : '#eeeeee',
+                color: flaggedQuestions.has(currentQ.id) ? '#ffffff' : '#222222',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem'
+              }}
+            >
+              <span>{flaggedQuestions.has(currentQ.id) ? 'Bỏ đánh dấu' : 'Đánh dấu xem lại (F)'}</span>
+            </button>
+          </div>
+
+          {/* Nút Câu tiếp theo / Nộp bài thi */}
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             {currentIndex < questions.length - 1 ? (
               <button
+                type="button"
                 className="btn btn-primary"
-                onClick={() => goToQuestion(Math.min(questions.length - 1, currentIndex + 1))}
-                style={{ minWidth: '135px' }}
+                onClick={() => goToQuestion(currentIndex + 1)}
+                style={{
+                  padding: '0.65rem 1.6rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  minWidth: '150px',
+                  borderRadius: '6px'
+                }}
               >
-                Câu tiếp theo <ArrowRight size={16} />
+                Câu tiếp theo <ArrowRight size={18} />
               </button>
             ) : (
               <button
-                className="btn btn-success"
+                type="button"
+                className="btn btn-primary"
                 onClick={handleSubmitClick}
-                style={{ padding: '0.65rem 1.75rem', minWidth: '135px' }}
+                style={{
+                  padding: '0.65rem 1.75rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  minWidth: '150px',
+                  borderRadius: '6px'
+                }}
               >
-                <Send size={16} /> Nộp bài thi
+                <Send size={18} /> Nộp bài thi
               </button>
             )}
           </div>
@@ -1635,131 +2003,26 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="modal-backdrop">
-          <div className="modal-content">
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+          <div className="modal-content" style={{ border: '1px solid #eeeeee', borderRadius: '8px' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#222222', marginBottom: '0.75rem' }}>
               Xác nhận nộp bài thi
             </h3>
-            <p style={{ color: '#475569', fontSize: '0.95rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+            <p style={{ color: '#555555', fontSize: '0.95rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
               Bạn đã hoàn thành <strong>{answeredCount} / {questions.length}</strong> câu hỏi.
               {answeredCount < questions.length && (
-                <span style={{ display: 'block', color: '#d97706', marginTop: '0.5rem', fontWeight: 600 }}>
+                <span style={{ display: 'block', color: '#b91c1c', marginTop: '0.5rem', fontWeight: 600 }}>
                   ⚠ Còn {questions.length - answeredCount} câu chưa có câu trả lời!
                 </span>
               )}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button className="btn btn-secondary" onClick={() => setShowConfirmModal(false)}>
+              <button className="btn btn-secondary" style={{ borderRadius: '6px' }} onClick={() => setShowConfirmModal(false)}>
                 Tiếp tục làm bài
               </button>
-              <button className="btn btn-success" onClick={confirmSubmit}>
+              <button className="btn btn-primary" style={{ borderRadius: '6px' }} onClick={confirmSubmit}>
                 Nộp bài ngay
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Drawer */}
-      {showNavDrawer && (
-        <div className="modal-backdrop" onClick={() => setShowNavDrawer(false)}>
-          <div className="modal-content" style={{ maxWidth: '680px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Danh sách câu hỏi
-                </h3>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                  Đã hoàn thành <strong>{answeredCount}</strong> / <strong>{questions.length}</strong> câu
-                </p>
-              </div>
-              <button
-                onClick={() => setShowNavDrawer(false)}
-                style={{ background: '#f1f5f9', border: 'none', cursor: 'pointer', color: '#64748b', borderRadius: '8px', padding: '6px' }}
-                title="Đóng bảng câu hỏi"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Legend */}
-            <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', fontWeight: 600 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#10b981' }} />
-                <span style={{ color: '#047857' }}>Đã làm ({answeredCount})</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#f5f3ff', border: '2px solid #7c3aed' }} />
-                <span style={{ color: '#7c3aed' }}>Đang xem (Câu {currentIndex + 1})</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: '#ffffff', border: '1px solid #cbd5e1' }} />
-                <span style={{ color: '#64748b' }}>Chưa làm ({questions.length - answeredCount})</span>
-              </div>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))',
-              gap: '0.65rem',
-              maxHeight: '420px',
-              overflowY: 'auto',
-              padding: '0.35rem'
-            }}>
-              {questions.map((q, idx) => {
-                const isAnswered = isQuestionAnswered(q);
-                const isCurrent = idx === currentIndex;
-
-                let bg = '#ffffff';
-                let border = '1.5px solid #cbd5e1';
-                let textCol = '#475569';
-                let boxShadow = 'none';
-
-                if (isCurrent && isAnswered) {
-                  bg = '#10b981';
-                  border = '3px solid #7c3aed';
-                  textCol = '#ffffff';
-                  boxShadow = '0 0 0 2px #ddd6fe';
-                } else if (isCurrent) {
-                  bg = '#f5f3ff';
-                  border = '2.5px solid #7c3aed';
-                  textCol = '#7c3aed';
-                  boxShadow = '0 0 0 2px #ddd6fe';
-                } else if (isAnswered) {
-                  bg = '#10b981';
-                  border = '1.5px solid #059669';
-                  textCol = '#ffffff';
-                }
-
-                return (
-                  <button
-                    key={q.id || idx}
-                    type="button"
-                    onClick={() => {
-                      goToQuestion(idx);
-                      setShowNavDrawer(false);
-                    }}
-                    title={`Chuyển tới Câu ${idx + 1}${isAnswered ? ' (Đã làm)' : ' (Chưa làm)'}`}
-                    style={{
-                      height: '46px',
-                      borderRadius: '10px',
-                      border: border,
-                      background: bg,
-                      color: textCol,
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: boxShadow,
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>

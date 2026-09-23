@@ -1,58 +1,100 @@
 import React from 'react';
-import { FileText, Download, Home } from './UIcons';
+import { Download, Home } from './UIcons';
 import { apiUrl } from '../apiConfig';
 
-export default function Navbar({ currentView, onNavigate }) {
+export default function Navbar({ currentView, onNavigate, searchQuery = '', onSearchChange }) {
   const handleDownloadSample = () => {
     window.location.href = apiUrl('/api/sample-file');
   };
 
   return (
     <header className="app-header">
-      <div className="brand-logo" onClick={() => onNavigate('home')}>
-        <div style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: '10px',
-          background: '#7c3aed',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#ffffff',
-          boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)'
-        }}>
-          <FileText size={22} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            WordQuiz <span style={{ color: '#7c3aed' }}>Pro</span>
-          </span>
-          <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>
-            Tạo đề thi từ Highlight Word (.docx)
-          </span>
-        </div>
-        {/* <span className="brand-badge">XML Highlight Engine</span> */}
+      {/* Brand Logo - Minimalist Black & White */}
+      <div className="brand-logo" onClick={() => onNavigate('home')} title="EduDocx - Về trang chủ">
+        <svg viewBox="0 0 160 40" style={{ height: '32px', width: 'auto' }} xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="36" height="36" rx="6" fill="#222222" stroke="#222222" strokeWidth="1.5" />
+          <path d="M12 14h16M12 20h10M12 26h14" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
+          <text x="48" y="26" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif" fontSize="18" fontWeight="800" fill="#222222">
+            EduDocx
+          </text>
+        </svg>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      {/* Global Search Bar */}
+      {currentView === 'home' && (
+        <div className="nav-search-box">
+          <span className="material-symbols-outlined" style={{ position: 'absolute', left: '10px', color: '#666666', fontSize: '18px', pointerEvents: 'none' }}>
+            search
+          </span>
+          <input
+            className="nav-search-input"
+            type="text"
+            placeholder="Tìm kiếm file Word, bài thi, câu hỏi..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange?.('')}
+              style={{
+                position: 'absolute',
+                right: '8px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#666666',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title="Xóa tìm kiếm"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Action Buttons & Profile */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: 'auto' }}>
         <button
-          className="btn btn-secondary"
+          className="btn btn-secondary btn-sm"
           onClick={() => onNavigate('home')}
-          style={{ fontSize: '0.875rem' }}
+          title="Trang chủ"
         >
-          <Home size={16} /> Trang chủ
+          <Home size={15} /> Trang chủ
         </button>
 
         <button
-          className="btn btn-secondary"
+          className="btn btn-secondary btn-sm"
           onClick={handleDownloadSample}
-          style={{ fontSize: '0.875rem', borderColor: '#ddd6fe', background: '#f5f3ff', color: '#7c3aed', fontWeight: 600 }}
-          title="Tải file Word mẫu gồm 6 dạng câu hỏi có Highlight"
+          title="Tải file Word mẫu"
         >
-          <Download size={16} /> Tải file mẫu (.docx)
+          <Download size={15} /> Tải file mẫu (.docx)
         </button>
+
+        <div style={{ height: '20px', width: '1px', backgroundColor: '#eeeeee', margin: '0 4px' }}></div>
+
+        {/* User Profile Pill */}
+        <div className="user-profile-badge" title="Tài khoản">
+          <div style={{
+            width: '26px',
+            height: '26px',
+            borderRadius: '4px',
+            background: '#222222',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: '0.75rem'
+          }}>
+            HT
+          </div>
+          <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#222222' }}>
+            Hoàng Triều
+          </span>
+        </div>
       </div>
     </header>
   );
 }
-

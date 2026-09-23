@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import confetti from 'canvas-confetti';
 import {
-  Trophy, CheckCircle2, XCircle, RotateCcw,
-  Edit3, Home
+  RotateCcw, Edit3, Home, ArrowRight, Play
 } from './UIcons';
 import { cleanQuestionPrompt, cleanOptionText } from './QuizPlayer';
 
@@ -10,264 +8,595 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
   const [filter, setFilter] = useState('all');
 
   const earnedScore = result?.earned_score || 0;
-  const totalScore = result?.total_score || 1;
-  const percentage = result?.percentage || 0;
+  const totalScore = result?.total_score || 10;
+  const percentage = result?.percentage !== undefined
+    ? result.percentage
+    : Math.round((earnedScore / Math.max(1, totalScore)) * 100);
   const questionResults = result?.question_results || [];
 
   useEffect(() => {
-    if (percentage >= 75) {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+    // Clean up temporary saved progress once quiz is submitted
+    try {
+      localStorage.removeItem('edudocx_saved_progress');
+    } catch (e) {
+      // ignore
     }
   }, [percentage]);
 
   const correctCount = questionResults.filter(q => q.is_correct).length;
-  const wrongCount = questionResults.length - correctCount;
+  const wrongCount = questionResults.filter(q => !q.is_correct && isAnswerGiven(q.user_answer)).length;
+  const skippedCount = questionResults.length - correctCount - wrongCount;
+
+  function isAnswerGiven(val) {
+    if (val === undefined || val === null || val === '') return false;
+    if (Array.isArray(val)) return val.length > 0;
+    if (typeof val === 'object') return Object.values(val).some(v => v !== '' && v !== null && v !== undefined);
+    return true;
+  }
+
+  const rankLabel = percentage >= 85 ? 'Xuất sắc' : percentage >= 70 ? 'Giỏi' : percentage >= 50 ? 'Khá' : 'Trung bình';
+  const rankColor = percentage >= 70 ? '#059669' : percentage >= 50 ? '#4f46e5' : '#d97706';
+  const rankBg = percentage >= 70 ? '#ecfdf5' : percentage >= 50 ? '#eef2ff' : '#fffbeb';
+
+  const avgPaceSec = Math.round(Math.max(10, (result?.time_spent_seconds || 45) / Math.max(1, questionResults.length)));
 
   const filteredResults = questionResults.filter(q => {
     if (filter === 'correct') return q.is_correct;
-    if (filter === 'wrong') return !q.is_correct;
+    if (filter === 'wrong') return !q.is_correct && isAnswerGiven(q.user_answer);
+    if (filter === 'skipped') return !q.is_correct && !isAnswerGiven(q.user_answer);
     return true;
   });
 
+  // Competency Analysis by Question Type
+  const typeMap = {
+    single_choice: 'Trắc nghiệm 1 đáp án',
+    multiple_choice: 'Trắc nghiệm nhiều đáp án',
+    true_false: 'Đúng / Sai',
+    fill_blank: 'Điền từ khuyết',
+    drag_drop_blank: 'Kéo thả từ vào ô',
+    matching: 'Ghép đôi thuật ngữ'
+  };
+
+  const competencyBreakdown = Object.entries(typeMap).map(([key, label]) => {
+    const list = questionResults.filter(q => q.type === key);
+    if (list.length === 0) return null;
+    const correct = list.filter(q => q.is_correct).length;
+    const pct = Math.round((correct / list.length) * 100);
+    return { key, label, total: list.length, correct, pct };
+  }).filter(Boolean);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto', paddingBottom: '4rem' }}>
-      <div className="card" style={{
-        textAlign: 'center',
-        padding: '2.5rem 1.5rem',
-        marginBottom: '2rem',
-        background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-        border: '1px solid #e2e8f0',
-        boxShadow: 'var(--shadow-md)'
+    <div style={{ maxWidth: '1800px', margin: '0 auto', paddingBottom: '5rem' }}>
+      {/* 1. Top Banner / Hero */}
+      <div style={{
+        borderRadius: '8px',
+        background: '#ffffff',
+        border: '1px solid #eeeeee',
+        padding: '1.5rem 2rem',
+        marginBottom: '1.75rem'
       }}>
-        <div style={{
-          width: '72px',
-          height: '72px',
-          borderRadius: '50%',
-          background: percentage >= 70 ? '#ecfdf5' : '#fffbeb',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 1rem',
-          color: percentage >= 70 ? '#059669' : '#d97706'
-        }}>
-          <Trophy size={38} />
-        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{
+              fontSize: '1.5rem',
+              fontWeight: 800,
+              color: '#222222',
+              margin: '0 0 6px'
+            }}>
+              Hoàn thành bài kiểm tra: {quiz?.title || 'Bài tập Word'}
+            </h1>
 
-        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem' }}>
-          Kết quả bài làm: {quiz?.title}
-        </h2>
-        <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-          Đã hoàn thành bài kiểm tra và tự động chấm điểm theo nguồn dữ liệu Word.
-        </p>
-
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'baseline',
-          gap: '0.5rem',
-          background: '#ffffff',
-          padding: '0.85rem 2rem',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          boxShadow: 'var(--shadow-sm)',
-          marginBottom: '1.5rem'
-        }}>
-          <span style={{ fontSize: '3rem', fontWeight: 800, color: percentage >= 70 ? '#059669' : '#d97706', lineHeight: 1 }}>
-            {earnedScore}
-          </span>
-          <span style={{ fontSize: '1.4rem', fontWeight: 600, color: '#94a3b8' }}>
-            / {totalScore} điểm ({percentage}%)
-          </span>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '2rem',
-          marginTop: '0.5rem',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#059669', fontWeight: 600 }}>
-            <CheckCircle2 size={18} /> {correctCount} câu trả lời đúng
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#555555' }}>
+              <span>
+                Thời gian nộp: {new Date().toLocaleDateString('vi-VN')} {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#dc2626', fontWeight: 600 }}>
-            <XCircle size={18} /> {wrongCount} câu trả lời sai / chưa trọn vẹn
-          </div>
-        </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={onRetake}>
-            <RotateCcw size={16} /> Làm lại bài
-          </button>
-          <button className="btn btn-secondary" onClick={onEdit}>
-            <Edit3 size={16} /> Chỉnh sửa câu hỏi
-          </button>
-          <button className="btn btn-secondary" onClick={onHome}>
-            <Home size={16} /> Về trang chủ
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-          Chi tiết kết quả từng câu hỏi
-        </h3>
-
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          <button
-            className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilter('all')}
-          >
-            Tất cả ({questionResults.length})
-          </button>
-          <button
-            className={`btn btn-sm ${filter === 'correct' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilter('correct')}
-          >
-            Đúng ({correctCount})
-          </button>
-          <button
-            className={`btn btn-sm ${filter === 'wrong' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setFilter('wrong')}
-          >
-            Sai ({wrongCount})
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {filteredResults.map((q, idx) => {
-          return (
-            <div
-              key={q.question_id || idx}
-              className="card"
-              style={{
-                borderLeft: q.is_correct ? '4px solid #10b981' : '4px solid #ef4444'
-              }}
+          {/* Action Buttons Row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={onRetake}
+              style={{ padding: '0.65rem 1.1rem', fontSize: '0.875rem', fontWeight: 700, borderRadius: '6px' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <span style={{
-                    width: '30px',
-                    height: '30px',
+              <RotateCcw size={16} /> Làm lại bài thi
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handlePrint}
+              style={{ padding: '0.65rem 1.1rem', fontSize: '0.875rem', fontWeight: 700, borderRadius: '6px' }}
+            >
+              Xuất kết quả PDF
+            </button>
+
+            {onEdit && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={onEdit}
+                style={{ padding: '0.65rem 1.1rem', fontSize: '0.875rem', fontWeight: 700, borderRadius: '6px' }}
+              >
+                <Edit3 size={16} /> Sửa câu hỏi
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={onHome}
+              style={{ padding: '0.65rem 1.25rem', fontSize: '0.875rem', fontWeight: 800, borderRadius: '6px' }}
+            >
+              <Home size={16} /> Về trang chủ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Score KPI Grid (4 Cards) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
+        {/* Card 1: Score & Rank */}
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+              Tổng điểm đạt được
+            </span>
+            <span style={{ padding: '3px 10px', borderRadius: '4px', border: '1px solid #eeeeee', background: '#ffffff', color: '#222222', fontSize: '11px', fontWeight: 800 }}>
+              Xếp loại: {rankLabel}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+              {earnedScore}
+            </span>
+            <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#555555' }}>
+              / {totalScore} điểm
+            </span>
+          </div>
+
+          <div style={{ width: '100%', height: '8px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ width: `${percentage}%`, height: '100%', background: '#222222' }} />
+          </div>
+
+          <div style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 600 }}>
+            {percentage >= 65 ? 'Đạt yêu cầu chứng chỉ môn học (≥65đ)' : 'Cần rèn luyện thêm để vượt mốc 65%'}
+          </div>
+        </div>
+
+        {/* Card 2: Accuracy & Count */}
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+              Tỷ lệ chính xác
+            </span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#222222' }}>
+              {correctCount} / {questionResults.length} câu
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+              {percentage}%
+            </span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#555555' }}>
+              chuẩn đầu ra
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', height: '8px', width: '100%', borderRadius: '4px', overflow: 'hidden', background: '#ffffff', border: '1px solid #eeeeee' }}>
+            <div style={{ width: `${(correctCount / Math.max(1, questionResults.length)) * 100}%`, background: '#222222' }} />
+            <div style={{ width: `${(wrongCount / Math.max(1, questionResults.length)) * 100}%`, background: '#71717a' }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#555555' }}>
+            <span>Đúng: <strong style={{ color: '#222222' }}>{correctCount}</strong></span>
+            <span>Sai: <strong style={{ color: '#222222' }}>{wrongCount}</strong></span>
+            <span>Bỏ: <strong style={{ color: '#222222' }}>{skippedCount}</strong></span>
+          </div>
+        </div>
+
+        {/* Card 3: Wrong / Omitted breakdown */}
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+              Cần cải thiện
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
+            <div>
+              <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+                {wrongCount}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: '#555555', marginLeft: '4px' }}>Câu sai</span>
+            </div>
+            <div style={{ width: '1px', height: '24px', background: '#eeeeee' }} />
+            <div>
+              <span style={{ fontSize: '2rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+                {skippedCount}
+              </span>
+              <span style={{ fontSize: '0.8rem', color: '#555555', marginLeft: '4px' }}>Bỏ trống</span>
+            </div>
+          </div>
+
+          <div style={{
+            padding: '8px 12px',
+            borderRadius: '6px',
+            border: '1px solid #eeeeee',
+            background: '#ffffff',
+            color: '#222222',
+            fontSize: '0.775rem',
+            fontWeight: 600
+          }}>
+            {wrongCount > 0 ? `Ôn lại ${wrongCount} câu sai để củng cố kiến thức` : 'Xuất sắc! Không có câu nào trả lời sai'}
+          </div>
+        </div>
+
+        {/* Card 4: Pace / Speed */}
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+              Tốc độ làm bài
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+              {avgPaceSec}
+            </span>
+            <span style={{ fontSize: '0.9rem', color: '#555555' }}>
+              giây / câu
+            </span>
+          </div>
+
+          <div style={{ width: '100%', height: '8px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ width: '65%', height: '100%', background: '#222222' }} />
+          </div>
+
+          <div style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 600 }}>
+            Tốc độ xử lý tốt, đảm bảo thời gian quy định
+          </div>
+        </div>
+      </div>
+
+      {/* 3. 2-Column Split Workspace */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: '1.75rem', alignItems: 'start' }}>
+        {/* LEFT COLUMN: Detailed Review Stream */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0 }}>
+          {/* Section Header & Filter Tabs */}
+          <div className="card" style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#222222', margin: 0 }}>
+                Xem lại đáp án & Giải thích chi tiết
+              </h2>
+            </div>
+
+            {/* Filter Tabs */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                className={`btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', borderRadius: '4px' }}
+                onClick={() => setFilter('all')}
+              >
+                Tất cả ({questionResults.length})
+              </button>
+              <button
+                className={`btn btn-sm ${filter === 'wrong' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', borderRadius: '4px' }}
+                onClick={() => setFilter('wrong')}
+              >
+                Sai ({wrongCount})
+              </button>
+              <button
+                className={`btn btn-sm ${filter === 'correct' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', borderRadius: '4px' }}
+                onClick={() => setFilter('correct')}
+              >
+                Đúng ({correctCount})
+              </button>
+              <button
+                className={`btn btn-sm ${filter === 'skipped' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', borderRadius: '4px' }}
+                onClick={() => setFilter('skipped')}
+              >
+                Bỏ trống ({skippedCount})
+              </button>
+            </div>
+          </div>
+
+          {/* Question Cards Stream */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {filteredResults.map((q, idx) => {
+              const isCorrect = q.is_correct;
+              const hasAnswered = isAnswerGiven(q.user_answer);
+
+              return (
+                <div
+                  key={q.question_id || idx}
+                  id={`review-q-${q.order || idx + 1}`}
+                  className="card"
+                  style={{
+                    padding: '1.5rem',
+                    border: '1px solid #eeeeee',
                     borderRadius: '8px',
-                    background: q.is_correct ? '#ecfdf5' : '#fef2f2',
-                    color: q.is_correct ? '#059669' : '#dc2626',
-                    fontWeight: 800,
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.85rem'
-                  }}>
-                    {q.order || idx + 1}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>
-                    Câu {q.order || idx + 1}
-                  </span>
-                  <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
-                    {q.type}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span className={`badge ${q.is_correct ? 'badge-success' : 'badge-warning'}`}>
-                    Điểm: {q.score} / {q.max_score}
-                  </span>
-                </div>
-              </div>
-
-              <p style={{
-                fontSize: '1.05rem',
-                fontWeight: 600,
-                color: '#0f172a',
-                marginBottom: '1rem',
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                tabSize: 4,
-                fontFamily: (q.content || '').includes('\n') ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' : 'inherit'
-              }}>
-                {cleanQuestionPrompt(q.content)}
-              </p>
-
-              <div style={{
-                background: '#f8fafc',
-                borderRadius: '10px',
-                padding: '1rem 1.25rem',
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-                fontSize: '0.925rem'
-              }}>
-                {(() => {
-                  const userAnsText = renderAnswerValue(q.user_answer, q, quiz);
-                  const isUserMulti = userAnsText.includes('\n');
-                  const isUserCode = isUserMulti || (q.content || '').includes('\n');
-
-                  const corrAnsText = renderCorrectAnswer(q, quiz);
-                  const isCorrMulti = corrAnsText.includes('\n');
-                  const isCorrCode = isCorrMulti || (q.content || '').includes('\n');
-
-                  return (
-                    <>
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: isUserMulti ? 'column' : 'row',
-                        alignItems: isUserMulti ? 'flex-start' : 'baseline',
-                        gap: isUserMulti ? '0.35rem' : '0.5rem'
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}
+                >
+                  {/* Question Meta Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{
+                        padding: '3px 10px',
+                        borderRadius: '4px',
+                        background: '#222222',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        color: '#ffffff',
+                        border: '1px solid #222222'
                       }}>
-                        <span style={{ fontWeight: 700, color: '#475569', flexShrink: 0 }}>Lựa chọn của bạn: </span>
-                        <span style={{
-                          color: q.is_correct ? '#059669' : '#dc2626',
-                          fontWeight: 600,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          lineHeight: 1.5,
-                          tabSize: 4,
-                          fontFamily: isUserCode ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
-                        }}>
-                          {userAnsText || '(Chưa trả lời)'}
-                        </span>
-                      </div>
+                        Câu {q.order || idx + 1}
+                      </span>
 
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: isCorrMulti ? 'column' : 'row',
-                        alignItems: isCorrMulti ? 'flex-start' : 'baseline',
-                        gap: isCorrMulti ? '0.35rem' : '0.5rem'
-                      }}>
-                        <span style={{ fontWeight: 700, color: '#475569', flexShrink: 0 }}>Đáp án đúng: </span>
+                      {isCorrect ? (
                         <span style={{
-                          color: '#059669',
-                          fontWeight: 700,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          lineHeight: 1.5,
-                          tabSize: 4,
-                          fontFamily: isCorrCode ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit'
+                          padding: '3px 10px',
+                          borderRadius: '4px',
+                          border: '1px solid #15803d',
+                          background: '#ffffff',
+                          color: '#15803d',
+                          fontSize: '11px',
+                          fontWeight: 800
                         }}>
-                          {corrAnsText}
+                          ✓ ĐÚNG
                         </span>
-                      </div>
-                    </>
-                  );
-                })()}
+                      ) : hasAnswered ? (
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: '4px',
+                          border: '1px solid #b91c1c',
+                          background: '#ffffff',
+                          color: '#b91c1c',
+                          fontSize: '11px',
+                          fontWeight: 800
+                        }}>
+                          ✗ SAI
+                        </span>
+                      ) : (
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: '4px',
+                          border: '1px solid #eeeeee',
+                          background: '#ffffff',
+                          color: '#555555',
+                          fontSize: '11px',
+                          fontWeight: 800
+                        }}>
+                          BỎ TRỐNG
+                        </span>
+                      )}
 
-                {q.explanation && (
-                  <div style={{ marginTop: '0.35rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '0.825rem', color: '#64748b' }}>
-                      {q.explanation}
+                      <span style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #eeeeee', background: '#ffffff', color: '#555555', fontSize: '11px', fontWeight: 600 }}>
+                        {typeMap[q.type] || q.type}
+                      </span>
+                    </div>
+
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#222222' }}>
+                      {q.score} / {q.max_score} điểm
                     </span>
                   </div>
-                )}
+
+                  {/* Question Prompt */}
+                  <h3 style={{
+                    fontSize: '1.05rem',
+                    fontWeight: (q.content || '').includes('\n') ? 600 : 700,
+                    color: '#222222',
+                    lineHeight: 1.6,
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    tabSize: 4,
+                    fontFamily: (q.content || '').includes('\n') && /[{};=()<>\[\]]/.test(q.content)
+                      ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+                      : 'inherit'
+                  }}>
+                    {cleanQuestionPrompt(q.content)}
+                  </h3>
+
+                  {/* Answer Breakdown Box */}
+                  <div style={{
+                    background: '#ffffff',
+                    borderRadius: '6px',
+                    padding: '1rem 1.25rem',
+                    border: '1px solid #eeeeee',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    fontSize: '0.9rem'
+                  }}>
+                    {(() => {
+                      const userAnsText = renderAnswerValue(q.user_answer, q, quiz);
+                      const isUserMulti = userAnsText.includes('\n');
+
+                      const corrAnsText = renderCorrectAnswer(q, quiz);
+                      const isCorrMulti = corrAnsText.includes('\n');
+
+                      return (
+                        <>
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: isUserMulti ? 'column' : 'row',
+                            alignItems: isUserMulti ? 'flex-start' : 'baseline',
+                            gap: isUserMulti ? '0.25rem' : '0.5rem'
+                          }}>
+                            <span style={{ fontWeight: 700, color: '#222222', flexShrink: 0 }}>Lựa chọn của bạn: </span>
+                            <span style={{
+                              color: isCorrect ? '#15803d' : '#b91c1c',
+                              fontWeight: 700,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              lineHeight: 1.5
+                            }}>
+                              {userAnsText || '(Chưa trả lời)'}
+                            </span>
+                          </div>
+
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: isCorrMulti ? 'column' : 'row',
+                            alignItems: isCorrMulti ? 'flex-start' : 'baseline',
+                            gap: isCorrMulti ? '0.25rem' : '0.5rem'
+                          }}>
+                            <span style={{ fontWeight: 700, color: '#222222', flexShrink: 0 }}>Đáp án đúng: </span>
+                            <span style={{
+                              color: '#222222',
+                              fontWeight: 800,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              lineHeight: 1.5
+                            }}>
+                              {corrAnsText}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Explanation Box */}
+                  <div style={{
+                    padding: '0.85rem 1.1rem',
+                    borderRadius: '6px',
+                    background: '#ffffff',
+                    border: '1px solid #eeeeee',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    <div style={{ color: '#222222', fontSize: '0.85rem', fontWeight: 800 }}>
+                      Giải thích đáp án:
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: '#555555', margin: 0, lineHeight: 1.6 }}>
+                      {q.explanation || `Đáp án chính xác được đối chiếu chuẩn xác theo tài liệu gốc.`}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Matrix & Competency Analytics */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'sticky', top: '5rem' }}>
+          {/* Question Matrix Navigation */}
+          <div className="card" style={{ padding: '1.25rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#222222' }}>Ma trận câu hỏi toàn bài</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '11px', color: '#555555' }}>
+                <span>Đúng: <strong style={{ color: '#222222' }}>{correctCount}</strong></span>
+                <span>•</span>
+                <span>Sai: <strong style={{ color: '#222222' }}>{wrongCount}</strong></span>
               </div>
             </div>
-          );
-        })}
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '6px',
+              maxHeight: '260px',
+              overflowY: 'auto',
+              padding: '2px'
+            }}>
+              {questionResults.map((q, idx) => {
+                const isCorrect = q.is_correct;
+                const hasAnswered = isAnswerGiven(q.user_answer);
+
+                let border = '1px solid #eeeeee';
+                let col = '#222222';
+                let bg = '#ffffff';
+                if (isCorrect) {
+                  border = '1px solid #15803d';
+                  col = '#15803d';
+                  bg = '#ffffff';
+                } else if (hasAnswered) {
+                  border = '1px solid #b91c1c';
+                  col = '#b91c1c';
+                  bg = '#ffffff';
+                }
+
+                return (
+                  <button
+                    key={q.question_id || idx}
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById(`review-q-${q.order || idx + 1}`);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    style={{
+                      height: '34px',
+                      borderRadius: '4px',
+                      border: border,
+                      background: bg,
+                      color: col,
+                      fontWeight: 800,
+                      fontSize: '0.825rem',
+                      cursor: 'pointer'
+                    }}
+                    title={`Xem Câu ${q.order || idx + 1}`}
+                  >
+                    {q.order || idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Competency Analysis Card */}
+          <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#222222', margin: 0 }}>
+                Năng lực theo dạng bài
+              </h3>
+              <span style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>{competencyBreakdown.length} dạng câu</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {competencyBreakdown.map((item) => (
+                <div key={item.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem' }}>
+                    <span style={{ fontWeight: 600, color: '#222222' }}>{item.label}</span>
+                    <span style={{ fontWeight: 800, color: '#222222' }}>{item.pct}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${item.pct}%`,
+                      height: '100%',
+                      background: '#222222'
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#555555' }}>
+                    Đạt {item.correct}/{item.total} câu
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Overall Rating Card */}
+            <div style={{ padding: '10px 12px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '6px' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#222222' }}>Đánh giá chung: {rankLabel}</div>
+              <div style={{ fontSize: '11px', color: '#555555', marginTop: '2px' }}>Đạt {percentage}% tổng điểm yêu cầu</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -285,9 +614,7 @@ function formatOptionWithDetail(label, options) {
 
   if (!rawText) return opt.label || String(label ?? '');
 
-  // Strip leading option prefix like "A.", "A)", "[A]", "(A)" if present to avoid "A. A. Content"
   const strippedText = cleanOptionText(rawText, opt.label);
-
   if (!strippedText) return opt.label || String(label ?? '');
 
   if (strippedText.includes('\n')) {
@@ -331,7 +658,7 @@ function renderAnswerValue(val, question = null, quiz = null) {
 
   const options = question?.options || quiz?.questions?.find(qq => qq.id === question?.question_id || qq.order === question?.order)?.options || [];
 
-  // 1. Array of answers (multiple choice, etc.)
+  // 1. Array of answers
   if (Array.isArray(val)) {
     if (val.length === 0) return '';
     if (options.length > 0) {
@@ -340,7 +667,7 @@ function renderAnswerValue(val, question = null, quiz = null) {
     return val.join(', ');
   }
 
-  // 2. Object values (true_false with statements, matching, drag_drop, multi-fill)
+  // 2. Object values
   if (typeof val === 'object') {
     if (question?.type === 'true_false' && question?.statements && question.statements.length > 0) {
       return question.statements.map((st, i) => {
@@ -365,11 +692,10 @@ function renderAnswerValue(val, question = null, quiz = null) {
     }).join(isDragDrop ? '\n' : ' | ');
   }
 
-  // 3. Single string answer with options (single choice)
+  // 3. Single string answer
   if (options.length > 0) {
     return formatOptionWithDetail(val, options);
   }
 
   return String(val);
 }
-
