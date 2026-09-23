@@ -1907,9 +1907,9 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
           maxWidth: '1800px',
           margin: '0 auto',
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           alignItems: 'center',
-          gap: '1rem',
+          gap: '0.85rem',
           flexWrap: 'wrap'
         }}>
           {/* Nút Câu trước */}
@@ -1929,77 +1929,76 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             <ArrowLeft size={18} /> Câu trước
           </button>
 
-          {/* Vị trí câu hiện tại & Đánh dấu xem lại */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <span style={{
-              padding: '0.45rem 1.1rem',
-              borderRadius: '6px',
-              background: '#ffffff',
-              border: '1px solid #eeeeee',
-              fontSize: '0.875rem',
-              fontWeight: 800,
-              color: '#333333'
-            }}>
-              Câu {currentIndex + 1} / {questions.length}
-            </span>
+          {/* Vị trí câu hiện tại */}
+          <span style={{
+            padding: '0.55rem 1.1rem',
+            borderRadius: '6px',
+            background: '#ffffff',
+            border: '1px solid #eeeeee',
+            fontSize: '0.875rem',
+            fontWeight: 800,
+            color: '#333333',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            Câu {currentIndex + 1} / {questions.length}
+          </span>
 
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => toggleFlag(currentQ.id)}
-              style={{
-                padding: '0.55rem 1.15rem',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                background: '#ffffff',
-                borderColor: flaggedQuestions.has(currentQ.id) ? '#333333' : '#eeeeee',
-                borderWidth: flaggedQuestions.has(currentQ.id) ? '1.5px' : '1px',
-                borderStyle: flaggedQuestions.has(currentQ.id) ? 'dashed' : 'solid',
-                color: '#333333',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem'
-              }}
-            >
-              <span>{flaggedQuestions.has(currentQ.id) ? 'Bỏ đánh dấu' : 'Đánh dấu xem lại (F)'}</span>
-            </button>
-          </div>
+          {/* Nút Đánh dấu xem lại */}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => toggleFlag(currentQ.id)}
+            style={{
+              padding: '0.55rem 1.15rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              background: '#ffffff',
+              borderColor: flaggedQuestions.has(currentQ.id) ? '#333333' : '#eeeeee',
+              borderWidth: flaggedQuestions.has(currentQ.id) ? '1.5px' : '1px',
+              borderStyle: flaggedQuestions.has(currentQ.id) ? 'dashed' : 'solid',
+              color: '#333333',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}
+          >
+            <span>{flaggedQuestions.has(currentQ.id) ? 'Bỏ đánh dấu' : 'Đánh dấu xem lại (F)'}</span>
+          </button>
 
           {/* Nút Câu tiếp theo / Nộp bài thi */}
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            {currentIndex < questions.length - 1 ? (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => goToQuestion(currentIndex + 1)}
-                style={{
-                  padding: '0.65rem 1.6rem',
-                  fontSize: '0.9rem',
-                  fontWeight: 800,
-                  minWidth: '150px',
-                  borderRadius: '6px'
-                }}
-              >
-                Câu tiếp theo <ArrowRight size={18} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleSubmitClick}
-                style={{
-                  padding: '0.65rem 1.75rem',
-                  fontSize: '0.9rem',
-                  fontWeight: 800,
-                  minWidth: '150px',
-                  borderRadius: '6px'
-                }}
-              >
-                <Send size={18} /> Nộp bài thi
-              </button>
-            )}
-          </div>
+          {currentIndex < questions.length - 1 ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => goToQuestion(currentIndex + 1)}
+              style={{
+                padding: '0.65rem 1.6rem',
+                fontSize: '0.9rem',
+                fontWeight: 800,
+                minWidth: '150px',
+                borderRadius: '6px'
+              }}
+            >
+              Câu tiếp theo <ArrowRight size={18} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSubmitClick}
+              style={{
+                padding: '0.65rem 1.75rem',
+                fontSize: '0.9rem',
+                fontWeight: 800,
+                minWidth: '150px',
+                borderRadius: '6px'
+              }}
+            >
+              <Send size={18} /> Nộp bài thi
+            </button>
+          )}
         </div>
       </div>
 
