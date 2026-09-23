@@ -21,11 +21,13 @@ from backend.database import (
     get_semesters, create_semester, update_semester, delete_semester,
     update_quiz_placement, get_full_tree, get_subject, move_subject
 )
+from fastapi.middleware.gzip import GZipMiddleware
 from backend.grading import grade_submission
 from backend.sample_generator import create_sample_docx
 
 app = FastAPI(title="Docx Quiz Generator & Player API", version="1.0.0")
 
+app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

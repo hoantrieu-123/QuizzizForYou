@@ -5,6 +5,7 @@ import {
   GripVertical, Plus, Check, X
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
+import { prefetchQuizDetail, removeCachedQuiz } from '../services/dataCache';
 
 export const naturalCompareQuizzes = (a, b) => {
   const titleA = (a?.title || a?.filename || '').trim();
@@ -23,7 +24,9 @@ export default function QuizList({
   selectedFilter,
   onClearFilter,
   onQuizPlacementChanged,
-  searchQuery = ''
+  searchQuery = '',
+  loadingQuizId = null,
+  onQuizzesLoaded
 }) {
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -82,6 +85,14 @@ export default function QuizList({
       rawQuizzes.sort(naturalCompareQuizzes);
       setQuizzes(rawQuizzes);
       setSubjects(subjectsData.subjects || []);
+      onQuizzesLoaded?.(rawQuizzes);
+
+      // Preload top 4 quiz details in background for 0ms click responses
+      if (rawQuizzes.length > 0) {
+        setTimeout(() => {
+          rawQuizzes.slice(0, 4).forEach(q => prefetchQuizDetail(q.id));
+        }, 300);
+      }
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu bài kiểm tra & môn học:', err);
     } finally {
@@ -100,6 +111,7 @@ export default function QuizList({
     try {
       const res = await fetch(apiUrl(`/api/quizzes/${id}`), { method: 'DELETE' });
       if (res.ok) {
+        removeCachedQuiz(id);
         setQuizzes(prev => prev.filter(q => q.id !== id));
         onQuizPlacementChanged?.();
       }
@@ -726,6 +738,7 @@ export default function QuizList({
                         onSelectQuiz={onSelectQuiz}
                         onStartQuiz={onStartQuiz}
                         onDeleteQuiz={handleDeleteQuiz}
+                        loadingQuizId={loadingQuizId}
                       />
                     ))}
                   </div>
@@ -766,6 +779,7 @@ export default function QuizList({
                   onSelectQuiz={onSelectQuiz}
                   onStartQuiz={onStartQuiz}
                   onDeleteQuiz={handleDeleteQuiz}
+                  loadingQuizId={loadingQuizId}
                 />
               ))}
             </div>
@@ -803,6 +817,7 @@ export default function QuizList({
                   onSelectQuiz={onSelectQuiz}
                   onStartQuiz={onStartQuiz}
                   onDeleteQuiz={handleDeleteQuiz}
+                  loadingQuizId={loadingQuizId}
                 />
               ))}
             </div>
@@ -920,6 +935,7 @@ export default function QuizList({
                     onSelectQuiz={onSelectQuiz}
                     onStartQuiz={onStartQuiz}
                     onDeleteQuiz={handleDeleteQuiz}
+                    loadingQuizId={loadingQuizId}
                   />
                 ))}
               </div>
@@ -945,15 +961,23 @@ function QuizCardItem({
   onSelectSubject,
   onSelectQuiz,
   onStartQuiz,
-  onDeleteQuiz
+  onDeleteQuiz,
+  loadingQuizId
 }) {
+  const isLoading = loadingQuizId === quiz.id;
+
   return (
     <div
       className={`card quiz-card-draggable ${isDragging ? 'is-dragging' : ''}`}
       draggable
       onDragStart={(e) => onDragStart(e, quiz.id)}
       onDragEnd={onDragEnd}
-      onClick={() => onSelectQuiz(quiz.id)}
+      onMouseEnter={() => prefetchQuizDetail(quiz.id)}
+      onClick={() => {
+        if (!isLoading) {
+          onSelectQuiz(quiz.id);
+        }
+      }}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -963,7 +987,8 @@ function QuizCardItem({
         borderRadius: '8px',
         position: 'relative',
         background: '#ffffff',
-        transition: 'all 0.15s ease'
+        transition: 'all 0.15s ease',
+        cursor: isLoading ? 'wait' : 'pointer'
       }}
     >
       <div>
@@ -1102,10 +1127,12 @@ function QuizCardItem({
       }}>
         <button
           className="btn btn-primary"
+          disabled={isLoading}
           onClick={(e) => {
             e.stopPropagation();
             onStartQuiz(quiz.id);
           }}
+          onMouseEnter={() => prefetchQuizDetail(quiz.id)}
           style={{
             flex: 1,
             padding: '0.35rem 0.5rem',
@@ -1115,19 +1142,29 @@ function QuizCardItem({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.25rem'
+            gap: '0.25rem',
+            cursor: isLoading ? 'wait' : 'pointer',
+            opacity: isLoading ? 0.65 : 1
           }}
           title="Bắt đầu làm bài thi ngay"
         >
-          <Play size={12} /> Làm bài
+          {isLoading ? (
+            <span>Đang mở...</span>
+          ) : (
+            <>
+              <Play size={12} /> Làm bài
+            </>
+          )}
         </button>
 
         <button
           className="btn btn-secondary"
+          disabled={isLoading}
           onClick={(e) => {
             e.stopPropagation();
             onSelectQuiz(quiz.id);
           }}
+          onMouseEnter={() => prefetchQuizDetail(quiz.id)}
           style={{
             padding: '0.35rem 0.6rem',
             fontSize: '0.78rem',

@@ -8,6 +8,7 @@ import PreviewEditor from './components/PreviewEditor';
 import QuizPlayer from './components/QuizPlayer';
 import ResultView from './components/ResultView';
 import { apiUrl } from './apiConfig';
+import { getQuizDetail, updateCachedQuiz, getCachedQuizSync } from './services/dataCache';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -18,6 +19,7 @@ export default function App() {
   const [refreshTreeTrigger, setRefreshTreeTrigger] = useState(0);
   const [playerSessionKey, setPlayerSessionKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadingQuizId, setLoadingQuizId] = useState(null);
   const [selectedTreeFilter, setSelectedTreeFilter] = useState({
     type: 'all',
     id: 'all',
@@ -25,22 +27,29 @@ export default function App() {
     path: []
   });
 
-  // Fetch quizzes for KPI calculation
+  // Fetch quizzes for KPI calculation only on initial load or list changes
   useEffect(() => {
+    let isMounted = true;
     const loadQuizzes = async () => {
       try {
         const res = await fetch(apiUrl('/api/quizzes'));
         const data = await res.json();
-        setQuizzesList(data.quizzes || []);
+        if (isMounted) {
+          setQuizzesList(data.quizzes || []);
+        }
       } catch (err) {
         console.error('Error fetching quizzes:', err);
       }
     };
     loadQuizzes();
+    return () => { isMounted = false; };
   }, [refreshListTrigger]);
 
   const handleUploadSuccess = (quiz) => {
     setCurrentQuiz(quiz);
+    if (quiz?.id) {
+      updateCachedQuiz(quiz.id, quiz);
+    }
     setCurrentView('preview');
     setRefreshListTrigger(prev => prev + 1);
     setRefreshTreeTrigger(prev => prev + 1);
@@ -48,30 +57,68 @@ export default function App() {
 
   const handleSelectQuiz = async (quizId) => {
     try {
-      const res = await fetch(apiUrl(`/api/quizzes/${quizId}`));
-      const data = await res.json();
-      setCurrentQuiz(data.quiz);
-      setCurrentView('preview');
+      // 1. Instant cache retrieval (0ms)
+      const cached = getCachedQuizSync(quizId);
+      if (cached) {
+        setCurrentQuiz(cached);
+        setCurrentView('preview');
+        // Silent background update if stale
+        getQuizDetail(quizId).then(fresh => {
+          if (fresh) setCurrentQuiz(fresh);
+        }).catch(() => {});
+        return;
+      }
+
+      setLoadingQuizId(quizId);
+      const quiz = await getQuizDetail(quizId);
+      if (quiz) {
+        setCurrentQuiz(quiz);
+        setCurrentView('preview');
+      }
     } catch (err) {
       alert('Không thể tải bài thi: ' + err.message);
+    } finally {
+      setLoadingQuizId(null);
     }
   };
 
   const handleStartQuiz = async (quizId, customQuestions = null) => {
     try {
       if (customQuestions && customQuestions.length > 0 && currentQuiz) {
-        setCurrentQuiz({ ...currentQuiz, questions: customQuestions });
+        const updated = { ...currentQuiz, questions: customQuestions };
+        setCurrentQuiz(updated);
+        updateCachedQuiz(quizId, updated);
         setPlayerSessionKey(prev => prev + 1);
         setCurrentView('player');
         return;
       }
-      const res = await fetch(apiUrl(`/api/quizzes/${quizId}`));
-      const data = await res.json();
-      setCurrentQuiz(data.quiz);
-      setPlayerSessionKey(prev => prev + 1);
-      setCurrentView('player');
+
+      if (currentQuiz?.id === quizId && currentQuiz.questions?.length > 0) {
+        setPlayerSessionKey(prev => prev + 1);
+        setCurrentView('player');
+        return;
+      }
+
+      // 1. Instant cache retrieval (0ms)
+      const cached = getCachedQuizSync(quizId);
+      if (cached && cached.questions?.length > 0) {
+        setCurrentQuiz(cached);
+        setPlayerSessionKey(prev => prev + 1);
+        setCurrentView('player');
+        return;
+      }
+
+      setLoadingQuizId(quizId);
+      const quiz = await getQuizDetail(quizId);
+      if (quiz) {
+        setCurrentQuiz(quiz);
+        setPlayerSessionKey(prev => prev + 1);
+        setCurrentView('player');
+      }
     } catch (err) {
       alert('Không thể bắt đầu làm bài: ' + err.message);
+    } finally {
+      setLoadingQuizId(null);
     }
   };
 
@@ -83,9 +130,10 @@ export default function App() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Lỗi lưu bài thi');
-    setCurrentQuiz(data.quiz);
+    const updated = data.quiz || { ...currentQuiz, id: quizId, title, questions };
+    setCurrentQuiz(updated);
+    updateCachedQuiz(quizId, updated);
     setRefreshListTrigger(prev => prev + 1);
-    setRefreshTreeTrigger(prev => prev + 1);
   };
 
   const handleSubmitQuiz = async (answers, questionsToSubmit) => {
@@ -111,7 +159,18 @@ export default function App() {
   const completedCount = totalQuizzesCount > 0 ? Math.min(totalQuizzesCount, Math.max(1, Math.round(totalQuizzesCount * 0.8))) : 0;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', position: 'relative' }}>
+      {loadingQuizId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '3px',
+          background: 'linear-gradient(90deg, #333333 0%, #888888 50%, #333333 100%)',
+          zIndex: 9999
+        }} />
+      )}
       <Navbar
         currentView={currentView}
         onNavigate={(view) => setCurrentView(view)}
@@ -129,8 +188,8 @@ export default function App() {
               onSelectFilter={setSelectedTreeFilter}
               refreshTrigger={refreshTreeTrigger}
               onTreeUpdated={() => {
+                // Avoid double fetch: only refresh list/KPIs, tree has already updated itself
                 setRefreshListTrigger(prev => prev + 1);
-                setRefreshTreeTrigger(prev => prev + 1);
               }}
             />
 
@@ -193,6 +252,8 @@ export default function App() {
                       setRefreshTreeTrigger(prev => prev + 1);
                     }}
                     searchQuery={searchQuery}
+                    loadingQuizId={loadingQuizId}
+                    onQuizzesLoaded={(list) => setQuizzesList(list)}
                   />
                 </div>
 
@@ -203,6 +264,7 @@ export default function App() {
                     onSelectQuiz={handleSelectQuiz}
                     onStartQuiz={handleStartQuiz}
                     onResumeProgress={handleStartQuiz}
+                    loadingQuizId={loadingQuizId}
                   />
                 </div>
               </div>

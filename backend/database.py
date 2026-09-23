@@ -1,11 +1,14 @@
 """
 SQLite Database Layer for Quizizz Docx App
 Stores Quizzes, Questions, and Quiz Attempts.
+Optimized with SQLite WAL mode, database indexes, and thread-safe in-memory caching.
 """
 import sqlite3
 import json
 import uuid
 import os
+import time
+from threading import Lock
 from typing import List, Dict, Any, Optional
 
 try:
@@ -19,12 +22,81 @@ DB_FILE = os.path.join(os.path.dirname(__file__), "quizizz.db")
 TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "").strip()
 TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip()
 
+# ==============================================================================
+# In-Memory High-Speed Cache Layer (Thread-Safe)
+# ==============================================================================
+_CACHE: Dict[str, Any] = {}
+_CACHE_LOCK = Lock()
+DEFAULT_TTL = 300  # 5 minutes
 
+
+def cache_get(key: str) -> Optional[Any]:
+    with _CACHE_LOCK:
+        item = _CACHE.get(key)
+        if item is not None:
+            val, expire_at = item
+            if time.time() < expire_at:
+                return val
+            _CACHE.pop(key, None)
+    return None
+
+
+def cache_set(key: str, val: Any, ttl: float = DEFAULT_TTL):
+    with _CACHE_LOCK:
+        _CACHE[key] = (val, time.time() + ttl)
+
+
+def cache_clear_key(key: str):
+    with _CACHE_LOCK:
+        _CACHE.pop(key, None)
+
+
+def cache_clear_prefix(prefix: str):
+    with _CACHE_LOCK:
+        keys_to_del = [k for k in _CACHE if k.startswith(prefix)]
+        for k in keys_to_del:
+            _CACHE.pop(k, None)
+
+
+def cache_clear_all():
+    with _CACHE_LOCK:
+        _CACHE.clear()
+
+
+def invalidate_quiz_cache(quiz_id: Optional[str] = None):
+    """Invalidate cached quiz list and specific quiz detail."""
+    cache_clear_key("quizzes_list")
+    cache_clear_key("full_tree")
+    if quiz_id:
+        cache_clear_key(f"quiz_{quiz_id}")
+    else:
+        cache_clear_prefix("quiz_")
+
+
+def invalidate_tree_cache():
+    """Invalidate hierarchical tree and categorization caches."""
+    cache_clear_key("full_tree")
+    cache_clear_key("classes_list")
+    cache_clear_key("subjects_list")
+    cache_clear_prefix("semesters_")
+    cache_clear_key("quizzes_list")
+
+
+# ==============================================================================
+# Database Connection with Performance PRAGMAs
+# ==============================================================================
 def get_connection():
     if TURSO_DATABASE_URL and HAS_LIBSQL:
         return libsql.connect(database=TURSO_DATABASE_URL, auth_token=TURSO_AUTH_TOKEN)
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
+        conn.execute("PRAGMA temp_store = MEMORY;")
+        conn.execute("PRAGMA cache_size = -10000;")
+    except Exception:
+        pass
     return conn
 
 
@@ -49,7 +121,7 @@ def rows_to_dicts(cursor, rows) -> List[Dict[str, Any]]:
 
 
 def init_db():
-    """Create tables if not already existing."""
+    """Create tables and performance indexes if not already existing."""
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -60,15 +132,20 @@ def init_db():
         filename TEXT NOT NULL,
         question_count INTEGER NOT NULL DEFAULT 0,
         subject_id TEXT DEFAULT '',
+        semester_id TEXT DEFAULT '',
+        class_id TEXT DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
 
-    # Check and add subject_id column if missing in existing quizzes table
     cursor.execute("PRAGMA table_info(quizzes)")
     quiz_columns = [col[1] for col in cursor.fetchall()]
     if 'subject_id' not in quiz_columns:
         cursor.execute("ALTER TABLE quizzes ADD COLUMN subject_id TEXT DEFAULT ''")
+    if 'semester_id' not in quiz_columns:
+        cursor.execute("ALTER TABLE quizzes ADD COLUMN semester_id TEXT DEFAULT ''")
+    if 'class_id' not in quiz_columns:
+        cursor.execute("ALTER TABLE quizzes ADD COLUMN class_id TEXT DEFAULT ''")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classes (
@@ -101,7 +178,6 @@ def init_db():
     );
     """)
 
-    # Check and add columns to subjects if missing
     cursor.execute("PRAGMA table_info(subjects)")
     subj_cols = [col[1] for col in cursor.fetchall()]
     if 'semester_id' not in subj_cols:
@@ -109,17 +185,6 @@ def init_db():
     if 'class_id' not in subj_cols:
         cursor.execute("ALTER TABLE subjects ADD COLUMN class_id TEXT DEFAULT ''")
 
-    # Check and add columns to quizzes if missing
-    cursor.execute("PRAGMA table_info(quizzes)")
-    quiz_columns = [col[1] for col in cursor.fetchall()]
-    if 'subject_id' not in quiz_columns:
-        cursor.execute("ALTER TABLE quizzes ADD COLUMN subject_id TEXT DEFAULT ''")
-    if 'semester_id' not in quiz_columns:
-        cursor.execute("ALTER TABLE quizzes ADD COLUMN semester_id TEXT DEFAULT ''")
-    if 'class_id' not in quiz_columns:
-        cursor.execute("ALTER TABLE quizzes ADD COLUMN class_id TEXT DEFAULT ''")
-
-    # Sync quiz semester_id and class_id from their subjects (if any)
     cursor.execute("""
     UPDATE quizzes 
     SET semester_id = (SELECT semester_id FROM subjects WHERE subjects.id = quizzes.subject_id),
@@ -160,6 +225,17 @@ def init_db():
         FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
     );
     """)
+
+    # Performance Indexes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_questions_quiz_id ON questions(quiz_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_questions_quiz_order ON questions(quiz_id, order_idx);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_quizzes_subject_id ON quizzes(subject_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_quizzes_semester_id ON quizzes(semester_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_quizzes_class_id ON quizzes(class_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_subjects_semester_id ON subjects(semester_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_subjects_class_id ON subjects(class_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_semesters_class_id ON semesters(class_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_attempts_quiz_id ON attempts(quiz_id);")
 
     conn.commit()
     conn.close()
@@ -207,22 +283,38 @@ def save_quiz(title: str, filename: str, questions: List[Dict[str, Any]]) -> str
 
     conn.commit()
     conn.close()
+    invalidate_quiz_cache()
     return quiz_id
 
 
-def get_quizzes() -> List[Dict[str, Any]]:
-    """Retrieve list of all quizzes."""
-    conn = get_connection()
+def get_quizzes(conn=None) -> List[Dict[str, Any]]:
+    """Retrieve list of all quizzes with in-memory caching."""
+    cached = cache_get("quizzes_list")
+    if cached is not None:
+        return cached
+
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM quizzes ORDER BY created_at DESC")
     rows = cursor.fetchall()
     result = rows_to_dicts(cursor, rows)
-    conn.close()
+    if should_close:
+        conn.close()
+
+    cache_set("quizzes_list", result, ttl=180)
     return result
 
 
 def get_quiz(quiz_id: str) -> Optional[Dict[str, Any]]:
-    """Retrieve quiz metadata and all questions."""
+    """Retrieve quiz metadata and all questions with in-memory caching."""
+    cached = cache_get(f"quiz_{quiz_id}")
+    if cached is not None:
+        return cached
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM quizzes WHERE id = ?", (quiz_id,))
@@ -256,6 +348,7 @@ def get_quiz(quiz_id: str) -> Optional[Dict[str, Any]]:
         })
 
     quiz_data['questions'] = questions
+    cache_set(f"quiz_{quiz_id}", quiz_data, ttl=300)
     return quiz_data
 
 
@@ -269,10 +362,8 @@ def update_quiz_questions(quiz_id: str, questions: List[Dict[str, Any]], title: 
     else:
         cursor.execute("UPDATE quizzes SET question_count = ? WHERE id = ?", (len(questions), quiz_id))
 
-    # Remove old questions
     cursor.execute("DELETE FROM questions WHERE quiz_id = ?", (quiz_id,))
 
-    # Insert updated questions
     for idx, q in enumerate(questions, start=1):
         q_id = q.get('id') or f"q_{uuid.uuid4().hex[:8]}"
         cursor.execute("""
@@ -301,6 +392,7 @@ def update_quiz_questions(quiz_id: str, questions: List[Dict[str, Any]], title: 
 
     conn.commit()
     conn.close()
+    invalidate_quiz_cache(quiz_id)
     return True
 
 
@@ -313,6 +405,7 @@ def delete_quiz(quiz_id: str) -> bool:
     cursor.execute("DELETE FROM quizzes WHERE id = ?", (quiz_id,))
     conn.commit()
     conn.close()
+    invalidate_quiz_cache(quiz_id)
     return True
 
 
@@ -333,14 +426,25 @@ def save_attempt(quiz_id: str, score: float, total_score: float, details: Dict[s
     return attempt_id
 
 
-def get_subjects() -> List[Dict[str, Any]]:
-    """Retrieve list of all subjects sorted by order_idx."""
-    conn = get_connection()
+def get_subjects(conn=None) -> List[Dict[str, Any]]:
+    """Retrieve list of all subjects sorted by order_idx with caching."""
+    cached = cache_get("subjects_list")
+    if cached is not None:
+        return cached
+
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM subjects ORDER BY order_idx ASC, created_at ASC")
     rows = cursor.fetchall()
     result = rows_to_dicts(cursor, rows)
-    conn.close()
+    if should_close:
+        conn.close()
+
+    cache_set("subjects_list", result, ttl=180)
     return result
 
 
@@ -366,6 +470,7 @@ def create_subject(name: str, semester_id: Optional[str] = None, class_id: Optio
     cursor.execute("SELECT * FROM subjects WHERE id = ?", (subject_id,))
     row = row_to_dict(cursor, cursor.fetchone())
     conn.close()
+    invalidate_tree_cache()
     return row
 
 
@@ -397,6 +502,7 @@ def update_subject(subject_id: str, name: str, semester_id: Optional[str] = None
         cursor.execute("UPDATE subjects SET name = ? WHERE id = ?", (name.strip(), subject_id))
     conn.commit()
     conn.close()
+    invalidate_tree_cache()
     return True
 
 
@@ -415,6 +521,7 @@ def move_subject(subject_id: str, semester_id: str, class_id: Optional[str] = No
     cursor.execute("UPDATE quizzes SET semester_id = ?, class_id = ? WHERE subject_id = ?", (sem_val, cls_val, subject_id))
     conn.commit()
     conn.close()
+    invalidate_tree_cache()
     return True
 
 
@@ -426,16 +533,28 @@ def delete_subject(subject_id: str) -> bool:
     cursor.execute("DELETE FROM subjects WHERE id = ?", (subject_id,))
     conn.commit()
     conn.close()
+    invalidate_tree_cache()
     return True
 
 
-def get_classes() -> List[Dict[str, Any]]:
-    conn = get_connection()
+def get_classes(conn=None) -> List[Dict[str, Any]]:
+    cached = cache_get("classes_list")
+    if cached is not None:
+        return cached
+
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM classes ORDER BY order_idx ASC, created_at ASC")
     rows = cursor.fetchall()
     result = rows_to_dicts(cursor, rows)
-    conn.close()
+    if should_close:
+        conn.close()
+
+    cache_set("classes_list", result, ttl=180)
     return result
 
 
@@ -453,6 +572,7 @@ def create_class(name: str) -> Dict[str, Any]:
     cursor.execute("SELECT * FROM classes WHERE id = ?", (class_id,))
     row = row_to_dict(cursor, cursor.fetchone())
     conn.close()
+    invalidate_tree_cache()
     return row
 
 
@@ -462,6 +582,7 @@ def update_class(class_id: str, name: str) -> bool:
     cursor.execute("UPDATE classes SET name = ? WHERE id = ?", (name.strip(), class_id))
     conn.commit()
     conn.close()
+    invalidate_tree_cache()
     return True
 
 
@@ -474,11 +595,21 @@ def delete_class(class_id: str) -> bool:
     cursor.execute("DELETE FROM classes WHERE id = ?", (class_id,))
     conn.commit()
     conn.close()
+    invalidate_tree_cache()
     return True
 
 
-def get_semesters(class_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    conn = get_connection()
+def get_semesters(class_id: Optional[str] = None, conn=None) -> List[Dict[str, Any]]:
+    cache_key = f"semesters_{class_id or 'all'}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+
     cursor = conn.cursor()
     if class_id:
         cursor.execute("SELECT * FROM semesters WHERE class_id = ? ORDER BY order_idx ASC, created_at ASC", (class_id,))
@@ -486,7 +617,10 @@ def get_semesters(class_id: Optional[str] = None) -> List[Dict[str, Any]]:
         cursor.execute("SELECT * FROM semesters ORDER BY order_idx ASC, created_at ASC")
     rows = cursor.fetchall()
     result = rows_to_dicts(cursor, rows)
-    conn.close()
+    if should_close:
+        conn.close()
+
+    cache_set(cache_key, result, ttl=180)
     return result
 
 
@@ -504,6 +638,7 @@ def create_semester(class_id: str, name: str) -> Dict[str, Any]:
     cursor.execute("SELECT * FROM semesters WHERE id = ?", (semester_id,))
     row = row_to_dict(cursor, cursor.fetchone())
     conn.close()
+    invalidate_tree_cache()
     return row
 
 
@@ -513,6 +648,7 @@ def update_semester(semester_id: str, name: str) -> bool:
     cursor.execute("UPDATE semesters SET name = ? WHERE id = ?", (name.strip(), semester_id))
     conn.commit()
     conn.close()
+    invalidate_tree_cache()
     return True
 
 
@@ -524,6 +660,7 @@ def delete_semester(semester_id: str) -> bool:
     cursor.execute("DELETE FROM semesters WHERE id = ?", (semester_id,))
     conn.commit()
     conn.close()
+    invalidate_tree_cache()
     return True
 
 
@@ -568,15 +705,24 @@ def update_quiz_placement(
     """, (sub_id, sem_id, cls_id, quiz_id))
     conn.commit()
     conn.close()
+    invalidate_quiz_cache(quiz_id)
+    invalidate_tree_cache()
     return True
 
 
 def get_full_tree() -> Dict[str, Any]:
     """Retrieve full hierarchical structure: Classes -> Semesters -> Subjects with Quiz counts."""
-    classes = get_classes()
-    semesters = get_semesters()
-    subjects = get_subjects()
-    quizzes = get_quizzes()
+    cached = cache_get("full_tree")
+    if cached is not None:
+        return cached
+
+    # Use a single shared connection for all queries
+    conn = get_connection()
+    classes = get_classes(conn=conn)
+    semesters = get_semesters(conn=conn)
+    subjects = get_subjects(conn=conn)
+    quizzes = get_quizzes(conn=conn)
+    conn.close()
 
     subject_quiz_counts = {}
     semester_quiz_counts = {}
@@ -623,7 +769,7 @@ def get_full_tree() -> Dict[str, Any]:
             "quiz_count": class_quiz_counts.get(cls_id, 0)
         })
 
-    return {
+    result = {
         "classes": tree_classes,
         "all_classes": classes,
         "all_semesters": semesters,
@@ -631,4 +777,5 @@ def get_full_tree() -> Dict[str, Any]:
         "total_quizzes": len(quizzes),
         "uncategorized_count": len(uncategorized_quizzes)
     }
-
+    cache_set("full_tree", result, ttl=180)
+    return result
