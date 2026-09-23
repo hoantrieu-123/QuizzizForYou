@@ -138,7 +138,7 @@ export default function App() {
             <div className="home-main-content">
               {/* Header Title Bar */}
               <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem' }}>
-                <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#222222', margin: 0 }}>
+                <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#333333', margin: 0 }}>
                   Quản lý đề thi & học tập
                 </h1>
                 <span className="badge">
@@ -152,7 +152,7 @@ export default function App() {
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
                     Tổng số đề thi
                   </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
                     {totalQuizzesCount}
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export default function App() {
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
                     Tổng số câu hỏi
                   </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
                     {totalQuestionsCount}
                   </div>
                 </div>
@@ -170,7 +170,7 @@ export default function App() {
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
                     Đã hoàn thành
                   </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
                     {completedCount}
                   </div>
                 </div>

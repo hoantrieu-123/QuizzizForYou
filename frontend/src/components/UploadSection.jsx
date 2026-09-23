@@ -98,7 +98,7 @@ export default function UploadSection({ onUploadSuccess }) {
             fontSize: '1.35rem',
             fontWeight: 800,
             margin: 0,
-            color: '#222222',
+            color: '#333333',
             letterSpacing: '-0.02em'
           }}>
             Tạo bài trắc nghiệm từ file Word (.docx)
@@ -128,7 +128,7 @@ export default function UploadSection({ onUploadSuccess }) {
               href={apiUrl('/api/sample-file')}
               download="Mau_De_Thi.docx"
               style={{
-                color: '#222222',
+                color: '#333333',
                 fontSize: '0.85rem',
                 textDecoration: 'underline',
                 textUnderlineOffset: '3px',
@@ -156,15 +156,15 @@ export default function UploadSection({ onUploadSuccess }) {
           >
             {isUploading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0' }}>
-                <Loader2 size={32} className="spin-animate" style={{ color: '#222222' }} />
+                <Loader2 size={32} className="spin-animate" style={{ color: '#333333' }} />
                 <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
                   Đang bóc tách file Word...
                 </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <UploadCloud size={30} style={{ color: '#222222' }} />
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#222222' }}>
+                <UploadCloud size={30} style={{ color: '#333333' }} />
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#333333' }}>
                   Kéo thả file .docx vào đây
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#555555' }}>

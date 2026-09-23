@@ -418,8 +418,8 @@ export default function SidebarTree({
       {/* Sidebar Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.25rem 0.25rem 0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Layers size={16} style={{ color: '#222222' }} />
-          <span style={{ fontWeight: 800, fontSize: '0.875rem', color: '#222222' }}>
+          <Layers size={16} style={{ color: '#333333' }} />
+          <span style={{ fontWeight: 800, fontSize: '0.875rem', color: '#333333' }}>
             Cấu trúc đào tạo
           </span>
         </div>
@@ -434,7 +434,7 @@ export default function SidebarTree({
           }}
           style={{
             background: '#ffffff',
-            color: '#222222',
+            color: '#333333',
             border: '1px solid #eeeeee',
             padding: '2px 8px',
             borderRadius: '6px',
@@ -484,7 +484,7 @@ export default function SidebarTree({
           onClick={() => onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] })}
         >
           <div className="tree-node-left">
-            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#222222', border: '1px solid #eeeeee' }}>
+            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
               <Folders size={14} />
             </div>
             <span className="tree-node-title">Tất cả đề thi</span>
@@ -495,7 +495,7 @@ export default function SidebarTree({
         {/* CLASS NODES */}
         {classes.length === 0 && (
           <div className="tree-empty-hint" style={{ padding: '0.65rem 0.5rem', textAlign: 'center', color: '#94a3b8' }}>
-            Chưa có lớp nào. Bấm nút <strong style={{ color: '#222222' }}>[+ Lớp]</strong> ở trên để bắt đầu tạo.
+            Chưa có lớp nào. Bấm nút <strong style={{ color: '#333333' }}>[+ Lớp]</strong> ở trên để bắt đầu tạo.
           </div>
         )}
         {classes.map((cls) => {
@@ -525,7 +525,7 @@ export default function SidebarTree({
                     {isClassExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </button>
 
-                  <div className="tree-node-icon" style={{ background: '#ffffff', color: '#222222', border: '1px solid #eeeeee' }}>
+                  <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
                     <Layers size={13} />
                   </div>
 
@@ -668,7 +668,7 @@ export default function SidebarTree({
                               {isSemExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                             </button>
 
-                            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#222222', border: '1px solid #eeeeee' }}>
+                            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
                               <Calendar size={12} />
                             </div>
 
@@ -816,7 +816,7 @@ export default function SidebarTree({
                                       <GripVertical size={11} />
                                     </span>
 
-                                    <div className="tree-node-icon" style={{ background: '#ffffff', color: '#222222', border: '1px solid #eeeeee' }}>
+                                    <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
                                       <Folders size={12} />
                                     </div>
 
@@ -895,7 +895,7 @@ export default function SidebarTree({
           title="Kéo thả đề thi vào đây để gỡ ra khỏi mục"
         >
           <div className="tree-node-left">
-            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#222222', border: '1px solid #eeeeee' }}>
+            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
               <FileText size={12} />
             </div>
             <span className="tree-node-title" style={{ color: '#555555' }}>

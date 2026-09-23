@@ -12,9 +12,9 @@ export default function Navbar({ currentView, onNavigate, searchQuery = '', onSe
       {/* Brand Logo - Minimalist Black & White */}
       <div className="brand-logo" onClick={() => onNavigate('home')} title="EduDocx - Về trang chủ">
         <svg viewBox="0 0 160 40" style={{ height: '32px', width: 'auto' }} xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="36" height="36" rx="6" fill="#222222" stroke="#222222" strokeWidth="1.5" />
+          <rect x="2" y="2" width="36" height="36" rx="6" fill="#333333" stroke="#333333" strokeWidth="1.5" />
           <path d="M12 14h16M12 20h10M12 26h14" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" />
-          <text x="48" y="26" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif" fontSize="18" fontWeight="800" fill="#222222">
+          <text x="48" y="26" fontFamily="'Plus Jakarta Sans', system-ui, sans-serif" fontSize="18" fontWeight="800" fill="#333333">
             EduDocx
           </text>
         </svg>
@@ -80,8 +80,9 @@ export default function Navbar({ currentView, onNavigate, searchQuery = '', onSe
             width: '26px',
             height: '26px',
             borderRadius: '4px',
-            background: '#222222',
-            color: '#ffffff',
+            background: '#ffffff',
+            color: '#333333',
+            border: '1px solid #eeeeee',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -90,7 +91,7 @@ export default function Navbar({ currentView, onNavigate, searchQuery = '', onSe
           }}>
             HT
           </div>
-          <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#222222' }}>
+          <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#333333' }}>
             Hoàng Triều
           </span>
         </div>

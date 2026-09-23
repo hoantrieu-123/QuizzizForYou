@@ -84,7 +84,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
             <h1 style={{
               fontSize: '1.5rem',
               fontWeight: 800,
-              color: '#222222',
+              color: '#333333',
               margin: '0 0 6px'
             }}>
               Hoàn thành bài kiểm tra: {quiz?.title || 'Bài tập Word'}
@@ -145,16 +145,16 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
         {/* Card 1: Score & Rank */}
         <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
               Tổng điểm đạt được
             </span>
-            <span style={{ padding: '3px 10px', borderRadius: '4px', border: '1px solid #eeeeee', background: '#ffffff', color: '#222222', fontSize: '11px', fontWeight: 800 }}>
+            <span style={{ padding: '3px 10px', borderRadius: '4px', border: '1px solid #eeeeee', background: '#ffffff', color: '#333333', fontSize: '11px', fontWeight: 800 }}>
               Xếp loại: {rankLabel}
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
               {earnedScore}
             </span>
             <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#555555' }}>
@@ -163,7 +163,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
           </div>
 
           <div style={{ width: '100%', height: '8px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: `${percentage}%`, height: '100%', background: '#222222' }} />
+            <div style={{ width: `${percentage}%`, height: '100%', background: '#333333' }} />
           </div>
 
           <div style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 600 }}>
@@ -174,16 +174,16 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
         {/* Card 2: Accuracy & Count */}
         <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
               Tỷ lệ chính xác
             </span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#222222' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#333333' }}>
               {correctCount} / {questionResults.length} câu
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
               {percentage}%
             </span>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#555555' }}>
@@ -192,35 +192,35 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
           </div>
 
           <div style={{ display: 'flex', height: '8px', width: '100%', borderRadius: '4px', overflow: 'hidden', background: '#ffffff', border: '1px solid #eeeeee' }}>
-            <div style={{ width: `${(correctCount / Math.max(1, questionResults.length)) * 100}%`, background: '#222222' }} />
+            <div style={{ width: `${(correctCount / Math.max(1, questionResults.length)) * 100}%`, background: '#333333' }} />
             <div style={{ width: `${(wrongCount / Math.max(1, questionResults.length)) * 100}%`, background: '#71717a' }} />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#555555' }}>
-            <span>Đúng: <strong style={{ color: '#222222' }}>{correctCount}</strong></span>
-            <span>Sai: <strong style={{ color: '#222222' }}>{wrongCount}</strong></span>
-            <span>Bỏ: <strong style={{ color: '#222222' }}>{skippedCount}</strong></span>
+            <span>Đúng: <strong style={{ color: '#333333' }}>{correctCount}</strong></span>
+            <span>Sai: <strong style={{ color: '#333333' }}>{wrongCount}</strong></span>
+            <span>Bỏ: <strong style={{ color: '#333333' }}>{skippedCount}</strong></span>
           </div>
         </div>
 
         {/* Card 3: Wrong / Omitted breakdown */}
         <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
               Cần cải thiện
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
             <div>
-              <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+              <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
                 {wrongCount}
               </span>
               <span style={{ fontSize: '0.8rem', color: '#555555', marginLeft: '4px' }}>Câu sai</span>
             </div>
             <div style={{ width: '1px', height: '24px', background: '#eeeeee' }} />
             <div>
-              <span style={{ fontSize: '2rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+              <span style={{ fontSize: '2rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
                 {skippedCount}
               </span>
               <span style={{ fontSize: '0.8rem', color: '#555555', marginLeft: '4px' }}>Bỏ trống</span>
@@ -232,7 +232,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
             borderRadius: '6px',
             border: '1px solid #eeeeee',
             background: '#ffffff',
-            color: '#222222',
+            color: '#333333',
             fontSize: '0.775rem',
             fontWeight: 600
           }}>
@@ -243,13 +243,13 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
         {/* Card 4: Pace / Speed */}
         <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#222222', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
               Tốc độ làm bài
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#222222', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
               {avgPaceSec}
             </span>
             <span style={{ fontSize: '0.9rem', color: '#555555' }}>
@@ -258,7 +258,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
           </div>
 
           <div style={{ width: '100%', height: '8px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: '65%', height: '100%', background: '#222222' }} />
+            <div style={{ width: '65%', height: '100%', background: '#333333' }} />
           </div>
 
           <div style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 600 }}>
@@ -274,7 +274,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
           {/* Section Header & Filter Tabs */}
           <div className="card" style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#222222', margin: 0 }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#333333', margin: 0 }}>
                 Xem lại đáp án & Giải thích chi tiết
               </h2>
             </div>
@@ -338,11 +338,11 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                       <span style={{
                         padding: '3px 10px',
                         borderRadius: '4px',
-                        background: '#222222',
+                        background: '#ffffff',
                         fontWeight: 800,
                         fontSize: '0.85rem',
-                        color: '#ffffff',
-                        border: '1px solid #222222'
+                        color: '#333333',
+                        border: '1.5px solid #333333'
                       }}>
                         Câu {q.order || idx + 1}
                       </span>
@@ -390,7 +390,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                       </span>
                     </div>
 
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#222222' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#333333' }}>
                       {q.score} / {q.max_score} điểm
                     </span>
                   </div>
@@ -399,7 +399,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                   <h3 style={{
                     fontSize: '1.05rem',
                     fontWeight: (q.content || '').includes('\n') ? 600 : 700,
-                    color: '#222222',
+                    color: '#333333',
                     lineHeight: 1.6,
                     margin: 0,
                     whiteSpace: 'pre-wrap',
@@ -438,7 +438,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                             alignItems: isUserMulti ? 'flex-start' : 'baseline',
                             gap: isUserMulti ? '0.25rem' : '0.5rem'
                           }}>
-                            <span style={{ fontWeight: 700, color: '#222222', flexShrink: 0 }}>Lựa chọn của bạn: </span>
+                            <span style={{ fontWeight: 700, color: '#333333', flexShrink: 0 }}>Lựa chọn của bạn: </span>
                             <span style={{
                               color: isCorrect ? '#15803d' : '#b91c1c',
                               fontWeight: 700,
@@ -456,9 +456,9 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                             alignItems: isCorrMulti ? 'flex-start' : 'baseline',
                             gap: isCorrMulti ? '0.25rem' : '0.5rem'
                           }}>
-                            <span style={{ fontWeight: 700, color: '#222222', flexShrink: 0 }}>Đáp án đúng: </span>
+                            <span style={{ fontWeight: 700, color: '#333333', flexShrink: 0 }}>Đáp án đúng: </span>
                             <span style={{
-                              color: '#222222',
+                              color: '#333333',
                               fontWeight: 800,
                               whiteSpace: 'pre-wrap',
                               wordBreak: 'break-word',
@@ -482,7 +482,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                     flexDirection: 'column',
                     gap: '4px'
                   }}>
-                    <div style={{ color: '#222222', fontSize: '0.85rem', fontWeight: 800 }}>
+                    <div style={{ color: '#333333', fontSize: '0.85rem', fontWeight: 800 }}>
                       Giải thích đáp án:
                     </div>
                     <p style={{ fontSize: '0.85rem', color: '#555555', margin: 0, lineHeight: 1.6 }}>
@@ -500,11 +500,11 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
           {/* Question Matrix Navigation */}
           <div className="card" style={{ padding: '1.25rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#222222' }}>Ma trận câu hỏi toàn bài</span>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: '#333333' }}>Ma trận câu hỏi toàn bài</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '11px', color: '#555555' }}>
-                <span>Đúng: <strong style={{ color: '#222222' }}>{correctCount}</strong></span>
+                <span>Đúng: <strong style={{ color: '#333333' }}>{correctCount}</strong></span>
                 <span>•</span>
-                <span>Sai: <strong style={{ color: '#222222' }}>{wrongCount}</strong></span>
+                <span>Sai: <strong style={{ color: '#333333' }}>{wrongCount}</strong></span>
               </div>
             </div>
 
@@ -521,7 +521,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
                 const hasAnswered = isAnswerGiven(q.user_answer);
 
                 let border = '1px solid #eeeeee';
-                let col = '#222222';
+                let col = '#333333';
                 let bg = '#ffffff';
                 if (isCorrect) {
                   border = '1px solid #15803d';
@@ -563,7 +563,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
           {/* Competency Analysis Card */}
           <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#222222', margin: 0 }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#333333', margin: 0 }}>
                 Năng lực theo dạng bài
               </h3>
               <span style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>{competencyBreakdown.length} dạng câu</span>
@@ -573,14 +573,14 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
               {competencyBreakdown.map((item) => (
                 <div key={item.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem' }}>
-                    <span style={{ fontWeight: 600, color: '#222222' }}>{item.label}</span>
-                    <span style={{ fontWeight: 800, color: '#222222' }}>{item.pct}%</span>
+                    <span style={{ fontWeight: 600, color: '#333333' }}>{item.label}</span>
+                    <span style={{ fontWeight: 800, color: '#333333' }}>{item.pct}%</span>
                   </div>
                   <div style={{ width: '100%', height: '6px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{
                       width: `${item.pct}%`,
                       height: '100%',
-                      background: '#222222'
+                      background: '#333333'
                     }} />
                   </div>
                   <span style={{ fontSize: '11px', color: '#555555' }}>
@@ -592,7 +592,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
 
             {/* Overall Rating Card */}
             <div style={{ padding: '10px 12px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '6px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#222222' }}>Đánh giá chung: {rankLabel}</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#333333' }}>Đánh giá chung: {rankLabel}</div>
               <div style={{ fontSize: '11px', color: '#555555', marginTop: '2px' }}>Đạt {percentage}% tổng điểm yêu cầu</div>
             </div>
           </div>

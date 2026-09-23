@@ -908,14 +908,14 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '12px', color: '#222222', fontWeight: 700 }}>
+                <span style={{ fontSize: '12px', color: '#333333', fontWeight: 700 }}>
                   Mã đề: {String(quiz.id || 'QUIZ').slice(0, 8).toUpperCase()}
                 </span>
               </div>
               <h1 style={{
                 fontSize: '1.25rem',
                 fontWeight: 800,
-                color: '#222222',
+                color: '#333333',
                 margin: '2px 0 0',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -941,7 +941,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             }}>
               <div>
                 <div style={{ fontSize: '10px', color: '#555555', fontWeight: 700, textTransform: 'uppercase' }}>Tiến độ</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#222222' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#333333' }}>
                   {answeredCount} / {questions.length} ({progressPercent}%)
                 </div>
               </div>
@@ -959,7 +959,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             }}>
               <div>
                 <div style={{ fontSize: '10px', color: '#555555', fontWeight: 700, textTransform: 'uppercase' }}>Trạng thái</div>
-                <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#222222' }}>Đã lưu tự động</div>
+                <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#333333' }}>Đã lưu tự động</div>
               </div>
             </div>
 
@@ -980,7 +980,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                 <div style={{
                   fontSize: '1rem',
                   fontWeight: 800,
-                  color: timeLeft < 300 ? '#b91c1c' : '#222222',
+                  color: timeLeft < 300 ? '#b91c1c' : '#333333',
                   fontVariantNumeric: 'tabular-nums'
                 }}>
                   {formatTime(timeLeft)}
@@ -1034,7 +1034,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         }}>
           <div style={{
             width: `${progressPercent}%`,
-            background: '#222222',
+            background: '#333333',
             transition: 'width 0.3s ease'
           }} />
         </div>
@@ -1044,7 +1044,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         <div style={{
           background: '#ffffff',
           border: '1px solid #eeeeee',
-          color: '#222222',
+          color: '#333333',
           padding: '0.75rem 1.25rem',
           borderRadius: '6px',
           marginBottom: '1.25rem',
@@ -1069,11 +1069,11 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                 <span style={{
                   padding: '4px 12px',
                   borderRadius: '6px',
-                  background: '#222222',
-                  color: '#ffffff',
+                  background: '#ffffff',
+                  color: '#333333',
                   fontSize: '0.8rem',
                   fontWeight: 800,
-                  border: '1px solid #222222'
+                  border: '1.5px solid #333333'
                 }}>
                   CÂU HỎI {currentIndex + 1}
                 </span>
@@ -1083,7 +1083,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                   borderRadius: '6px',
                   background: '#ffffff',
                   border: '1px solid #eeeeee',
-                  color: '#222222',
+                  color: '#333333',
                   fontSize: '0.78rem',
                   fontWeight: 700
                 }}>
@@ -1100,7 +1100,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                   borderRadius: '6px',
                   background: '#ffffff',
                   border: '1px solid #eeeeee',
-                  color: '#222222',
+                  color: '#333333',
                   fontSize: '0.78rem',
                   fontWeight: 700
                 }}>
@@ -1115,7 +1115,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     borderRadius: '6px',
                     background: '#ffffff',
                     border: '1px solid #eeeeee',
-                    color: '#222222',
+                    color: '#333333',
                     fontSize: '0.75rem',
                     fontWeight: 700
                   }}>
@@ -1129,11 +1129,11 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     gap: '4px',
                     padding: '4px 10px',
                     borderRadius: '6px',
-                    background: '#222222',
-                    color: '#ffffff',
+                    background: '#ffffff',
+                    color: '#333333',
                     fontSize: '0.75rem',
                     fontWeight: 700,
-                    border: '1px solid #222222'
+                    border: '1.5px dashed #333333'
                   }}>
                     ★ Đang xem lại
                   </span>
@@ -1144,7 +1144,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         <h3 style={{
           fontSize: '1.2rem',
           fontWeight: (currentQ.content || '').includes('\n') ? 600 : 700,
-          color: '#222222',
+          color: '#333333',
           lineHeight: 1.6,
           marginBottom: '1.75rem',
           whiteSpace: 'pre-wrap',
@@ -1175,7 +1175,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                   </div>
                   <span style={{
                     fontSize: '1rem',
-                    color: '#222222',
+                    color: '#333333',
                     fontWeight: isSelected ? 700 : 400,
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
@@ -1212,7 +1212,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                     </div>
                     <span style={{
                       fontSize: '1rem',
-                      color: '#222222',
+                      color: '#333333',
                       fontWeight: isSelected ? 700 : 400,
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
@@ -1247,7 +1247,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                       </div>
                       <span style={{
                         fontSize: '1rem',
-                        color: '#222222',
+                        color: '#333333',
                         fontWeight: isSelected ? 700 : 400,
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
@@ -1282,7 +1282,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                       flexWrap: 'wrap'
                     }}
                   >
-                    <span style={{ fontSize: '1rem', color: '#222222', fontWeight: 500, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                    <span style={{ fontSize: '1rem', color: '#333333', fontWeight: 500, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
                       {st.content}
                     </span>
 
@@ -1328,7 +1328,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                   gap: '0.5rem',
                   alignItems: 'center'
                 }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#222222', marginRight: '0.25rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#333333', marginRight: '0.25rem' }}>
                     Từ gợi ý (Bấm để điền):
                   </span>
                   {currentQ.bank.map((word, wIdx) => (
@@ -1355,7 +1355,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
               {blanks.length <= 1 ? (
                 <div style={{ marginTop: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#222222', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, color: '#333333', marginBottom: '0.5rem' }}>
                     Nhập câu trả lời của bạn:
                   </label>
                   <input
@@ -1373,13 +1373,13 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                       border: '1px solid #eeeeee',
                       outline: 'none',
                       background: '#ffffff',
-                      color: '#222222'
+                      color: '#333333'
                     }}
                   />
 
                   {currentQ.options && currentQ.options.length >= 2 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '1.25rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#222222' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#333333' }}>
                         Hoặc chọn phương án:
                       </span>
                       {currentQ.options.map(opt => {
@@ -1420,12 +1420,13 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                           background: '#ffffff',
                           padding: '0.75rem 1rem',
                           borderRadius: '6px',
-                          border: activeBlank === bNum ? '2px solid #222222' : '1px solid #eeeeee'
+                          border: activeBlank === bNum ? '2px solid #333333' : '1px solid #eeeeee'
                         }}
                       >
                         <div style={{
-                          background: '#222222',
-                          color: '#ffffff',
+                          background: '#ffffff',
+                          color: '#333333',
+                          border: '1.5px solid #333333',
                           fontWeight: 800,
                           fontSize: '0.85rem',
                           padding: '0.4rem 0.75rem',
@@ -1449,7 +1450,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                             border: '1px solid #eeeeee',
                             outline: 'none',
                             background: '#ffffff',
-                            color: '#222222',
+                            color: '#333333',
                             fontWeight: 500
                           }}
                         />
@@ -1531,7 +1532,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                         padding: '1.15rem 1.25rem',
                         background: '#ffffff',
                         borderRadius: '6px',
-                        border: isActive ? '2px solid #222222' : '1px solid #eeeeee',
+                        border: isActive ? '2px solid #333333' : '1px solid #eeeeee',
                         cursor: 'pointer'
                       }}
                     >
@@ -1539,16 +1540,16 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                           <span style={{
                             padding: '3px 8px',
-                            background: isActive ? '#222222' : '#ffffff',
-                            color: isActive ? '#ffffff' : '#222222',
-                            border: '1px solid #222222',
+                            background: '#ffffff',
+                            color: '#333333',
+                            border: isActive ? '1.5px solid #333333' : '1px solid #eeeeee',
                             borderRadius: '4px',
                             fontWeight: 800,
                             fontSize: '0.8rem'
                           }}>
                             Vị trí {it.blank}
                           </span>
-                          <span style={{ fontSize: '0.975rem', color: '#222222', fontWeight: 600 }}>
+                          <span style={{ fontSize: '0.975rem', color: '#333333', fontWeight: 600 }}>
                             {it.text || `Chỗ trống số ${it.blank}`}
                           </span>
                         </div>
@@ -1633,7 +1634,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
             <div className="match-grid">
               {/* Left Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#222222' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#333333' }}>
                   Cột A: Thuật ngữ
                 </span>
                 {(currentQ.pairs || []).map((pair) => {
@@ -1661,7 +1662,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                             e.stopPropagation();
                             handleClearMatch(pairId);
                           }}
-                          style={{ background: 'none', border: 'none', color: '#222222', cursor: 'pointer' }}
+                          style={{ background: 'none', border: 'none', color: '#333333', cursor: 'pointer' }}
                           title="Hủy ghép"
                         >
                           <X size={16} />
@@ -1674,7 +1675,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
 
               {/* Right Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#222222' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#333333' }}>
                   Cột B: Định nghĩa
                 </span>
                 {(currentQ.shuffledRights || (currentQ.pairs || []).map(p => p.right)).map((rightText, rIdx) => {
@@ -1691,7 +1692,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                         }
                       }}
                     >
-                      <span style={{ fontSize: '0.9rem', color: '#222222' }}>
+                      <span style={{ fontSize: '0.9rem', color: '#333333' }}>
                         {rightText}
                       </span>
                     </div>
@@ -1764,7 +1765,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: '5rem' }}>
           <div className="card" style={{ padding: '1.25rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#222222', margin: 0 }}>Bảng câu hỏi</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#333333', margin: 0 }}>Bảng câu hỏi</h3>
               <span style={{ fontSize: '11px', fontWeight: 700, background: '#ffffff', color: '#555555', border: '1px solid #eeeeee', padding: '2px 8px', borderRadius: '4px' }}>
                 {questions.length} câu
               </span>
@@ -1783,15 +1784,15 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               marginBottom: '1rem'
             }}>
               <div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#222222' }}>{answeredCount}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#333333' }}>{answeredCount}</div>
                 <div style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>Đã làm</div>
               </div>
               <div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#222222' }}>{flaggedQuestions.size}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#333333' }}>{flaggedQuestions.size}</div>
                 <div style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>Xem lại</div>
               </div>
               <div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#222222' }}>{questions.length - answeredCount}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#333333' }}>{questions.length - answeredCount}</div>
                 <div style={{ fontSize: '11px', color: '#555555', fontWeight: 600 }}>Chưa làm</div>
               </div>
             </div>
@@ -1811,20 +1812,20 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                 const isCurrent = idx === currentIndex;
 
                 let bg = '#ffffff';
-                let color = '#222222';
+                let color = '#333333';
                 let border = '1px solid #eeeeee';
 
                 if (isCurrent) {
-                  border = '2px solid #222222';
-                  bg = '#222222';
-                  color = '#ffffff';
+                  border = '2.5px solid #333333';
+                  bg = '#ffffff';
+                  color = '#333333';
                 } else if (isFlagged) {
                   bg = '#ffffff';
-                  color = '#222222';
-                  border = '2px dashed #222222';
+                  color = '#333333';
+                  border = '2px dashed #333333';
                 } else if (isAnswered) {
                   bg = '#f4f4f5';
-                  color = '#222222';
+                  color = '#333333';
                   border = '1px solid #eeeeee';
                 }
 
@@ -1857,7 +1858,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                           position: 'absolute',
                           top: '1px',
                           right: '3px',
-                          color: isCurrent ? '#ffffff' : '#222222'
+                          color: '#333333'
                         }}
                       >
                         ★
@@ -1875,11 +1876,11 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                 <span>Đã trả lời ({answeredCount})</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#222222', border: '1px solid #222222' }} />
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ffffff', border: '2px solid #333333' }} />
                 <span>Đang xem (Câu {currentIndex + 1})</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ffffff', border: '2px dashed #222222' }} />
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ffffff', border: '2px dashed #333333' }} />
                 <span>Cần xem lại ({flaggedQuestions.size})</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1937,7 +1938,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               border: '1px solid #eeeeee',
               fontSize: '0.875rem',
               fontWeight: 800,
-              color: '#222222'
+              color: '#333333'
             }}>
               Câu {currentIndex + 1} / {questions.length}
             </span>
@@ -1950,9 +1951,11 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
                 padding: '0.55rem 1.15rem',
                 fontSize: '0.85rem',
                 fontWeight: 700,
-                background: flaggedQuestions.has(currentQ.id) ? '#222222' : '#ffffff',
-                borderColor: flaggedQuestions.has(currentQ.id) ? '#222222' : '#eeeeee',
-                color: flaggedQuestions.has(currentQ.id) ? '#ffffff' : '#222222',
+                background: '#ffffff',
+                borderColor: flaggedQuestions.has(currentQ.id) ? '#333333' : '#eeeeee',
+                borderWidth: flaggedQuestions.has(currentQ.id) ? '1.5px' : '1px',
+                borderStyle: flaggedQuestions.has(currentQ.id) ? 'dashed' : 'solid',
+                color: '#333333',
                 borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
@@ -2004,7 +2007,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
       {showConfirmModal && (
         <div className="modal-backdrop">
           <div className="modal-content" style={{ border: '1px solid #eeeeee', borderRadius: '8px' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#222222', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#333333', marginBottom: '0.75rem' }}>
               Xác nhận nộp bài thi
             </h3>
             <p style={{ color: '#555555', fontSize: '0.95rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
