@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FileText, Download, UploadCloud, Plus, Trash2, Edit3, Check, X,
   Folders, Play, Loader2, ChevronRight, ChevronDown, AddFolder, Home, Clock, Calendar
@@ -206,10 +207,11 @@ export default function DocumentList({
   };
 
   const openDeleteFolderModal = (folder) => {
+    if (!folder) return;
     setModalState({
       type: 'delete',
       folderId: folder.id,
-      folderName: folder.name,
+      folderName: folder.name || 'Thư mục',
       docCount: folder.doc_count || 0
     });
   };
@@ -1667,7 +1669,7 @@ export default function DocumentList({
       </div>
 
       {/* PDF VIEWER MODAL */}
-      {previewDoc && (
+      {previewDoc && createPortal(
         <div className="modal-backdrop" onClick={() => setPreviewDoc(null)}>
           <div
             className="modal-content"
@@ -1738,11 +1740,12 @@ export default function DocumentList({
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* FOLDER CRUD MODAL (Create, Rename, Delete) */}
-      {modalState && (
+      {modalState && createPortal(
         <div className="modal-backdrop" onClick={() => setModalState(null)}>
           <div
             className="modal-content"
@@ -1756,7 +1759,10 @@ export default function DocumentList({
               background: '#ffffff',
               display: 'flex',
               flexDirection: 'column',
-              gap: '1rem'
+              gap: '1rem',
+              boxShadow: '0 16px 36px rgba(0, 0, 0, 0.16)',
+              position: 'relative',
+              zIndex: 100000
             }}
           >
             {/* Modal Header */}
@@ -1855,7 +1861,8 @@ export default function DocumentList({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Inline styles for hover state of folder items */}

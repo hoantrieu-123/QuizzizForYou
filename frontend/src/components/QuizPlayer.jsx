@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Clock, ArrowLeft, ArrowRight, CheckCircle2,
   Send, Grid, X, Edit3, Shuffle, UploadCloud
@@ -2010,7 +2011,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
       </div>
 
       {/* Confirmation Modal */}
-      {showConfirmModal && (
+      {showConfirmModal && createPortal(
         <div className="modal-backdrop">
           <div className="modal-content" style={{ border: '1px solid #eeeeee', borderRadius: '8px' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 400, color: '#333333', marginBottom: '0.75rem' }}>
@@ -2034,7 +2035,8 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
