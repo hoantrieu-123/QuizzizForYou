@@ -86,12 +86,12 @@ export default function Navbar({ currentView, onNavigate, searchQuery = '', onSe
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 800,
+            fontWeight: 400,
             fontSize: '0.75rem'
           }}>
             HT
           </div>
-          <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#333333' }}>
+          <span style={{ fontSize: '0.825rem', fontWeight: 400, color: '#333333' }}>
             Hoàng Triều
           </span>
         </div>

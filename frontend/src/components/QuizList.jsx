@@ -311,7 +311,7 @@ export default function QuizList({
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '2.5rem', color: '#7c3aed', fontWeight: 600 }}>
+      <div style={{ textAlign: 'center', padding: '2.5rem', color: '#7c3aed', fontWeight: 400}}>
         Đang tải danh sách bài kiểm tra & phân loại môn học...
       </div>
     );
@@ -401,7 +401,7 @@ export default function QuizList({
       {selectedFilter && selectedFilter.type !== 'all' && (
         <div className="filter-breadcrumb-bar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>Đang xem:</span>
+            <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 400}}>Đang xem:</span>
             <button
               type="button"
               className="breadcrumb-chip root"
@@ -433,7 +433,7 @@ export default function QuizList({
       {/* Top Header & Actions */}
       <div className="card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 400, color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {filterContextTitle ? filterContextTitle : 'Danh sách đề thi'}
             <span className="badge">
               {displayedQuizzesCount} đề thi
@@ -486,7 +486,7 @@ export default function QuizList({
           }}
         >
           <Folders size={18} style={{ color: '#333333', flexShrink: 0 }} />
-          <span style={{ fontWeight: 700, color: '#333333', fontSize: '0.875rem' }}>
+          <span style={{ fontWeight: 400, color: '#333333', fontSize: '0.875rem' }}>
             Tên môn học mới:
           </span>
           <input
@@ -503,7 +503,7 @@ export default function QuizList({
               border: '1px solid #eeeeee',
               outline: 'none',
               fontSize: '0.875rem',
-              fontWeight: 600,
+              fontWeight: 400,
               background: '#ffffff',
               color: '#333333'
             }}
@@ -621,7 +621,7 @@ export default function QuizList({
                         borderRadius: '6px',
                         border: '1px solid #eeeeee',
                         fontSize: '0.95rem',
-                        fontWeight: 700,
+                        fontWeight: 400,
                         color: '#333333',
                         outline: 'none',
                         background: '#ffffff'
@@ -648,7 +648,7 @@ export default function QuizList({
                   <h4
                     style={{
                       fontSize: '1rem',
-                      fontWeight: 800,
+                      fontWeight: 400,
                       color: '#333333',
                       margin: 0,
                       display: 'flex',
@@ -717,7 +717,7 @@ export default function QuizList({
                 {subjectQuizzes.length === 0 ? (
                   <div className="empty-zone">
                     <Folders size={32} style={{ color: '#ddd6fe', marginBottom: '0.5rem' }} />
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#64748b' }}>
+                    <p style={{ margin: 0, fontWeight: 400, fontSize: '0.9rem', color: '#64748b' }}>
                       Chưa có đề thi trong mục "{subject.name}"
                     </p>
                     <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.2rem' }}>
@@ -757,7 +757,7 @@ export default function QuizList({
               <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#ffffff', border: '1px solid #eeeeee', color: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Calendar size={15} />
               </div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#333333', margin: 0 }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 400, color: '#333333', margin: 0 }}>
                 Đề thi gán trong kỳ này (chưa phân vào môn cụ thể)
               </h4>
               <span className="badge">
@@ -795,7 +795,7 @@ export default function QuizList({
               <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#ffffff', border: '1px solid #eeeeee', color: '#333333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Layers size={15} />
               </div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#333333', margin: 0 }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 400, color: '#333333', margin: 0 }}>
                 Đề thi chung của lớp (chưa phân vào môn cụ thể)
               </h4>
               <span className="badge">
@@ -829,7 +829,7 @@ export default function QuizList({
       {filteredSubjects.length === 0 && !showUncategorized && directSemesterQuizzes.length === 0 && directClassQuizzes.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: '2.5rem 1.5rem', background: '#fafafa', border: '1.5px dashed #eeeeee', borderRadius: '12px', margin: '1rem 0' }}>
           <Folders size={36} style={{ color: '#cccccc', marginBottom: '0.6rem' }} />
-          <h4 style={{ fontWeight: 700, color: '#333333', margin: '0 0 0.4rem' }}>Chưa có môn học hoặc đề thi trong mục này</h4>
+          <h4 style={{ fontWeight: 400, color: '#333333', margin: '0 0 0.4rem' }}>Chưa có môn học hoặc đề thi trong mục này</h4>
           <p style={{ fontSize: '0.85rem', color: '#555555', margin: '0 0 1rem' }}>
             Bạn có thể tạo môn học mới bên dưới hoặc kéo thả đề thi vào mục này từ cây thư mục bên trái.
           </p>
@@ -837,7 +837,7 @@ export default function QuizList({
             type="button"
             className="btn btn-primary btn-sm"
             onClick={() => setShowAddSubject(true)}
-            style={{ fontWeight: 700 }}
+            style={{ fontWeight: 400}}
           >
             <AddFolder size={16} /> + Thêm môn học
           </button>
@@ -894,7 +894,7 @@ export default function QuizList({
                   <FileText size={15} />
                 </div>
 
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#333333', margin: 0 }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 400, color: '#333333', margin: 0 }}>
                   Đề thi ngoài mục (Chưa phân loại môn)
                 </h4>
 
@@ -903,7 +903,7 @@ export default function QuizList({
                 </span>
               </div>
 
-              <span style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 400}}>
                 Kéo thả đề thi vào đây để gỡ khỏi môn
               </span>
             </div>
@@ -914,7 +914,7 @@ export default function QuizList({
             {uncategorizedQuizzes.length === 0 ? (
               <div className="empty-zone">
                 <Check size={28} style={{ color: '#10b981', marginBottom: '0.4rem' }} />
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: '#10b981' }}>
+                <p style={{ margin: 0, fontWeight: 400, fontSize: '0.875rem', color: '#10b981' }}>
                   Tất cả các đề thi đã được phân loại vào các mục môn học!
                 </p>
                 <span style={{ fontSize: '0.775rem', color: '#555555', marginTop: '0.2rem' }}>
@@ -1048,7 +1048,7 @@ function QuizCardItem({
         <h4
           style={{
             fontSize: '0.885rem',
-            fontWeight: 700,
+            fontWeight: 400,
             color: '#333333',
             marginBottom: '0.35rem',
             lineHeight: 1.3,
@@ -1094,7 +1094,7 @@ function QuizCardItem({
             style={{
               width: '100%',
               fontSize: '0.72rem',
-              fontWeight: 600,
+              fontWeight: 400,
               padding: '3px 8px',
               borderRadius: '6px',
               border: '1px solid #eeeeee',
@@ -1137,7 +1137,7 @@ function QuizCardItem({
             flex: 1,
             padding: '0.35rem 0.5rem',
             fontSize: '0.78rem',
-            fontWeight: 700,
+            fontWeight: 400,
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',

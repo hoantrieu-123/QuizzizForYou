@@ -428,7 +428,7 @@ export default function SidebarTree({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.25rem 0.25rem 0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Layers size={16} style={{ color: '#333333' }} />
-          <span style={{ fontWeight: 800, fontSize: '0.875rem', color: '#333333' }}>
+          <span style={{ fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}>
             Cấu trúc đào tạo
           </span>
         </div>
@@ -448,7 +448,7 @@ export default function SidebarTree({
             padding: '2px 8px',
             borderRadius: '6px',
             fontSize: '0.78rem',
-            fontWeight: 700,
+            fontWeight: 400,
             display: 'inline-flex',
             alignItems: 'center',
             gap: '3px',

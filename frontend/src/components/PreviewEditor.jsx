@@ -1077,7 +1077,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
       {/* 1. Header & File Info */}
       <div className="card" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#333333', margin: 0 }}>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 400, color: '#333333', margin: 0 }}>
             {quiz.title || quiz.filename || 'Chỉnh sửa đề thi'}
           </h1>
           <span style={{ fontSize: '0.8rem', color: '#555555' }}>
@@ -1103,7 +1103,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#333333', margin: 0 }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 400, color: '#333333', margin: 0 }}>
                   Danh sách câu hỏi trích xuất
                 </h3>
               </div>
@@ -1203,7 +1203,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                     padding: '0.35rem 0.65rem',
                     background: filterType === 'warning' ? '#ef4444' : '#ffdad6',
                     color: filterType === 'warning' ? '#ffffff' : '#93000a',
-                    fontWeight: 700
+                    fontWeight: 400
                   }}
                   onClick={() => setFilterType('warning')}
                 >
@@ -1246,7 +1246,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                     background: '#f5f3ff',
                     border: '1px solid #ddd6fe',
                     color: '#7c3aed',
-                    fontWeight: 800,
+                    fontWeight: 400,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1255,7 +1255,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                     {q.order || qActualIndex + 1}
                   </span>
 
-                  <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>
+                  <span style={{ fontWeight: 400, fontSize: '1rem', color: '#1e293b' }}>
                     Câu {q.order || qActualIndex + 1}
                   </span>
 
@@ -1267,7 +1267,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                       borderRadius: '6px',
                       border: '1px solid #cbd5e1',
                       fontSize: '0.825rem',
-                      fontWeight: 600,
+                      fontWeight: 400,
                       color: '#334155',
                       background: '#ffffff',
                       cursor: 'pointer'
@@ -1313,7 +1313,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
 
               {/* Editable Question Content */}
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#475569', marginBottom: '0.35rem' }}>
+                <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 400, color: '#475569', marginBottom: '0.35rem' }}>
                   ✏ Nội dung câu hỏi (Gõ để sửa):
                 </label>
                 <textarea
@@ -1327,7 +1327,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                     border: '1.5px solid #cbd5e1',
                     fontSize: '1rem',
                     color: '#333333',
-                    fontWeight: 500,
+                    fontWeight: 400,
                     lineHeight: 1.6,
                     resize: 'vertical',
                     outline: 'none',
@@ -1345,7 +1345,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               {q.type === 'single_choice' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 400}}>
                       ✏ Các phương án trả lời (Gõ vào ô để sửa chữ, bấm nút để chọn đáp án đúng):
                     </p>
                     <button
@@ -1357,7 +1357,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                         borderColor: '#ddd6fe',
                         color: '#7c3aed',
                         background: '#f5f3ff',
-                        fontWeight: 700
+                        fontWeight: 400
                       }}
                     >
                       <Plus size={15} /> + Thêm phương án
@@ -1387,7 +1387,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             style={{
                               background: isCorrect ? '#10b981' : '#f1f5f9',
                               color: isCorrect ? '#ffffff' : '#475569',
-                              fontWeight: 800,
+                              fontWeight: 400,
                               cursor: 'pointer'
                             }}
                             onClick={() => handleSingleChoiceSelect(qActualIndex, opt.label)}
@@ -1408,7 +1408,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                               borderRadius: '8px',
                               padding: '0.5rem 0.75rem',
                               fontSize: '0.95rem',
-                              fontWeight: isCorrect ? 700 : 500,
+                              fontWeight: 400,
                               background: '#ffffff',
                               outline: 'none',
                               color: '#333333',
@@ -1433,7 +1433,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                               borderRadius: '8px',
                               padding: '0.45rem 0.85rem',
                               fontSize: '0.8rem',
-                              fontWeight: 700,
+                              fontWeight: 400,
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
@@ -1475,7 +1475,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               {q.type === 'multiple_choice' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 400}}>
                       ✏ Các phương án trả lời (Gõ vào ô để sửa chữ, bấm nút để chọn nhiều đáp án đúng):
                     </p>
                     <button
@@ -1487,7 +1487,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                         borderColor: '#ddd6fe',
                         color: '#7c3aed',
                         background: '#f5f3ff',
-                        fontWeight: 700
+                        fontWeight: 400
                       }}
                     >
                       <Plus size={15} /> + Thêm phương án
@@ -1516,7 +1516,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             style={{
                               background: isCorrect ? '#10b981' : '#f1f5f9',
                               color: isCorrect ? '#ffffff' : '#475569',
-                              fontWeight: 800,
+                              fontWeight: 400,
                               cursor: 'pointer'
                             }}
                             onClick={() => handleMultiChoiceToggle(qActualIndex, opt.label)}
@@ -1536,7 +1536,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                               borderRadius: '8px',
                               padding: '0.5rem 0.75rem',
                               fontSize: '0.95rem',
-                              fontWeight: isCorrect ? 700 : 500,
+                              fontWeight: 400,
                               background: '#ffffff',
                               outline: 'none',
                               color: '#333333',
@@ -1560,7 +1560,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                               borderRadius: '8px',
                               padding: '0.45rem 0.85rem',
                               fontSize: '0.8rem',
-                              fontWeight: 700,
+                              fontWeight: 400,
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
@@ -1605,14 +1605,14 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               {q.type === 'true_false' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 400}}>
                       ✏ Các phát biểu Đúng / Sai (Gõ vào ô để sửa nội dung mệnh đề):
                     </p>
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
                       onClick={() => handleAddStatement(qActualIndex)}
-                      style={{ fontSize: '0.8rem', borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 700 }}
+                      style={{ fontSize: '0.8rem', borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 400}}
                     >
                       <Plus size={15} /> + Thêm mệnh đề
                     </button>
@@ -1632,7 +1632,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                           gap: '0.75rem'
                         }}
                       >
-                        <span style={{ fontWeight: 800, color: '#18181b', fontSize: '0.9rem', minWidth: '22px' }}>
+                        <span style={{ fontWeight: 400, color: '#18181b', fontSize: '0.9rem', minWidth: '22px' }}>
                           {stIdx + 1}.
                         </span>
 
@@ -1700,7 +1700,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                   return (
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700, margin: 0 }}>
+                        <label style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 400, margin: 0 }}>
                           ✏ Từ / Cụm từ đáp án đúng (Gõ vào ô để sửa, ngăn cách bằng dấu phẩy nếu có nhiều từ tương đương):
                         </label>
                         <button
@@ -1727,7 +1727,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                           borderRadius: '8px',
                           border: '1.5px solid #cbd5e1',
                           fontSize: '1rem',
-                          fontWeight: 600,
+                          fontWeight: 400,
                           color: '#18181b',
                           background: '#ffffff',
                           outline: 'none'
@@ -1741,7 +1741,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                 return (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 400}}>
                         ✏ Đáp án đúng cho từng ô trống ({blankCount} ô trống theo thứ tự):
                       </span>
                       <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -1785,7 +1785,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             <span style={{
                               background: '#ede9fe',
                               color: '#7c3aed',
-                              fontWeight: 700,
+                              fontWeight: 400,
                               fontSize: '0.8rem',
                               padding: '0.3rem 0.6rem',
                               borderRadius: '6px',
@@ -1809,7 +1809,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                 borderRadius: '6px',
                                 border: '1.5px solid #cbd5e1',
                                 fontSize: '0.95rem',
-                                fontWeight: 600,
+                                fontWeight: 400,
                                 color: '#18181b',
                                 background: '#ffffff',
                                 outline: 'none'
@@ -1840,7 +1840,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                         <div>
-                          <h5 style={{ fontSize: '1rem', fontWeight: 800, color: '#333333', display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+                          <h5 style={{ fontSize: '1rem', fontWeight: 400, color: '#333333', display: 'flex', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
                             <Package size={18} style={{ color: '#333333' }} />
                             Hộp chứa các đáp án kéo thả ({bankWords.length} từ)
                           </h5>
@@ -1854,7 +1854,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             type="button"
                             className="btn btn-secondary btn-sm"
                             onClick={() => handleShuffleBank(qActualIndex)}
-                            style={{ fontSize: '0.8rem', borderColor: '#eeeeee', color: '#333333', background: '#ffffff', fontWeight: 600 }}
+                            style={{ fontSize: '0.8rem', borderColor: '#eeeeee', color: '#333333', background: '#ffffff', fontWeight: 400}}
                             title="Xáo trộn thứ tự các từ trong hộp"
                           >
                             <Shuffle size={14} style={{ color: '#333333' }} /> Đảo thứ tự hộp
@@ -1864,7 +1864,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             type="button"
                             className="btn btn-primary btn-sm"
                             onClick={() => handleAddBankWord(qActualIndex)}
-                            style={{ fontSize: '0.8rem', background: '#ffffff', color: '#333333', border: '1.5px solid #333333', fontWeight: 700 }}
+                            style={{ fontSize: '0.8rem', background: '#ffffff', color: '#333333', border: '1px solid #eeeeee', fontWeight: 400}}
                           >
                             <Plus size={14} /> + Thêm từ vào hộp kéo
                           </button>
@@ -1916,7 +1916,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                   border: 'none',
                                   background: 'transparent',
                                   fontSize: '0.925rem',
-                                  fontWeight: 700,
+                                  fontWeight: 400,
                                   color: slotMatch ? '#7c3aed' : '#334155',
                                   outline: 'none',
                                   minWidth: '70px',
@@ -1937,7 +1937,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                 }}
                                 style={{
                                   fontSize: '0.75rem',
-                                  fontWeight: 800,
+                                  fontWeight: 400,
                                   padding: '3px 6px',
                                   borderRadius: '7px',
                                   border: slotMatch ? '1.5px solid #7c3aed' : '1px solid #cbd5e1',
@@ -1961,7 +1961,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                     Nhiều vị trí ({matchedItems.map(m => m.blank).join(', ')})
                                   </option>
                                 )}
-                                <option value="multi_modal" style={{ background: '#f5f3ff', color: '#7c3aed', fontWeight: 'bold' }}>
+                                <option value="multi_modal" style={{ background: '#f5f3ff', color: '#7c3aed', fontWeight: 400}}>
                                   ⚙ Tùy chọn nhiều vị trí...
                                 </option>
                               </select>
@@ -2003,7 +2003,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                   }}
                                 >
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem', paddingBottom: '0.35rem', borderBottom: '1px solid #e2e8f0' }}>
-                                    <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1e293b' }}>
+                                    <span style={{ fontSize: '0.775rem', fontWeight: 400, color: '#1e293b' }}>
                                       Vị trí của "{word}":
                                     </span>
                                     <button
@@ -2053,7 +2053,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                         handleSetWordSlot(qActualIndex, word, 'distractor');
                                         setActiveMultiWord(null);
                                       }}
-                                      style={{ fontSize: '0.725rem', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                                      style={{ fontSize: '0.725rem', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 400}}
                                     >
                                       Gỡ khỏi tất cả vị trí
                                     </button>
@@ -2088,14 +2088,14 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
 
                     {/* CÁC VỊ TRÍ Ô TRỐNG CẦN ĐIỀN */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                      <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                      <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 400}}>
                         ✏ Các câu có ô trống cần điền (Chỉnh sửa số vị trí và chọn đáp án thủ công cho từng câu):
                       </p>
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
                         onClick={() => handleAddBlankItem(qActualIndex)}
-                        style={{ fontSize: '0.8rem', borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 700 }}
+                        style={{ fontSize: '0.8rem', borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 400}}
                       >
                         <Plus size={15} /> + Thêm vị trí trống
                       </button>
@@ -2126,7 +2126,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             {/* Dòng 1: Số vị trí (sửa được) + Nội dung câu + Nút xóa */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
-                                <span className="badge badge-blue" style={{ fontSize: '0.8rem', fontWeight: 800 }}>Vị trí</span>
+                                <span className="badge badge-blue" style={{ fontSize: '0.8rem', fontWeight: 400}}>Vị trí</span>
                                 <input
                                   type="number"
                                   min="1"
@@ -2135,7 +2135,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                   style={{
                                     width: '46px',
                                     padding: '4px 6px',
-                                    fontWeight: 800,
+                                    fontWeight: 400,
                                     borderRadius: '8px',
                                     border: '1.5px solid #ddd6fe',
                                     textAlign: 'center',
@@ -2195,7 +2195,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                               borderRadius: '8px',
                               border: '1px solid #e2e8f0'
                             }}>
-                              <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 800, flexShrink: 0 }}>
+                              <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 400, flexShrink: 0 }}>
                                 Đáp án đúng ({itemAnsList.length}):
                               </span>
 
@@ -2213,7 +2213,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                     padding: '2px 8px',
                                     borderRadius: '6px',
                                     fontSize: '0.825rem',
-                                    fontWeight: 700
+                                    fontWeight: 400
                                   }}
                                 >
                                   <span>{ansWord}</span>
@@ -2249,7 +2249,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                                 }}
                                 style={{
                                   fontSize: '0.775rem',
-                                  fontWeight: 700,
+                                  fontWeight: 400,
                                   padding: '3px 8px',
                                   borderRadius: '6px',
                                   border: '1.5px solid #ddd6fe',
@@ -2304,14 +2304,14 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               {q.type === 'matching' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 700 }}>
+                    <p style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 400}}>
                       ✏ Các cặp ghép đôi (Thuật ngữ cột trái ↔ Định nghĩa cột phải):
                     </p>
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
                       onClick={() => handleAddPair(qActualIndex)}
-                      style={{ fontSize: '0.8rem', borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 700 }}
+                      style={{ fontSize: '0.8rem', borderColor: '#ddd6fe', color: '#7c3aed', background: '#f5f3ff', fontWeight: 400}}
                     >
                       <Plus size={15} /> + Thêm cặp ghép
                     </button>
@@ -2341,14 +2341,14 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                             padding: '0.5rem 0.75rem',
                             borderRadius: '8px',
                             border: '1.5px solid #cbd5e1',
-                            fontWeight: 700,
+                            fontWeight: 400,
                             background: '#ffffff',
                             outline: 'none'
                           }}
                           onFocus={(e) => e.target.style.borderColor = '#7c3aed'}
                           onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                         />
-                        <span style={{ color: '#7c3aed', fontWeight: 800, fontSize: '1.1rem' }}>→</span>
+                        <span style={{ color: '#7c3aed', fontWeight: 400, fontSize: '1.1rem' }}>→</span>
                         <input
                           type="text"
                           value={p.right || ''}
@@ -2395,12 +2395,12 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'sticky', top: '5rem' }}>
       {/* Main Config Card */}
       <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#333333', margin: 0 }}>Cấu hình bài thi</h3>
+        <h3 style={{ fontSize: '1.05rem', fontWeight: 400, color: '#333333', margin: 0 }}>Cấu hình bài thi</h3>
 
         {/* Form Fields */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#333333', marginBottom: '0.35rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 400, color: '#333333', marginBottom: '0.35rem' }}>
               Tên bài thi
             </label>
             <input
@@ -2414,7 +2414,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                 borderRadius: '6px',
                 border: '1px solid #eeeeee',
                 fontSize: '0.875rem',
-                fontWeight: 600,
+                fontWeight: 400,
                 outline: 'none',
                 color: '#333333',
                 background: '#ffffff'
@@ -2425,8 +2425,8 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
           {/* Duration Slider */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#333333' }}>Thời lượng</span>
-              <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#333333' }}>{durationMinutes} phút</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#333333' }}>Thời lượng</span>
+              <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#333333' }}>{durationMinutes} phút</span>
             </div>
             <input
               type="range"
@@ -2448,7 +2448,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
 
           {/* Question Count Policy */}
           <div>
-            <span style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#333333', marginBottom: '0.35rem' }}>
+            <span style={{ display: 'block', fontSize: '0.8rem', fontWeight: 400, color: '#333333', marginBottom: '0.35rem' }}>
               Số câu hỏi
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -2459,11 +2459,11 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                   gap: '0.45rem',
                   padding: '0.55rem 0.65rem',
                   borderRadius: '6px',
-                  background: '#ffffff',
-                  border: questionCountType === 'all' ? '2px solid #333333' : '1px solid #eeeeee',
+                  background: questionCountType === 'all' ? '#f4f4f5' : '#ffffff',
+                  border: '1px solid #eeeeee',
                   cursor: 'pointer',
                   fontSize: '0.8rem',
-                  fontWeight: questionCountType === 'all' ? 700 : 500,
+                  fontWeight: 400,
                   color: '#333333'
                 }}
               >
@@ -2484,11 +2484,11 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                   gap: '0.45rem',
                   padding: '0.55rem 0.65rem',
                   borderRadius: '6px',
-                  background: '#ffffff',
-                  border: questionCountType === 'random20' ? '2px solid #333333' : '1px solid #eeeeee',
+                  background: questionCountType === 'random20' ? '#f4f4f5' : '#ffffff',
+                  border: '1px solid #eeeeee',
                   cursor: 'pointer',
                   fontSize: '0.8rem',
-                  fontWeight: questionCountType === 'random20' ? 700 : 500,
+                  fontWeight: 400,
                   color: '#333333'
                 }}
               >
@@ -2506,7 +2506,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
 
           {/* Exam Rules & Anti-cheat Toggles */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#333333', marginBottom: '2px' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#333333', marginBottom: '2px' }}>
               Tùy chọn hiển thị
             </span>
 
@@ -2587,7 +2587,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               width: '100%',
               padding: '0.85rem 1rem',
               fontSize: '0.95rem',
-              fontWeight: 800,
+              fontWeight: 400,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -2608,7 +2608,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               width: '100%',
               padding: '0.65rem 1rem',
               fontSize: '0.85rem',
-              fontWeight: 700,
+              fontWeight: 400,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -2628,7 +2628,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               width: '100%',
               padding: '0.65rem 1rem',
               fontSize: '0.85rem',
-              fontWeight: 700,
+              fontWeight: 400,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -2651,7 +2651,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               border: 'none',
               cursor: 'pointer',
               textAlign: 'center',
-              fontWeight: 600
+              fontWeight: 400
             }}
             onMouseEnter={(e) => e.target.style.color = '#1e293b'}
             onMouseLeave={(e) => e.target.style.color = '#64748b'}

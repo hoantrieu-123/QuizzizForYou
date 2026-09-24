@@ -96,7 +96,7 @@ export default function UploadSection({ onUploadSuccess }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           <h2 style={{
             fontSize: '1.35rem',
-            fontWeight: 800,
+            fontWeight: 400,
             margin: 0,
             color: '#333333',
             letterSpacing: '-0.02em'
@@ -157,14 +157,14 @@ export default function UploadSection({ onUploadSuccess }) {
             {isUploading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0' }}>
                 <Loader2 size={32} className="spin-animate" style={{ color: '#333333' }} />
-                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                <div style={{ fontWeight: 400, fontSize: '0.95rem' }}>
                   Đang bóc tách file Word...
                 </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <UploadCloud size={30} style={{ color: '#333333' }} />
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#333333' }}>
+                <div style={{ fontWeight: 400, fontSize: '0.95rem', color: '#333333' }}>
                   Kéo thả file .docx vào đây
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#555555' }}>
@@ -189,7 +189,7 @@ export default function UploadSection({ onUploadSuccess }) {
           color: '#b91c1c',
           marginTop: '1rem',
           fontSize: '0.85rem',
-          fontWeight: 600
+          fontWeight: 400
         }}>
           <AlertCircle size={16} style={{ flexShrink: 0 }} />
           <span>{errorMsg}</span>

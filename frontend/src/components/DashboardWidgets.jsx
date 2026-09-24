@@ -45,7 +45,7 @@ export default function DashboardWidgets({
       {inProgressQuiz && (
         <aside className="card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#333333' }}>
+            <span style={{ fontWeight: 400, fontSize: '0.9rem', color: '#333333' }}>
               Bài làm chưa nộp
             </span>
             <span className="badge" style={{ fontSize: '0.72rem' }}>
@@ -93,10 +93,10 @@ export default function DashboardWidgets({
       {/* WIDGET 2: File Word gần đây */}
       <aside className="card" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-          <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#333333' }}>
+          <span style={{ fontWeight: 400, fontSize: '0.9rem', color: '#333333' }}>
             Đề thi gần đây
           </span>
-          <span style={{ fontSize: '0.75rem', color: '#555555', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.75rem', color: '#555555', fontWeight: 400}}>
             {recentFiles.length} file
           </span>
         </div>
@@ -121,7 +121,7 @@ export default function DashboardWidgets({
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                    <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#333333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ fontSize: '0.825rem', fontWeight: 400, color: '#333333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {q.title || q.filename}
                     </span>
                     <span style={{ fontSize: '0.72rem', color: '#555555' }}>

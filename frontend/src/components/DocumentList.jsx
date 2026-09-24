@@ -482,10 +482,10 @@ export default function DocumentList({
             borderRadius: '6px',
             cursor: 'pointer',
             background: isSelected ? '#f4f4f5' : 'transparent',
-            border: isSelected ? '1px solid #333333' : '1px solid transparent',
+            border: isSelected ? '1px solid #eeeeee' : '1px solid transparent',
             color: '#333333',
             fontSize: '0.825rem',
-            fontWeight: isSelected ? 800 : 600,
+            fontWeight: 400,
             transition: 'background 0.15s ease',
             position: 'relative',
             userSelect: 'none'
@@ -527,7 +527,7 @@ export default function DocumentList({
           {/* Document count badge */}
           <span style={{
             fontSize: '0.72rem',
-            fontWeight: 700,
+            fontWeight: 400,
             color: '#666666',
             background: '#ffffff',
             border: '1px solid #eeeeee',
@@ -595,7 +595,7 @@ export default function DocumentList({
           zIndex: 9999,
           background: '#ffffff',
           color: '#333333',
-          border: '1.5px solid #333333',
+          border: '1px solid #eeeeee',
           borderRadius: '8px',
           padding: '0.85rem 1.4rem',
           boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
@@ -603,7 +603,7 @@ export default function DocumentList({
           alignItems: 'center',
           gap: '0.5rem',
           fontSize: '0.875rem',
-          fontWeight: 700
+          fontWeight: 400
         }}>
           <Check size={18} />
           <span>{toast.message}</span>
@@ -642,7 +642,7 @@ export default function DocumentList({
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#333333' }}>
+            <span style={{ fontSize: '1.25rem', fontWeight: 400, color: '#333333' }}>
               Kho tài liệu học tập
             </span>
             <span className="badge">
@@ -654,14 +654,14 @@ export default function DocumentList({
           <div style={{ fontSize: '0.8rem', color: '#666666', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
             <span
               onClick={() => setCurrentFolderId(null)}
-              style={{ cursor: 'pointer', color: currentFolderId === null ? '#333333' : '#666666', fontWeight: currentFolderId === null ? 800 : 500 }}
+              style={{ cursor: 'pointer', color: currentFolderId === null ? '#333333' : '#666666', fontWeight: 400}}
             >
               Tài liệu
             </span>
             {selectedFilter?.path?.length > 0 && selectedFilter.path.map((segment, idx) => (
               <React.Fragment key={`filter_${idx}`}>
                 <span>›</span>
-                <span style={{ fontWeight: 600, color: '#333333' }}>{segment}</span>
+                <span style={{ fontWeight: 400, color: '#333333' }}>{segment}</span>
               </React.Fragment>
             ))}
             {breadcrumbs.length > 0 && breadcrumbs.map((crumb, idx) => (
@@ -672,7 +672,7 @@ export default function DocumentList({
                     onClick={() => setCurrentFolderId(crumb.id)}
                     style={{
                       cursor: 'pointer',
-                      fontWeight: idx === breadcrumbs.length - 1 ? 800 : 500,
+                      fontWeight: 400,
                       color: idx === breadcrumbs.length - 1 ? '#333333' : '#666666',
                       textDecoration: idx === breadcrumbs.length - 1 ? 'none' : 'underline'
                     }}
@@ -711,7 +711,7 @@ export default function DocumentList({
             style={{
               padding: '0.55rem 0.95rem',
               fontSize: '0.825rem',
-              fontWeight: 700,
+              fontWeight: 400,
               borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
@@ -731,7 +731,7 @@ export default function DocumentList({
             style={{
               padding: '0.55rem 1rem',
               fontSize: '0.825rem',
-              fontWeight: 700,
+              fontWeight: 400,
               borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
@@ -751,7 +751,7 @@ export default function DocumentList({
             style={{
               padding: '0.55rem 1.15rem',
               fontSize: '0.825rem',
-              fontWeight: 800,
+              fontWeight: 400,
               borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
@@ -799,7 +799,7 @@ export default function DocumentList({
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <Folders size={17} style={{ color: '#333333' }} />
-                <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#333333' }}>
+                <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#333333' }}>
                   Thư mục tài liệu
                 </span>
               </div>
@@ -809,7 +809,7 @@ export default function DocumentList({
                   type="button"
                   onClick={() => openCreateFolderModal('')}
                   className="btn btn-secondary btn-sm"
-                  style={{ padding: '3px 6px', fontSize: '0.75rem', fontWeight: 700 }}
+                  style={{ padding: '3px 6px', fontSize: '0.75rem', fontWeight: 400}}
                   title="Tạo thư mục mới ở gốc"
                 >
                   <Plus size={13} />
@@ -831,10 +831,10 @@ export default function DocumentList({
                   borderRadius: '6px',
                   cursor: 'pointer',
                   background: currentFolderId === null ? '#f4f4f5' : 'transparent',
-                  border: currentFolderId === null ? '1px solid #333333' : '1px solid transparent',
+                  border: currentFolderId === null ? '1px solid #eeeeee' : '1px solid transparent',
                   color: '#333333',
                   fontSize: '0.825rem',
-                  fontWeight: currentFolderId === null ? 800 : 600
+                  fontWeight: 400
                 }}
               >
                 <FileText size={15} />
@@ -853,10 +853,10 @@ export default function DocumentList({
                   borderRadius: '6px',
                   cursor: 'pointer',
                   background: currentFolderId === 'root' ? '#f4f4f5' : 'transparent',
-                  border: currentFolderId === 'root' ? '1px solid #333333' : '1px solid transparent',
+                  border: currentFolderId === 'root' ? '1px solid #eeeeee' : '1px solid transparent',
                   color: '#333333',
                   fontSize: '0.825rem',
-                  fontWeight: currentFolderId === 'root' ? 800 : 600
+                  fontWeight: 400
                 }}
               >
                 <Home size={15} />
@@ -912,7 +912,7 @@ export default function DocumentList({
                 <span>{isTreeCollapsed ? 'Hiện thư mục' : 'Ẩn thư mục'}</span>
               </button>
 
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#333333' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 400, color: '#333333' }}>
                 {currentFolderName}
               </span>
 
@@ -959,14 +959,14 @@ export default function DocumentList({
               borderRadius: '8px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#555555', textTransform: 'uppercase' }}>
                   Thư mục con ({currentSubfolders.length})
                 </span>
                 <button
                   type="button"
                   onClick={() => openCreateFolderModal(currentFolderId || '')}
                   className="btn btn-secondary btn-sm"
-                  style={{ padding: '2px 8px', fontSize: '0.75rem', fontWeight: 700 }}
+                  style={{ padding: '2px 8px', fontSize: '0.75rem', fontWeight: 400}}
                 >
                   <Plus size={11} /> Thêm thư mục
                 </button>
@@ -1000,7 +1000,7 @@ export default function DocumentList({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontSize: '0.85rem',
-                        fontWeight: 700,
+                        fontWeight: 400,
                         color: '#333333',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -1050,7 +1050,7 @@ export default function DocumentList({
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             style={{
-              border: dragOver ? '2px dashed #333333' : '1px dashed #dddddd',
+              border: dragOver ? '2px dashed #999999' : '1px dashed #dddddd',
               borderRadius: '8px',
               background: dragOver ? '#fbfbfb' : '#ffffff',
               padding: '1.1rem',
@@ -1067,7 +1067,7 @@ export default function DocumentList({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#555555' }}>
               <UploadCloud size={19} />
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#333333' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#333333' }}>
                 Kéo thả file hoặc thư mục Word (.docx, .doc), PDF (.pdf) vào "{currentFolderName}"
               </span>
             </div>
@@ -1098,11 +1098,11 @@ export default function DocumentList({
                   style={{
                     padding: '0.35rem 0.85rem',
                     fontSize: '0.8rem',
-                    fontWeight: 700,
+                    fontWeight: 400,
                     borderRadius: '6px',
-                    background: '#ffffff',
+                    background: selectedType === tab.id ? '#f4f4f5' : '#ffffff',
                     color: '#333333',
-                    border: selectedType === tab.id ? '1.5px solid #333333' : '1px solid #eeeeee',
+                    border: '1px solid #eeeeee',
                     cursor: 'pointer'
                   }}
                 >
@@ -1137,7 +1137,7 @@ export default function DocumentList({
                   style={{
                     padding: '0.35rem 0.65rem',
                     fontSize: '0.78rem',
-                    fontWeight: 700,
+                    fontWeight: 400,
                     background: viewMode === 'grid' ? '#f4f4f5' : '#ffffff',
                     border: 'none',
                     color: '#333333',
@@ -1153,7 +1153,7 @@ export default function DocumentList({
                   style={{
                     padding: '0.35rem 0.65rem',
                     fontSize: '0.78rem',
-                    fontWeight: 700,
+                    fontWeight: 400,
                     background: viewMode === 'table' ? '#f4f4f5' : '#ffffff',
                     border: 'none',
                     borderLeft: '1px solid #eeeeee',
@@ -1177,7 +1177,7 @@ export default function DocumentList({
           ) : displayedDocs.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
               <FileText size={36} style={{ color: '#888888', margin: '0 auto 0.75rem' }} />
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#333333', marginBottom: '0.35rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 400, color: '#333333', marginBottom: '0.35rem' }}>
                 Chưa có tài liệu nào trong thư mục này
               </h3>
               <p style={{ fontSize: '0.85rem', color: '#666666', maxWidth: '420px', margin: '0 auto 1.25rem' }}>
@@ -1225,16 +1225,16 @@ export default function DocumentList({
                         padding: '2px 8px',
                         borderRadius: '4px',
                         fontSize: '0.72rem',
-                        fontWeight: 800,
+                        fontWeight: 400,
                         textTransform: 'uppercase',
-                        border: '1px solid #333333',
+                        border: '1px solid #eeeeee',
                         background: '#ffffff',
                         color: '#333333'
                       }}>
                         {doc.file_type}
                       </span>
 
-                      <span style={{ fontSize: '0.75rem', color: '#666666', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.75rem', color: '#666666', fontWeight: 400}}>
                         {formatFileSize(doc.file_size)}
                       </span>
                     </div>
@@ -1252,7 +1252,7 @@ export default function DocumentList({
                               fontSize: '0.85rem',
                               padding: '0.3rem 0.5rem',
                               borderRadius: '4px',
-                              border: '1px solid #333333',
+                              border: '1px solid #eeeeee',
                               background: '#ffffff',
                               color: '#333333'
                             }}
@@ -1283,7 +1283,7 @@ export default function DocumentList({
                           title={`${doc.title || doc.filename} (Nháy đúp để đổi tên)`}
                           style={{
                             fontSize: '0.885rem',
-                            fontWeight: 700,
+                            fontWeight: 400,
                             color: '#333333',
                             lineHeight: 1.35,
                             display: '-webkit-box',
@@ -1327,7 +1327,7 @@ export default function DocumentList({
                             className="btn btn-primary btn-sm"
                             disabled={convertingDocId === doc.id}
                             onClick={() => handleConvertToQuiz(doc)}
-                            style={{ padding: '4px 8px', fontSize: '0.75rem', fontWeight: 800 }}
+                            style={{ padding: '4px 8px', fontSize: '0.75rem', fontWeight: 400}}
                             title="Tự động bóc tách câu hỏi và highlight để tạo bài thi trắc nghiệm"
                           >
                             {convertingDocId === doc.id ? (
@@ -1417,8 +1417,8 @@ export default function DocumentList({
                             padding: '2px 6px',
                             borderRadius: '4px',
                             fontSize: '0.72rem',
-                            fontWeight: 800,
-                            border: '1px solid #333333',
+                            fontWeight: 400,
+                            border: '1px solid #eeeeee',
                             background: '#ffffff',
                             color: '#333333',
                             textTransform: 'uppercase'
@@ -1426,7 +1426,7 @@ export default function DocumentList({
                             {doc.file_type}
                           </span>
                         </td>
-                        <td style={{ padding: '0.65rem 1rem', fontWeight: 700, color: '#333333' }}>
+                        <td style={{ padding: '0.65rem 1rem', fontWeight: 400, color: '#333333' }}>
                           {doc.title || doc.filename}
                         </td>
                         <td style={{ padding: '0.65rem 1rem', color: '#666666', fontSize: '0.8rem' }}>
@@ -1515,7 +1515,7 @@ export default function DocumentList({
               display: 'flex',
               flexDirection: 'column',
               padding: '1.25rem',
-              border: '1.5px solid #333333',
+              border: '1px solid #eeeeee',
               borderRadius: '8px'
             }}
           >
@@ -1533,14 +1533,14 @@ export default function DocumentList({
                   padding: '2px 8px',
                   borderRadius: '4px',
                   fontSize: '0.75rem',
-                  fontWeight: 800,
-                  border: '1px solid #333333',
+                  fontWeight: 400,
+                  border: '1px solid #eeeeee',
                   background: '#ffffff',
                   color: '#333333'
                 }}>
                   PDF
                 </span>
-                <span style={{ fontSize: '1rem', fontWeight: 800, color: '#333333' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 400, color: '#333333' }}>
                   {previewDoc.title || previewDoc.filename}
                 </span>
               </div>
@@ -1587,7 +1587,7 @@ export default function DocumentList({
               maxWidth: '460px',
               width: '90vw',
               padding: '1.5rem',
-              border: '1.5px solid #333333',
+              border: '1px solid #eeeeee',
               borderRadius: '8px',
               background: '#ffffff',
               display: 'flex',
@@ -1599,7 +1599,7 @@ export default function DocumentList({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #eeeeee', paddingBottom: '0.65rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Folders size={20} style={{ color: '#333333' }} />
-                <span style={{ fontSize: '1rem', fontWeight: 800, color: '#333333' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 400, color: '#333333' }}>
                   {modalState.type === 'create'
                     ? (modalState.parentId ? `Tạo thư mục con` : 'Tạo thư mục mới')
                     : modalState.type === 'rename'
@@ -1635,7 +1635,7 @@ export default function DocumentList({
                   </div>
                 )}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#333333', marginBottom: '0.35rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 400, color: '#333333', marginBottom: '0.35rem' }}>
                     Tên thư mục:
                   </label>
                   <input
@@ -1648,7 +1648,7 @@ export default function DocumentList({
                       width: '100%',
                       padding: '0.55rem 0.85rem',
                       fontSize: '0.875rem',
-                      border: '1.5px solid #333333',
+                      border: '1px solid #eeeeee',
                       borderRadius: '6px',
                       background: '#ffffff',
                       color: '#333333',
@@ -1681,7 +1681,7 @@ export default function DocumentList({
                 type="button"
                 className="btn btn-primary"
                 onClick={handleModalSubmit}
-                style={{ padding: '0.5rem 1.25rem', fontSize: '0.825rem', fontWeight: 800 }}
+                style={{ padding: '0.5rem 1.25rem', fontSize: '0.825rem', fontWeight: 400}}
               >
                 {modalState.type === 'create'
                   ? 'Tạo thư mục'
@@ -1703,7 +1703,7 @@ export default function DocumentList({
           display: flex !important;
         }
         .doc-folder-card:hover {
-          border-color: #333333 !important;
+          border-color: #cccccc !important;
           background: #fafafa !important;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
