@@ -4,6 +4,7 @@ import SidebarTree from './components/SidebarTree';
 import UploadSection from './components/UploadSection';
 import QuizList from './components/QuizList';
 import DashboardWidgets from './components/DashboardWidgets';
+import DocumentList from './components/DocumentList';
 import PreviewEditor from './components/PreviewEditor';
 import QuizPlayer from './components/QuizPlayer';
 import ResultView from './components/ResultView';
@@ -12,11 +13,13 @@ import { getQuizDetail, updateCachedQuiz, getCachedQuizSync } from './services/d
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
+  const [activeHomeTab, setActiveHomeTab] = useState('quizzes'); // 'quizzes' | 'documents'
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [currentResult, setCurrentResult] = useState(null);
   const [quizzesList, setQuizzesList] = useState([]);
   const [refreshListTrigger, setRefreshListTrigger] = useState(0);
   const [refreshTreeTrigger, setRefreshTreeTrigger] = useState(0);
+  const [refreshDocTrigger, setRefreshDocTrigger] = useState(0);
   const [playerSessionKey, setPlayerSessionKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingQuizId, setLoadingQuizId] = useState(null);
@@ -185,89 +188,165 @@ export default function App() {
             {/* Left Column: Sidebar Tree Navigation & Hierarchy */}
             <SidebarTree
               selectedFilter={selectedTreeFilter}
-              onSelectFilter={setSelectedTreeFilter}
+              onSelectFilter={(filter, tab) => {
+                setSelectedTreeFilter(filter);
+                if (tab) {
+                  setActiveHomeTab(tab);
+                } else if (filter.type === 'documents') {
+                  setActiveHomeTab('documents');
+                }
+              }}
               refreshTrigger={refreshTreeTrigger}
+              activeHomeTab={activeHomeTab}
               onTreeUpdated={() => {
-                // Avoid double fetch: only refresh list/KPIs, tree has already updated itself
                 setRefreshListTrigger(prev => prev + 1);
+                setRefreshDocTrigger(prev => prev + 1);
               }}
             />
 
             {/* Central Workspace */}
             <div className="home-main-content">
-              {/* Header Title Bar */}
-              <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem' }}>
-                <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#333333', margin: 0 }}>
-                  Quản lý đề thi & học tập
-                </h1>
-                <span className="badge">
-                  {totalQuizzesCount} bài thi • {totalQuestionsCount} câu hỏi
-                </span>
-              </div>
-
-              {/* 3 Thẻ Thống Kê KPI Gọn Gàng */}
-              <div className="kpi-grid">
-                <div className="kpi-card">
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
-                    Tổng số đề thi
-                  </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
-                    {totalQuizzesCount}
-                  </div>
+              {/* Header Title Bar with Mode Tabs */}
+              <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <h1 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#333333', margin: 0 }}>
+                    {activeHomeTab === 'documents' ? 'Kho tài liệu Word & PDF' : 'Quản lý đề thi & học tập'}
+                  </h1>
                 </div>
 
-                <div className="kpi-card">
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
-                    Tổng số câu hỏi
-                  </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
-                    {totalQuestionsCount}
-                  </div>
-                </div>
-
-                <div className="kpi-card">
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
-                    Đã hoàn thành
-                  </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
-                    {completedCount}
-                  </div>
-                </div>
-              </div>
-
-              {/* Hero Banner & Droppable Upload */}
-              <UploadSection onUploadSuccess={handleUploadSuccess} />
-
-              {/* Split Grid: Left Quizzes & Right Widgets */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
-                {/* Left Side: Quiz List */}
-                <div style={{ flex: '1 1 65%' }}>
-                  <QuizList
-                    onSelectQuiz={handleSelectQuiz}
-                    onStartQuiz={handleStartQuiz}
-                    refreshTrigger={refreshListTrigger}
-                    selectedFilter={selectedTreeFilter}
-                    onClearFilter={() => setSelectedTreeFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] })}
-                    onQuizPlacementChanged={() => {
-                      setRefreshTreeTrigger(prev => prev + 1);
+                {/* Mode Switcher Tabs */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveHomeTab('quizzes');
+                      if (selectedFilter.type === 'documents') {
+                        setSelectedTreeFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] });
+                      }
                     }}
-                    searchQuery={searchQuery}
-                    loadingQuizId={loadingQuizId}
-                    onQuizzesLoaded={(list) => setQuizzesList(list)}
-                  />
-                </div>
-
-                {/* Right Side: Dashboard Widgets */}
-                <div style={{ flex: '1 1 35%', minWidth: '300px' }}>
-                  <DashboardWidgets
-                    quizzes={quizzesList}
-                    onSelectQuiz={handleSelectQuiz}
-                    onStartQuiz={handleStartQuiz}
-                    onResumeProgress={handleStartQuiz}
-                    loadingQuizId={loadingQuizId}
-                  />
+                    style={{
+                      padding: '0.4rem 0.9rem',
+                      borderRadius: '6px',
+                      fontSize: '0.825rem',
+                      fontWeight: 800,
+                      background: '#ffffff',
+                      color: '#333333',
+                      border: activeHomeTab === 'quizzes' ? '1.5px solid #333333' : '1px solid #eeeeee',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Đề thi ({totalQuizzesCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveHomeTab('documents');
+                      if (selectedFilter.type === 'all') {
+                        setSelectedTreeFilter({ type: 'documents', id: 'documents', name: 'Tất cả tài liệu', path: ['Tài liệu'] });
+                      }
+                    }}
+                    style={{
+                      padding: '0.4rem 0.9rem',
+                      borderRadius: '6px',
+                      fontSize: '0.825rem',
+                      fontWeight: 800,
+                      background: '#ffffff',
+                      color: '#333333',
+                      border: activeHomeTab === 'documents' ? '1.5px solid #333333' : '1px solid #eeeeee',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Tài liệu
+                  </button>
                 </div>
               </div>
+
+              {activeHomeTab === 'documents' ? (
+                /* VIEW: DOCUMENT MANAGER */
+                <DocumentList
+                  selectedFilter={selectedTreeFilter}
+                  onClearFilter={() => setSelectedTreeFilter({ type: 'documents', id: 'documents', name: 'Tất cả tài liệu', path: ['Tài liệu'] })}
+                  searchQuery={searchQuery}
+                  onConvertDocToQuiz={(quiz) => {
+                    setCurrentQuiz(quiz);
+                    setCurrentView('preview');
+                    setRefreshListTrigger(prev => prev + 1);
+                    setRefreshTreeTrigger(prev => prev + 1);
+                  }}
+                  onTreeUpdated={() => {
+                    setRefreshTreeTrigger(prev => prev + 1);
+                    setRefreshDocTrigger(prev => prev + 1);
+                  }}
+                  refreshTrigger={refreshDocTrigger}
+                />
+              ) : (
+                /* VIEW: QUIZZES DASHBOARD */
+                <>
+                  {/* 3 Thẻ Thống Kê KPI Gọn Gàng */}
+                  <div className="kpi-grid">
+                    <div className="kpi-card">
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
+                        Tổng số đề thi
+                      </span>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
+                        {totalQuizzesCount}
+                      </div>
+                    </div>
+
+                    <div className="kpi-card">
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
+                        Tổng số câu hỏi
+                      </span>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
+                        {totalQuestionsCount}
+                      </div>
+                    </div>
+
+                    <div className="kpi-card">
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555555', textTransform: 'uppercase' }}>
+                        Đã hoàn thành
+                      </span>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#333333', lineHeight: 1 }}>
+                        {completedCount}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hero Banner & Droppable Upload */}
+                  <UploadSection onUploadSuccess={handleUploadSuccess} />
+
+                  {/* Split Grid: Left Quizzes & Right Widgets */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+                    {/* Left Side: Quiz List */}
+                    <div style={{ flex: '1 1 65%' }}>
+                      <QuizList
+                        onSelectQuiz={handleSelectQuiz}
+                        onStartQuiz={handleStartQuiz}
+                        refreshTrigger={refreshListTrigger}
+                        selectedFilter={selectedTreeFilter}
+                        onClearFilter={() => setSelectedTreeFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] })}
+                        onQuizPlacementChanged={() => {
+                          setRefreshTreeTrigger(prev => prev + 1);
+                        }}
+                        searchQuery={searchQuery}
+                        loadingQuizId={loadingQuizId}
+                        onQuizzesLoaded={(list) => setQuizzesList(list)}
+                      />
+                    </div>
+
+                    {/* Right Side: Dashboard Widgets */}
+                    <div style={{ flex: '1 1 35%', minWidth: '300px' }}>
+                      <DashboardWidgets
+                        quizzes={quizzesList}
+                        onSelectQuiz={handleSelectQuiz}
+                        onStartQuiz={handleStartQuiz}
+                        onResumeProgress={handleStartQuiz}
+                        loadingQuizId={loadingQuizId}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

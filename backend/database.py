@@ -73,6 +73,15 @@ def invalidate_quiz_cache(quiz_id: Optional[str] = None):
         cache_clear_prefix("quiz_")
 
 
+def invalidate_doc_cache(doc_id: Optional[str] = None):
+    """Invalidate cached documents and tree."""
+    cache_clear_prefix("documents_")
+    cache_clear_prefix("doc_folders_")
+    cache_clear_key("full_tree")
+    if doc_id:
+        cache_clear_key(f"doc_{doc_id}")
+
+
 def invalidate_tree_cache():
     """Invalidate hierarchical tree and categorization caches."""
     cache_clear_key("full_tree")
@@ -80,6 +89,8 @@ def invalidate_tree_cache():
     cache_clear_key("subjects_list")
     cache_clear_prefix("semesters_")
     cache_clear_key("quizzes_list")
+    cache_clear_prefix("documents_")
+    cache_clear_prefix("doc_folders_")
 
 
 # ==============================================================================
@@ -226,6 +237,43 @@ def init_db():
     );
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS document_folders (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        parent_id TEXT DEFAULT NULL,
+        subject_id TEXT DEFAULT '',
+        semester_id TEXT DEFAULT '',
+        class_id TEXT DEFAULT '',
+        order_idx INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS documents (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER NOT NULL DEFAULT 0,
+        file_type TEXT NOT NULL,
+        folder_id TEXT DEFAULT '',
+        subject_id TEXT DEFAULT '',
+        semester_id TEXT DEFAULT '',
+        class_id TEXT DEFAULT '',
+        folder_path TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cursor.execute("PRAGMA table_info(documents)")
+    doc_cols = [col[1] for col in cursor.fetchall()]
+    if 'folder_id' not in doc_cols:
+        cursor.execute("ALTER TABLE documents ADD COLUMN folder_id TEXT DEFAULT ''")
+
     # Performance Indexes
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_questions_quiz_id ON questions(quiz_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_questions_quiz_order ON questions(quiz_id, order_idx);")
@@ -236,6 +284,13 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_subjects_class_id ON subjects(class_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_semesters_class_id ON semesters(class_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_attempts_quiz_id ON attempts(quiz_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_subject_id ON documents(subject_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_semester_id ON documents(semester_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_class_id ON documents(class_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_folder_id ON documents(folder_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_documents_file_type ON documents(file_type);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_folders_parent_id ON document_folders(parent_id);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_folders_subject_id ON document_folders(subject_id);")
 
     conn.commit()
     conn.close()
@@ -710,8 +765,507 @@ def update_quiz_placement(
     return True
 
 
+# ==============================================================================
+# Document Management Functions
+# ==============================================================================
+# Document Folders (Tree Structure)
+# ==============================================================================
+def create_document_folder(
+    name: str,
+    parent_id: Optional[str] = None,
+    subject_id: str = '',
+    semester_id: str = '',
+    class_id: str = ''
+) -> Dict[str, Any]:
+    """Create a new folder or subfolder for documents."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    folder_id = f"folder_{uuid.uuid4().hex[:10]}"
+
+    clean_parent = parent_id.strip() if parent_id and parent_id.strip() else None
+
+    # Inherit subject_id, semester_id, class_id from parent folder if not provided
+    if clean_parent and not subject_id:
+        cursor.execute("SELECT subject_id, semester_id, class_id FROM document_folders WHERE id = ?", (clean_parent,))
+        p_row = cursor.fetchone()
+        if p_row:
+            subject_id = p_row['subject_id'] or ''
+            semester_id = p_row['semester_id'] or ''
+            class_id = p_row['class_id'] or ''
+
+    cursor.execute("""
+    INSERT INTO document_folders (
+        id, name, parent_id, subject_id, semester_id, class_id
+    ) VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        folder_id, name.strip(), clean_parent,
+        subject_id or '', semester_id or '', class_id or ''
+    ))
+    conn.commit()
+
+    cursor.execute("SELECT * FROM document_folders WHERE id = ?", (folder_id,))
+    row = row_to_dict(cursor, cursor.fetchone())
+    conn.close()
+    invalidate_doc_cache()
+    return row
+
+
+def get_document_folder(folder_id: str, conn = None) -> Optional[Dict[str, Any]]:
+    """Retrieve single folder metadata."""
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM document_folders WHERE id = ?", (folder_id,))
+    row = row_to_dict(cursor, cursor.fetchone())
+    if should_close:
+        conn.close()
+    return row
+
+
+def get_document_folders(
+    parent_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    conn = None
+) -> List[Dict[str, Any]]:
+    """Retrieve list of folders with optional parent_id filter."""
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+
+    cursor = conn.cursor()
+    query = "SELECT * FROM document_folders WHERE 1=1"
+    params = []
+
+    if parent_id is not None:
+        if parent_id == 'root' or parent_id == '':
+            query += " AND (parent_id IS NULL OR parent_id = '')"
+        else:
+            query += " AND parent_id = ?"
+            params.append(parent_id)
+
+    if subject_id:
+        query += " AND subject_id = ?"
+        params.append(subject_id)
+
+    query += " ORDER BY order_idx ASC, name ASC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    result = rows_to_dicts(cursor, rows)
+
+    if should_close:
+        conn.close()
+    return result
+
+
+def get_document_folders_tree(
+    subject_id: Optional[str] = None,
+    semester_id: Optional[str] = None,
+    class_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Retrieve complete hierarchical tree of folders with document counts."""
+    cache_key = f"doc_folders_tree_{class_id or ''}_{semester_id or ''}_{subject_id or ''}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Query all folders
+    query = "SELECT * FROM document_folders WHERE 1=1"
+    params = []
+    if subject_id:
+        query += " AND subject_id = ?"
+        params.append(subject_id)
+    elif semester_id:
+        query += " AND semester_id = ?"
+        params.append(semester_id)
+    elif class_id:
+        query += " AND class_id = ?"
+        params.append(class_id)
+
+    query += " ORDER BY order_idx ASC, name ASC"
+    cursor.execute(query, tuple(params))
+    all_folders = rows_to_dicts(cursor, cursor.fetchall())
+
+    # Query document counts grouped by folder_id
+    cursor.execute("SELECT folder_id, COUNT(*) as cnt FROM documents GROUP BY folder_id")
+    folder_doc_counts = {r['folder_id']: r['cnt'] for r in cursor.fetchall() if r['folder_id']}
+    conn.close()
+
+    # Build folder lookup and hierarchy
+    folder_map = {}
+    for f in all_folders:
+        folder_map[f['id']] = {
+            **f,
+            "children": [],
+            "direct_doc_count": folder_doc_counts.get(f['id'], 0),
+            "doc_count": folder_doc_counts.get(f['id'], 0)
+        }
+
+    root_folders = []
+    for f in all_folders:
+        p_id = f.get('parent_id')
+        if p_id and p_id in folder_map:
+            folder_map[p_id]["children"].append(folder_map[f['id']])
+        else:
+            root_folders.append(folder_map[f['id']])
+
+    # Compute total doc_count including all subfolders
+    def compute_total_docs(node):
+        total = node["direct_doc_count"]
+        for child in node["children"]:
+            total += compute_total_docs(child)
+        node["doc_count"] = total
+        return total
+
+    for rf in root_folders:
+        compute_total_docs(rf)
+
+    cache_set(cache_key, root_folders, ttl=180)
+    return root_folders
+
+
+def get_folder_breadcrumbs(folder_id: str) -> List[Dict[str, Any]]:
+    """Retrieve breadcrumb trail from root to the given folder."""
+    if not folder_id:
+        return []
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    trail = []
+    curr_id = folder_id
+
+    while curr_id:
+        cursor.execute("SELECT id, name, parent_id FROM document_folders WHERE id = ?", (curr_id,))
+        row = row_to_dict(cursor, cursor.fetchone())
+        if not row:
+            break
+        trail.append({"id": row['id'], "name": row['name']})
+        curr_id = row.get('parent_id')
+
+    conn.close()
+    trail.reverse()
+    return trail
+
+
+def update_document_folder(
+    folder_id: str,
+    name: Optional[str] = None,
+    parent_id: Optional[str] = None
+) -> bool:
+    """Update name or move folder to new parent."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    updates = []
+    params = []
+
+    if name is not None:
+        updates.append("name = ?")
+        params.append(name.strip())
+
+    if parent_id is not None:
+        clean_p = parent_id.strip() if parent_id.strip() else None
+        # Avoid circular parent assignment
+        if clean_p != folder_id:
+            updates.append("parent_id = ?")
+            params.append(clean_p)
+
+    if not updates:
+        conn.close()
+        return True
+
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(folder_id)
+
+    query = f"UPDATE document_folders SET {', '.join(updates)} WHERE id = ?"
+    cursor.execute(query, tuple(params))
+    conn.commit()
+    conn.close()
+
+    invalidate_doc_cache()
+    return True
+
+
+def delete_document_folder(folder_id: str) -> List[str]:
+    """
+    Delete folder and all its subfolders recursively.
+    Returns list of file_paths of documents that need to be deleted from disk.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Find all descendant folder IDs recursively
+    to_check = [folder_id]
+    all_folder_ids = []
+
+    while to_check:
+        curr = to_check.pop(0)
+        all_folder_ids.append(curr)
+        cursor.execute("SELECT id FROM document_folders WHERE parent_id = ?", (curr,))
+        children = [r[0] for r in cursor.fetchall()]
+        to_check.extend(children)
+
+    # Collect physical file paths of documents in these folders
+    file_paths_to_delete = []
+    placeholders = ', '.join(['?'] * len(all_folder_ids))
+    cursor.execute(f"SELECT file_path FROM documents WHERE folder_id IN ({placeholders})", tuple(all_folder_ids))
+    for r in cursor.fetchall():
+        if r[0]:
+            file_paths_to_delete.append(r[0])
+
+    # Delete documents in these folders
+    cursor.execute(f"DELETE FROM documents WHERE folder_id IN ({placeholders})", tuple(all_folder_ids))
+
+    # Delete the folders
+    cursor.execute(f"DELETE FROM document_folders WHERE id IN ({placeholders})", tuple(all_folder_ids))
+
+    conn.commit()
+    conn.close()
+
+    invalidate_doc_cache()
+    return file_paths_to_delete
+
+
+# ==============================================================================
+# Document Management Functions
+# ==============================================================================
+def create_document(
+    title: str,
+    filename: str,
+    file_path: str,
+    file_size: int,
+    file_type: str,
+    folder_id: str = '',
+    subject_id: str = '',
+    semester_id: str = '',
+    class_id: str = '',
+    folder_path: str = ''
+) -> Dict[str, Any]:
+    """Create a new document entry in database."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    doc_id = f"doc_{uuid.uuid4().hex[:10]}"
+
+    clean_folder_id = folder_id.strip() if folder_id else ''
+    sub_id = subject_id.strip() if subject_id else ''
+    sem_id = semester_id.strip() if semester_id else ''
+    cls_id = class_id.strip() if class_id else ''
+
+    # If folder_id provided and no subject_id, inherit from folder
+    if clean_folder_id and (not sub_id or not sem_id or not cls_id):
+        cursor.execute("SELECT subject_id, semester_id, class_id FROM document_folders WHERE id = ?", (clean_folder_id,))
+        f_row = cursor.fetchone()
+        if f_row:
+            if not sub_id: sub_id = f_row['subject_id'] or ''
+            if not sem_id: sem_id = f_row['semester_id'] or ''
+            if not cls_id: cls_id = f_row['class_id'] or ''
+
+    # Auto-resolve semester_id and class_id if subject_id is supplied
+    if sub_id and (not sem_id or not cls_id):
+        cursor.execute("SELECT semester_id, class_id FROM subjects WHERE id = ?", (sub_id,))
+        row = cursor.fetchone()
+        if row:
+            if not sem_id:
+                sem_id = row['semester_id'] or ''
+            if not cls_id:
+                cls_id = row['class_id'] or ''
+
+    if sem_id and not cls_id:
+        cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_id,))
+        row = cursor.fetchone()
+        if row:
+            cls_id = row['class_id'] or ''
+
+    cursor.execute("""
+    INSERT INTO documents (
+        id, title, filename, file_path, file_size, file_type, folder_id,
+        subject_id, semester_id, class_id, folder_path
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        doc_id, title.strip(), filename.strip(), file_path, file_size, file_type.lower(),
+        clean_folder_id, sub_id, sem_id, cls_id, folder_path or ''
+    ))
+    conn.commit()
+
+    cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
+    row = row_to_dict(cursor, cursor.fetchone())
+    conn.close()
+    invalidate_doc_cache(doc_id)
+    return row
+
+
+def get_documents(
+    class_id: Optional[str] = None,
+    semester_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    folder_id: Optional[str] = None,
+    search: Optional[str] = None,
+    file_type: Optional[str] = None,
+    conn = None
+) -> List[Dict[str, Any]]:
+    """Retrieve list of documents filtered by class, semester, subject, folder, or search term."""
+    cache_key = f"documents_{class_id or ''}_{semester_id or ''}_{subject_id or ''}_{folder_id or ''}_{file_type or ''}_{search or ''}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+
+    cursor = conn.cursor()
+    query = "SELECT * FROM documents WHERE 1=1"
+    params = []
+
+    if folder_id is not None:
+        if folder_id == 'root':
+            query += " AND (folder_id IS NULL OR folder_id = '')"
+        elif folder_id:
+            query += " AND folder_id = ?"
+            params.append(folder_id)
+
+    if subject_id:
+        query += " AND subject_id = ?"
+        params.append(subject_id)
+    elif semester_id:
+        query += " AND semester_id = ?"
+        params.append(semester_id)
+    elif class_id:
+        query += " AND class_id = ?"
+        params.append(class_id)
+
+    if file_type:
+        query += " AND file_type = ?"
+        params.append(file_type.lower())
+
+    if search:
+        query += " AND (title LIKE ? OR filename LIKE ? OR folder_path LIKE ?)"
+        term = f"%{search.strip()}%"
+        params.extend([term, term, term])
+
+    query += " ORDER BY created_at DESC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    result = rows_to_dicts(cursor, rows)
+
+    if should_close:
+        conn.close()
+
+    cache_set(cache_key, result, ttl=180)
+    return result
+
+
+def get_document(doc_id: str) -> Optional[Dict[str, Any]]:
+    """Get single document by ID."""
+    cached = cache_get(f"doc_{doc_id}")
+    if cached is not None:
+        return cached
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
+    row = row_to_dict(cursor, cursor.fetchone())
+    conn.close()
+
+    if row:
+        cache_set(f"doc_{doc_id}", row, ttl=300)
+    return row
+
+
+def update_document(
+    doc_id: str,
+    title: Optional[str] = None,
+    folder_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    semester_id: Optional[str] = None,
+    class_id: Optional[str] = None,
+    folder_path: Optional[str] = None
+) -> bool:
+    """Update title and/or placement of a document."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    updates = []
+    params = []
+
+    if title is not None:
+        updates.append("title = ?")
+        params.append(title.strip())
+
+    if folder_id is not None:
+        updates.append("folder_id = ?")
+        params.append(folder_id.strip())
+
+    if subject_id is not None:
+        sub_id = subject_id.strip() if subject_id else ''
+        sem_id = semester_id.strip() if semester_id else ''
+        cls_id = class_id.strip() if class_id else ''
+
+        if sub_id and (not sem_id or not cls_id):
+            cursor.execute("SELECT semester_id, class_id FROM subjects WHERE id = ?", (sub_id,))
+            s_row = cursor.fetchone()
+            if s_row:
+                if not sem_id:
+                    sem_id = s_row['semester_id'] or ''
+                if not cls_id:
+                    cls_id = s_row['class_id'] or ''
+
+        if sem_id and not cls_id:
+            cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_id,))
+            c_row = cursor.fetchone()
+            if c_row:
+                cls_id = c_row['class_id'] or ''
+
+        updates.extend(["subject_id = ?", "semester_id = ?", "class_id = ?"])
+        params.extend([sub_id, sem_id, cls_id])
+
+    if folder_path is not None:
+        updates.append("folder_path = ?")
+        params.append(folder_path.strip())
+
+    if not updates:
+        conn.close()
+        return True
+
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(doc_id)
+
+    query = f"UPDATE documents SET {', '.join(updates)} WHERE id = ?"
+    cursor.execute(query, tuple(params))
+    conn.commit()
+    conn.close()
+
+    invalidate_doc_cache(doc_id)
+    return True
+
+
+def delete_document(doc_id: str) -> Optional[Dict[str, Any]]:
+    """Delete document from database and return its metadata so file can be removed from disk."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
+    row = row_to_dict(cursor, cursor.fetchone())
+    if not row:
+        conn.close()
+        return None
+
+    cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+    conn.commit()
+    conn.close()
+
+    invalidate_doc_cache(doc_id)
+    return row
+
+
 def get_full_tree() -> Dict[str, Any]:
-    """Retrieve full hierarchical structure: Classes -> Semesters -> Subjects with Quiz counts."""
+    """Retrieve full hierarchical structure: Classes -> Semesters -> Subjects with Quiz and Document counts."""
     cached = cache_get("full_tree")
     if cached is not None:
         return cached
@@ -722,6 +1276,7 @@ def get_full_tree() -> Dict[str, Any]:
     semesters = get_semesters(conn=conn)
     subjects = get_subjects(conn=conn)
     quizzes = get_quizzes(conn=conn)
+    documents = get_documents(conn=conn)
     conn.close()
 
     subject_quiz_counts = {}
@@ -744,6 +1299,26 @@ def get_full_tree() -> Dict[str, Any]:
         if not sub_id and not sem_id and not cls_id:
             uncategorized_quizzes.append(q)
 
+    subject_doc_counts = {}
+    semester_doc_counts = {}
+    class_doc_counts = {}
+    uncategorized_docs = []
+
+    for d in documents:
+        sub_id = d.get('subject_id') or ''
+        sem_id = d.get('semester_id') or ''
+        cls_id = d.get('class_id') or ''
+
+        if sub_id:
+            subject_doc_counts[sub_id] = subject_doc_counts.get(sub_id, 0) + 1
+        if sem_id:
+            semester_doc_counts[sem_id] = semester_doc_counts.get(sem_id, 0) + 1
+        if cls_id:
+            class_doc_counts[cls_id] = class_doc_counts.get(cls_id, 0) + 1
+
+        if not sub_id and not sem_id and not cls_id:
+            uncategorized_docs.append(d)
+
     tree_classes = []
     for cls in classes:
         cls_id = cls['id']
@@ -756,17 +1331,20 @@ def get_full_tree() -> Dict[str, Any]:
                     if sub.get('semester_id') == sem_id or (not sub.get('semester_id') and sub.get('class_id') == cls_id):
                         sem_subjects.append({
                             **sub,
-                            "quiz_count": subject_quiz_counts.get(sub['id'], 0)
+                            "quiz_count": subject_quiz_counts.get(sub['id'], 0),
+                            "doc_count": subject_doc_counts.get(sub['id'], 0)
                         })
                 cls_semesters.append({
                     **sem,
                     "subjects": sem_subjects,
-                    "quiz_count": semester_quiz_counts.get(sem_id, 0)
+                    "quiz_count": semester_quiz_counts.get(sem_id, 0),
+                    "doc_count": semester_doc_counts.get(sem_id, 0)
                 })
         tree_classes.append({
             **cls,
             "semesters": cls_semesters,
-            "quiz_count": class_quiz_counts.get(cls_id, 0)
+            "quiz_count": class_quiz_counts.get(cls_id, 0),
+            "doc_count": class_doc_counts.get(cls_id, 0)
         })
 
     result = {
@@ -775,7 +1353,9 @@ def get_full_tree() -> Dict[str, Any]:
         "all_semesters": semesters,
         "all_subjects": subjects,
         "total_quizzes": len(quizzes),
-        "uncategorized_count": len(uncategorized_quizzes)
+        "total_documents": len(documents),
+        "uncategorized_count": len(uncategorized_quizzes),
+        "uncategorized_doc_count": len(uncategorized_docs)
     }
     cache_set("full_tree", result, ttl=180)
     return result

@@ -4,8 +4,10 @@ Handles file upload, XML highlight parsing, quiz editing, interactive quiz takin
 """
 import os
 import io
+import json
+import uuid
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +21,10 @@ from backend.database import (
     get_subjects, create_subject, update_subject, delete_subject, update_quiz_subject,
     get_classes, create_class, update_class, delete_class,
     get_semesters, create_semester, update_semester, delete_semester,
-    update_quiz_placement, get_full_tree, get_subject, move_subject
+    update_quiz_placement, get_full_tree, get_subject, move_subject,
+    create_document, get_documents, get_document, update_document, delete_document,
+    create_document_folder, get_document_folders, get_document_folders_tree,
+    get_document_folder, get_folder_breadcrumbs, update_document_folder, delete_document_folder
 )
 from fastapi.middleware.gzip import GZipMiddleware
 from backend.grading import grade_submission
@@ -96,6 +101,32 @@ class UpdateQuizPlacementRequest(BaseModel):
     subject_id: Optional[str] = None
     semester_id: Optional[str] = None
     class_id: Optional[str] = None
+
+
+class UpdateDocumentRequest(BaseModel):
+    title: Optional[str] = None
+    folder_id: Optional[str] = None
+    subject_id: Optional[str] = None
+    semester_id: Optional[str] = None
+    class_id: Optional[str] = None
+    folder_path: Optional[str] = None
+
+
+class CreateFolderRequest(BaseModel):
+    name: str
+    parent_id: Optional[str] = ''
+    subject_id: Optional[str] = ''
+    semester_id: Optional[str] = ''
+    class_id: Optional[str] = ''
+
+
+class UpdateFolderRequest(BaseModel):
+    name: Optional[str] = None
+    parent_id: Optional[str] = None
+
+
+DOCUMENTS_DIR = os.path.join(os.path.dirname(__file__), "uploads", "documents")
+os.makedirs(DOCUMENTS_DIR, exist_ok=True)
 
 
 
@@ -316,6 +347,317 @@ def place_quiz_route(quiz_id: str, payload: UpdateQuizPlacementRequest):
         raise HTTPException(status_code=404, detail="Không tìm thấy bài thi")
     update_quiz_placement(quiz_id, subject_id=payload.subject_id, semester_id=payload.semester_id, class_id=payload.class_id)
     return {"success": True, "message": "Cập nhật vị trí bài thi thành công"}
+
+
+# ==============================================================================
+# Document Folder Management Endpoints
+# ==============================================================================
+@app.get("/api/document-folders/tree")
+def list_document_folders_tree(
+    subject_id: Optional[str] = None,
+    semester_id: Optional[str] = None,
+    class_id: Optional[str] = None
+):
+    folders = get_document_folders_tree(
+        subject_id=subject_id,
+        semester_id=semester_id,
+        class_id=class_id
+    )
+    return {"folders": folders}
+
+
+@app.get("/api/document-folders/breadcrumbs/{folder_id}")
+def get_breadcrumbs(folder_id: str):
+    crumbs = get_folder_breadcrumbs(folder_id)
+    return {"breadcrumbs": crumbs}
+
+
+@app.post("/api/document-folders")
+def create_folder(payload: CreateFolderRequest):
+    if not payload.name or not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Tên thư mục không được để trống")
+    folder = create_document_folder(
+        name=payload.name.strip(),
+        parent_id=payload.parent_id or '',
+        subject_id=payload.subject_id or '',
+        semester_id=payload.semester_id or '',
+        class_id=payload.class_id or ''
+    )
+    return {"success": True, "folder": folder}
+
+
+@app.put("/api/document-folders/{folder_id}")
+def edit_folder(folder_id: str, payload: UpdateFolderRequest):
+    existing = get_document_folder(folder_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Không tìm thấy thư mục")
+
+    if payload.name is not None and not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Tên thư mục không được để trống")
+
+    updated = update_document_folder(
+        folder_id,
+        name=payload.name.strip() if payload.name is not None else None,
+        parent_id=payload.parent_id
+    )
+    return {"success": True, "folder": updated}
+
+
+@app.delete("/api/document-folders/{folder_id}")
+def remove_folder(folder_id: str):
+    existing = get_document_folder(folder_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Không tìm thấy thư mục")
+
+    # Delete folder and all descendants recursively, returns files to delete
+    files_to_delete = delete_document_folder(folder_id)
+    for fpath in files_to_delete:
+        if fpath and os.path.exists(fpath):
+            try:
+                os.remove(fpath)
+            except Exception as e:
+                print(f"Lỗi xóa file {fpath}: {e}")
+
+    return {"success": True, "message": "Xóa thư mục thành công"}
+
+
+# ==============================================================================
+# Document Management Endpoints (Word & PDF)
+# ==============================================================================
+@app.post("/api/documents/upload")
+async def upload_documents(
+    files: List[UploadFile] = File(...),
+    subject_id: Optional[str] = Form(None),
+    semester_id: Optional[str] = Form(None),
+    class_id: Optional[str] = Form(None),
+    folder_id: Optional[str] = Form(None),
+    folder_paths: Optional[str] = Form(None)
+):
+    """
+    Upload one or multiple documents (.docx, .doc, .pdf) or an entire directory.
+    folder_paths is an optional JSON string list of relative paths matching files list.
+    """
+    if not files:
+        raise HTTPException(status_code=400, detail="Không có file nào được tải lên")
+
+    parsed_paths = []
+    if folder_paths:
+        try:
+            parsed_paths = json.loads(folder_paths)
+        except Exception:
+            parsed_paths = []
+
+    uploaded_docs = []
+    errors = []
+    folder_cache = {}
+
+    for idx, f in enumerate(files):
+        filename = f.filename or "untitled"
+        # Determine extension
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in [".docx", ".doc", ".pdf"]:
+            errors.append(f"{filename}: Định dạng không được hỗ trợ (chỉ nhận .docx, .doc, .pdf)")
+            continue
+
+        file_type = ext.replace(".", "")
+        content = await f.read()
+        file_size = len(content)
+
+        if file_size == 0:
+            errors.append(f"{filename}: File rỗng (0 bytes)")
+            continue
+
+        # Safe unique storage filename
+        unique_prefix = uuid.uuid4().hex[:8]
+        safe_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
+        disk_filename = f"{unique_prefix}_{safe_filename}"
+        disk_path = os.path.join(DOCUMENTS_DIR, disk_filename)
+
+        with open(disk_path, "wb") as out_f:
+            out_f.write(content)
+
+        relative_folder = ""
+        target_folder_id = folder_id or ''
+
+        if idx < len(parsed_paths) and parsed_paths[idx]:
+            rel_path = str(parsed_paths[idx]).replace("\\", "/")
+            rel_dir = os.path.dirname(rel_path)
+            relative_folder = rel_dir
+            if rel_dir:
+                parts = [p.strip() for p in rel_dir.split('/') if p.strip()]
+                current_parent = folder_id or ''
+                for part in parts:
+                    cache_key = (current_parent, part)
+                    if cache_key in folder_cache:
+                        current_parent = folder_cache[cache_key]
+                    else:
+                        existing_folders = get_document_folders(parent_id=current_parent, subject_id=subject_id or '')
+                        match = next((fol for fol in existing_folders if fol['name'].lower() == part.lower()), None)
+                        if match:
+                            f_id = match['id']
+                        else:
+                            new_f = create_document_folder(
+                                name=part,
+                                parent_id=current_parent,
+                                subject_id=subject_id or '',
+                                semester_id=semester_id or '',
+                                class_id=class_id or ''
+                            )
+                            f_id = new_f['id']
+                        folder_cache[cache_key] = f_id
+                        current_parent = f_id
+                target_folder_id = current_parent
+
+        title = os.path.splitext(filename)[0]
+
+        doc = create_document(
+            title=title,
+            filename=filename,
+            file_path=disk_path,
+            file_size=file_size,
+            file_type=file_type,
+            folder_id=target_folder_id,
+            subject_id=subject_id or '',
+            semester_id=semester_id or '',
+            class_id=class_id or '',
+            folder_path=relative_folder
+        )
+        uploaded_docs.append(doc)
+
+    return {
+        "success": True,
+        "count": len(uploaded_docs),
+        "documents": uploaded_docs,
+        "errors": errors
+    }
+
+
+@app.get("/api/documents")
+def list_documents(
+    class_id: Optional[str] = None,
+    semester_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    folder_id: Optional[str] = None,
+    search: Optional[str] = None,
+    file_type: Optional[str] = None
+):
+    docs = get_documents(
+        class_id=class_id,
+        semester_id=semester_id,
+        subject_id=subject_id,
+        folder_id=folder_id,
+        search=search,
+        file_type=file_type
+    )
+    return {"documents": docs, "total": len(docs)}
+
+
+@app.get("/api/documents/{doc_id}/download")
+def download_document(doc_id: str):
+    doc = get_document(doc_id)
+    if not doc or not os.path.exists(doc['file_path']):
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+
+    media_type = "application/octet-stream"
+    if doc['file_type'] == 'pdf':
+        media_type = "application/pdf"
+    elif doc['file_type'] == 'docx':
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif doc['file_type'] == 'doc':
+        media_type = "application/msword"
+
+    return FileResponse(
+        doc['file_path'],
+        media_type=media_type,
+        filename=doc['filename']
+    )
+
+
+@app.get("/api/documents/{doc_id}/view")
+def view_document_inline(doc_id: str):
+    doc = get_document(doc_id)
+    if not doc or not os.path.exists(doc['file_path']):
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+
+    media_type = "application/octet-stream"
+    if doc['file_type'] == 'pdf':
+        media_type = "application/pdf"
+    elif doc['file_type'] == 'docx':
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+    headers = {
+        "Content-Disposition": f'inline; filename="{doc["filename"]}"'
+    }
+    return FileResponse(doc['file_path'], media_type=media_type, headers=headers)
+
+
+@app.delete("/api/documents/{doc_id}")
+def remove_document(doc_id: str):
+    doc = delete_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+
+    # Delete physical file
+    if doc.get('file_path') and os.path.exists(doc['file_path']):
+        try:
+            os.remove(doc['file_path'])
+        except Exception as e:
+            print(f"Lỗi xóa file vật lý: {e}")
+
+    return {"success": True, "message": "Xóa tài liệu thành công"}
+
+
+@app.put("/api/documents/{doc_id}")
+def edit_document(doc_id: str, payload: UpdateDocumentRequest):
+    existing = get_document(doc_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+
+    update_document(
+        doc_id=doc_id,
+        title=payload.title,
+        folder_id=payload.folder_id,
+        subject_id=payload.subject_id,
+        semester_id=payload.semester_id,
+        class_id=payload.class_id,
+        folder_path=payload.folder_path
+    )
+    updated = get_document(doc_id)
+    return {"success": True, "document": updated}
+
+
+@app.post("/api/documents/{doc_id}/create-quiz")
+def convert_document_to_quiz(doc_id: str):
+    doc = get_document(doc_id)
+    if not doc or not os.path.exists(doc['file_path']):
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+
+    if doc['file_type'] != 'docx':
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ tạo đề thi từ file Word (.docx)")
+
+    with open(doc['file_path'], "rb") as f:
+        content = f.read()
+
+    elements = parse_docx_bytes(content)
+    detected_questions = detect_questions_from_elements(elements)
+    if not detected_questions:
+        raise HTTPException(status_code=422, detail="Không tìm thấy câu hỏi hoặc highlight hợp lệ trong file này")
+
+    quiz_id = save_quiz(
+        title=doc['title'] or doc['filename'],
+        filename=doc['filename'],
+        questions=detected_questions
+    )
+    if doc.get('subject_id'):
+        update_quiz_placement(
+            quiz_id,
+            subject_id=doc.get('subject_id'),
+            semester_id=doc.get('semester_id'),
+            class_id=doc.get('class_id')
+        )
+
+    created_quiz = get_quiz(quiz_id)
+    return {"success": True, "quiz": created_quiz}
 
 
 

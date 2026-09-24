@@ -9,7 +9,8 @@ export default function SidebarTree({
   selectedFilter,
   onSelectFilter,
   refreshTrigger,
-  onTreeUpdated
+  onTreeUpdated,
+  activeHomeTab = 'quizzes'
 }) {
   const [treeData, setTreeData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -401,10 +402,18 @@ export default function SidebarTree({
       {/* Quick Navigation Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '0.5rem', paddingBottom: '0.65rem', borderBottom: '1px solid #eeeeee' }}>
         <div
-          className={`sidebar-nav-item ${selectedFilter?.type === 'all' ? 'active' : ''}`}
-          onClick={() => onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] })}
+          className={`sidebar-nav-item ${selectedFilter?.type === 'all' && activeHomeTab === 'quizzes' ? 'active' : ''}`}
+          onClick={() => onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] }, 'quizzes')}
         >
           <span>Tất cả đề thi</span>
+          {treeData?.total_quizzes > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{treeData.total_quizzes}</span>}
+        </div>
+        <div
+          className={`sidebar-nav-item ${(selectedFilter?.type === 'documents' || activeHomeTab === 'documents') && selectedFilter?.type !== 'uncategorized' && selectedFilter?.type !== 'subject' && selectedFilter?.type !== 'semester' && selectedFilter?.type !== 'class' ? 'active' : ''}`}
+          onClick={() => onSelectFilter({ type: 'documents', id: 'documents', name: 'Tất cả tài liệu', path: ['Tài liệu'] }, 'documents')}
+        >
+          <span>Tài liệu</span>
+          {treeData?.total_documents > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{treeData.total_documents}</span>}
         </div>
         <div
           className={`sidebar-nav-item ${selectedFilter?.type === 'uncategorized' ? 'active' : ''}`}
@@ -584,7 +593,9 @@ export default function SidebarTree({
                       </button>
                     </div>
                   )}
-                  <span className="tree-badge">{cls.quiz_count || 0}</span>
+                  <span className="tree-badge" title={`${cls.quiz_count || 0} đề thi • ${cls.doc_count || 0} tài liệu`}>
+                    {activeHomeTab === 'documents' ? (cls.doc_count || 0) : (cls.quiz_count || 0)}
+                  </span>
                 </div>
               </div>
 
@@ -727,7 +738,9 @@ export default function SidebarTree({
                                 </button>
                               </div>
                             )}
-                            <span className="tree-badge">{sem.quiz_count || 0}</span>
+                            <span className="tree-badge" title={`${sem.quiz_count || 0} đề thi • ${sem.doc_count || 0} tài liệu`}>
+                              {activeHomeTab === 'documents' ? (sem.doc_count || 0) : (sem.quiz_count || 0)}
+                            </span>
                           </div>
                         </div>
 
@@ -864,7 +877,9 @@ export default function SidebarTree({
                                         </button>
                                       </div>
                                     )}
-                                    <span className="tree-badge">{sub.quiz_count || 0}</span>
+                                    <span className="tree-badge" title={`${sub.quiz_count || 0} đề thi • ${sub.doc_count || 0} tài liệu`}>
+                                      {activeHomeTab === 'documents' ? (sub.doc_count || 0) : (sub.quiz_count || 0)}
+                                    </span>
                                   </div>
                                 </div>
                               );

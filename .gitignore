@@ -28,3 +28,6 @@ backend/quizizz.db
 .DS_Store
 Thumbs.db
 
+# Uploaded documents
+backend/uploads/
+
