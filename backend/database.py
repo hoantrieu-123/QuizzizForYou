@@ -1185,13 +1185,15 @@ def get_document(doc_id: str) -> Optional[Dict[str, Any]]:
 def update_document(
     doc_id: str,
     title: Optional[str] = None,
+    filename: Optional[str] = None,
+    file_path: Optional[str] = None,
     folder_id: Optional[str] = None,
     subject_id: Optional[str] = None,
     semester_id: Optional[str] = None,
     class_id: Optional[str] = None,
     folder_path: Optional[str] = None
 ) -> bool:
-    """Update title and/or placement of a document."""
+    """Update title, filename, file_path and/or placement of a document."""
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -1201,6 +1203,14 @@ def update_document(
     if title is not None:
         updates.append("title = ?")
         params.append(title.strip())
+
+    if filename is not None:
+        updates.append("filename = ?")
+        params.append(filename.strip())
+
+    if file_path is not None:
+        updates.append("file_path = ?")
+        params.append(file_path.strip())
 
     if folder_id is not None:
         updates.append("folder_id = ?")

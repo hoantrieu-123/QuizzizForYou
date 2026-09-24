@@ -1129,9 +1129,10 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
           type="button"
           className="btn btn-secondary btn-sm"
           onClick={onBack}
-          style={{ borderRadius: '6px' }}
+          style={{ borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
         >
-          ← Quay lại danh sách
+          <ArrowLeft size={14} />
+          <span>Quay lại danh sách</span>
         </button>
       </div>
 
@@ -1153,19 +1154,21 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={handleShuffleAllQuestions}
-                  style={{ fontSize: '0.8rem', borderRadius: '6px' }}
+                  style={{ fontSize: '0.8rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                   title="Đảo ngẫu nhiên thứ tự các câu hỏi"
                 >
-                  Đảo câu
+                  <Shuffle size={12} />
+                  <span>Đảo câu</span>
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={handleShuffleAllAnswers}
-                  style={{ fontSize: '0.8rem', borderRadius: '6px' }}
+                  style={{ fontSize: '0.8rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                   title="Đảo ngẫu nhiên vị trí các đáp án A/B/C/D"
                 >
-                  Đảo đáp án
+                  <Shuffle size={12} />
+                  <span>Đảo đáp án</span>
                 </button>
                 <button
                   type="button"
@@ -2691,12 +2694,17 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               border: 'none',
               cursor: 'pointer',
               textAlign: 'center',
-              fontWeight: 400
+              fontWeight: 400,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px'
             }}
             onMouseEnter={(e) => e.target.style.color = '#1e293b'}
             onMouseLeave={(e) => e.target.style.color = '#64748b'}
           >
-            ← Quay lại danh sách bài kiểm tra
+            <ArrowLeft size={14} />
+            <span>Quay lại danh sách bài kiểm tra</span>
           </button>
         </div>
       </div>

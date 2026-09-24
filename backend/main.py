@@ -484,7 +484,8 @@ async def upload_documents(
         folder_cache = {}
 
         for idx, f in enumerate(files):
-            filename = f.filename or "untitled"
+            raw_filename = (f.filename or "untitled").replace("\\", "/")
+            filename = os.path.basename(raw_filename) or "untitled"
             # Determine extension
             ext = os.path.splitext(filename)[1].lower()
             if ext not in [".docx", ".doc", ".pdf"]:
@@ -511,9 +512,14 @@ async def upload_documents(
             relative_folder = ""
             target_folder_id = folder_id or ''
 
+            rel_source = ""
             if idx < len(parsed_paths) and parsed_paths[idx]:
-                rel_path = str(parsed_paths[idx]).replace("\\", "/")
-                rel_dir = os.path.dirname(rel_path)
+                rel_source = str(parsed_paths[idx]).replace("\\", "/")
+            elif "/" in raw_filename:
+                rel_source = raw_filename
+
+            if rel_source:
+                rel_dir = os.path.dirname(rel_source)
                 relative_folder = rel_dir
                 if rel_dir:
                     parts = [p.strip() for p in rel_dir.split('/') if p.strip()]
@@ -588,43 +594,103 @@ def list_documents(
     return {"documents": docs, "total": len(docs)}
 
 
+def get_document_actual_path(doc: Dict[str, Any]) -> Optional[str]:
+    """Find the valid physical file for a document, resolving relative or shifted paths."""
+    if not doc:
+        return None
+    raw_path = doc.get('file_path') or ''
+    # 1. Direct path check
+    if raw_path and os.path.exists(raw_path):
+        return raw_path
+
+    # 2. Check if disk base name exists in current DOCUMENTS_DIR
+    if raw_path:
+        base_name = os.path.basename(raw_path)
+        p1 = os.path.join(DOCUMENTS_DIR, base_name)
+        if os.path.exists(p1):
+            try:
+                update_document(doc['id'], file_path=p1)
+            except Exception:
+                pass
+            return p1
+
+    # 3. Check by doc['filename'] clean basename in DOCUMENTS_DIR
+    raw_fname = doc.get('filename') or ''
+    clean_fname = os.path.basename(raw_fname.replace('\\', '/'))
+    if clean_fname:
+        p2 = os.path.join(DOCUMENTS_DIR, clean_fname)
+        if os.path.exists(p2):
+            try:
+                update_document(doc['id'], file_path=p2)
+            except Exception:
+                pass
+            return p2
+
+        # 4. Search DOCUMENTS_DIR for any file matching clean_fname or base_name
+        if os.path.exists(DOCUMENTS_DIR):
+            for candidate in os.listdir(DOCUMENTS_DIR):
+                if candidate.endswith(clean_fname) or (raw_path and os.path.basename(raw_path) in candidate):
+                    p3 = os.path.join(DOCUMENTS_DIR, candidate)
+                    if os.path.exists(p3):
+                        try:
+                            update_document(doc['id'], file_path=p3)
+                        except Exception:
+                            pass
+                        return p3
+    return None
+
+
 @app.get("/api/documents/{doc_id}/download")
 def download_document(doc_id: str):
     doc = get_document(doc_id)
-    if not doc or not os.path.exists(doc['file_path']):
+    if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
 
+    actual_path = get_document_actual_path(doc)
+    if not actual_path or not os.path.exists(actual_path):
+        raise HTTPException(status_code=404, detail="Không tìm thấy file tài liệu trên hệ thống")
+
+    raw_filename = doc.get('filename') or os.path.basename(actual_path)
+    clean_filename = os.path.basename(raw_filename.replace('\\', '/'))
+    if not clean_filename or clean_filename == "untitled":
+        clean_filename = f"{doc.get('title', 'document')}.{doc.get('file_type', 'docx')}"
+
     media_type = "application/octet-stream"
-    if doc['file_type'] == 'pdf':
+    if doc.get('file_type') == 'pdf':
         media_type = "application/pdf"
-    elif doc['file_type'] == 'docx':
+    elif doc.get('file_type') == 'docx':
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    elif doc['file_type'] == 'doc':
+    elif doc.get('file_type') == 'doc':
         media_type = "application/msword"
 
     return FileResponse(
-        doc['file_path'],
+        actual_path,
         media_type=media_type,
-        filename=doc['filename']
+        filename=clean_filename
     )
 
 
 @app.get("/api/documents/{doc_id}/view")
 def view_document_inline(doc_id: str):
     doc = get_document(doc_id)
-    if not doc or not os.path.exists(doc['file_path']):
+    if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
 
+    actual_path = get_document_actual_path(doc)
+    if not actual_path or not os.path.exists(actual_path):
+        raise HTTPException(status_code=404, detail="Không tìm thấy file tài liệu trên hệ thống")
+
+    clean_filename = os.path.basename((doc.get('filename') or 'document').replace('\\', '/'))
     media_type = "application/octet-stream"
-    if doc['file_type'] == 'pdf':
+    if doc.get('file_type') == 'pdf':
         media_type = "application/pdf"
-    elif doc['file_type'] == 'docx':
+    elif doc.get('file_type') == 'docx':
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
     headers = {
-        "Content-Disposition": f'inline; filename="{doc["filename"]}"'
+        "Content-Disposition": f'inline; filename="{clean_filename}"'
     }
-    return FileResponse(doc['file_path'], media_type=media_type, headers=headers)
+    return FileResponse(actual_path, media_type=media_type, headers=headers)
 
 
 @app.delete("/api/documents/{doc_id}")
@@ -634,9 +700,10 @@ def remove_document(doc_id: str):
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
 
     # Delete physical file
-    if doc.get('file_path') and os.path.exists(doc['file_path']):
+    actual_path = get_document_actual_path(doc)
+    if actual_path and os.path.exists(actual_path):
         try:
-            os.remove(doc['file_path'])
+            os.remove(actual_path)
         except Exception as e:
             print(f"Lỗi xóa file vật lý: {e}")
 
@@ -649,9 +716,14 @@ def edit_document(doc_id: str, payload: UpdateDocumentRequest):
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
 
+    # Ensure clean title without directory slashes
+    clean_title = payload.title
+    if clean_title:
+        clean_title = os.path.basename(clean_title.replace('\\', '/'))
+
     update_document(
         doc_id=doc_id,
-        title=payload.title,
+        title=clean_title,
         folder_id=payload.folder_id,
         subject_id=payload.subject_id,
         semester_id=payload.semester_id,
@@ -665,13 +737,17 @@ def edit_document(doc_id: str, payload: UpdateDocumentRequest):
 @app.post("/api/documents/{doc_id}/create-quiz")
 def convert_document_to_quiz(doc_id: str):
     doc = get_document(doc_id)
-    if not doc or not os.path.exists(doc['file_path']):
+    if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
 
-    if doc['file_type'] != 'docx':
+    actual_path = get_document_actual_path(doc)
+    if not actual_path or not os.path.exists(actual_path):
+        raise HTTPException(status_code=404, detail="Không tìm thấy file tài liệu trên hệ thống")
+
+    if doc.get('file_type') != 'docx':
         raise HTTPException(status_code=400, detail="Chỉ hỗ trợ tạo đề thi từ file Word (.docx)")
 
-    with open(doc['file_path'], "rb") as f:
+    with open(actual_path, "rb") as f:
         content = f.read()
 
     elements = parse_docx_bytes(content)
@@ -679,9 +755,13 @@ def convert_document_to_quiz(doc_id: str):
     if not detected_questions:
         raise HTTPException(status_code=422, detail="Không tìm thấy câu hỏi hoặc highlight hợp lệ trong file này")
 
+    raw_filename = doc.get('filename') or os.path.basename(actual_path)
+    clean_filename = os.path.basename(raw_filename.replace('\\', '/'))
+    clean_title = os.path.basename((doc.get('title') or clean_filename).replace('\\', '/'))
+
     quiz_id = save_quiz(
-        title=doc['title'] or doc['filename'],
-        filename=doc['filename'],
+        title=clean_title,
+        filename=clean_filename,
         questions=detected_questions
     )
     if doc.get('subject_id'):

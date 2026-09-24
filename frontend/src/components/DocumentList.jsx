@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   FileText, Download, UploadCloud, Plus, Trash2, Edit3, Check, X,
-  Folders, Play, Loader2, ChevronRight, ChevronDown, AddFolder, Home
+  Folders, Play, Loader2, ChevronRight, ChevronDown, AddFolder, Home, Clock, Calendar
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
 
@@ -64,18 +64,8 @@ export default function DocumentList({
       const tree = data.folders || [];
       setFolderTree(tree);
 
-      // Auto expand all top-level folders on initial load
-      setExpandedFolders(prev => {
-        const next = { ...prev };
-        const expandAll = (nodes) => {
-          nodes.forEach(n => {
-            if (next[n.id] === undefined) next[n.id] = true;
-            if (n.children && n.children.length > 0) expandAll(n.children);
-          });
-        };
-        expandAll(tree);
-        return next;
-      });
+      // Keep folders closed by default on initial load
+      setExpandedFolders(prev => prev);
     } catch (err) {
       console.error('Lỗi tải cây thư mục:', err);
     } finally {
@@ -411,8 +401,14 @@ export default function DocumentList({
     }
   };
 
+  const getCleanFileName = (name) => {
+    if (!name) return '';
+    return name.replace(/\\/g, '/').split('/').pop();
+  };
+
   const handleDeleteDoc = async (doc) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${doc.title || doc.filename}"?`)) return;
+    const displayName = getCleanFileName(doc.title || doc.filename);
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${displayName}"?`)) return;
     try {
       const res = await fetch(apiUrl(`/api/documents/${doc.id}`), { method: 'DELETE' });
       if (!res.ok) throw new Error('Không thể xóa tài liệu');
@@ -427,16 +423,17 @@ export default function DocumentList({
 
   const handleStartRenameDoc = (doc) => {
     setEditingDocId(doc.id);
-    setEditingTitle(doc.title || doc.filename);
+    setEditingTitle(getCleanFileName(doc.title || doc.filename));
   };
 
   const handleSaveRenameDoc = async (docId) => {
-    if (!editingTitle.trim()) return;
+    const cleanTitle = getCleanFileName(editingTitle.trim());
+    if (!cleanTitle) return;
     try {
       const res = await fetch(apiUrl(`/api/documents/${docId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editingTitle.trim() })
+        body: JSON.stringify({ title: cleanTitle })
       });
       if (!res.ok) throw new Error('Lỗi đổi tên');
       setEditingDocId(null);
@@ -692,14 +689,18 @@ export default function DocumentList({
           <div style={{ fontSize: '0.8rem', color: '#666666', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
             <span
               onClick={() => setCurrentFolderId(null)}
-              style={{ cursor: 'pointer', color: currentFolderId === null ? '#333333' : '#666666', fontWeight: 400}}
+              style={{ cursor: 'pointer', color: currentFolderId === null ? '#333333' : '#666666', fontWeight: 400, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
             >
-              Tài liệu
+              <Folders size={15} style={{ color: '#333333' }} />
+              <span>Tài liệu</span>
             </span>
             {selectedFilter?.path?.length > 0 && selectedFilter.path.map((segment, idx) => (
               <React.Fragment key={`filter_${idx}`}>
                 <span>›</span>
-                <span style={{ fontWeight: 400, color: '#333333' }}>{segment}</span>
+                <span style={{ fontWeight: 400, color: '#333333', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Folders size={13} style={{ color: '#555555' }} />
+                  <span>{segment}</span>
+                </span>
               </React.Fragment>
             ))}
             {breadcrumbs.length > 0 && breadcrumbs.map((crumb, idx) => (
@@ -712,10 +713,14 @@ export default function DocumentList({
                       cursor: 'pointer',
                       fontWeight: 400,
                       color: idx === breadcrumbs.length - 1 ? '#333333' : '#666666',
-                      textDecoration: idx === breadcrumbs.length - 1 ? 'none' : 'underline'
+                      textDecoration: idx === breadcrumbs.length - 1 ? 'none' : 'underline',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
                     }}
                   >
-                    {crumb.name}
+                    <Folders size={13} style={{ color: '#555555' }} />
+                    <span>{crumb.name}</span>
                   </span>
                 </React.Fragment>
               )
@@ -1143,9 +1148,9 @@ export default function DocumentList({
             {/* Type Filter Pills */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               {[
-                { id: 'all', label: 'Tất cả' },
-                { id: 'docx', label: 'Word (.docx, .doc)' },
-                { id: 'pdf', label: 'PDF (.pdf)' }
+                { id: 'all', label: 'Tất cả', icon: <Folders size={13} style={{ color: '#333333' }} /> },
+                { id: 'docx', label: 'Word (.docx, .doc)', icon: <FileText size={13} style={{ color: '#333333' }} /> },
+                { id: 'pdf', label: 'PDF (.pdf)', icon: <FileText size={13} style={{ color: '#333333' }} /> }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1159,10 +1164,14 @@ export default function DocumentList({
                     background: selectedType === tab.id ? '#f4f4f5' : '#ffffff',
                     color: '#333333',
                     border: '1px solid #eeeeee',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
                   }}
                 >
-                  {tab.label}
+                  {tab.icon}
+                  <span>{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -1355,7 +1364,7 @@ export default function DocumentList({
                       ) : (
                         <div
                           onDoubleClick={() => handleStartRenameDoc(doc)}
-                          title={`${doc.title || doc.filename} (Nháy đúp để đổi tên)`}
+                          title={`${getCleanFileName(doc.title || doc.filename)} (Nháy đúp để đổi tên)`}
                           style={{
                             fontSize: '0.885rem',
                             fontWeight: 400,
@@ -1368,13 +1377,14 @@ export default function DocumentList({
                             cursor: 'pointer'
                           }}
                         >
-                          {doc.title || doc.filename}
+                          {getCleanFileName(doc.title || doc.filename)}
                         </div>
                       )}
 
                       {doc.folder_path && (
-                        <div style={{ fontSize: '0.72rem', color: '#666666', marginTop: '0.2rem' }}>
-                          📁 {doc.folder_path}
+                        <div style={{ fontSize: '0.72rem', color: '#666666', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Folders size={12} style={{ color: '#666666', flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.folder_path}</span>
                         </div>
                       )}
                     </div>
@@ -1390,8 +1400,9 @@ export default function DocumentList({
                       gap: '0.4rem',
                       flexWrap: 'wrap'
                     }}>
-                      <span style={{ fontSize: '0.72rem', color: '#666666' }}>
-                        {formatDate(doc.created_at)}
+                      <span style={{ fontSize: '0.72rem', color: '#666666', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <Calendar size={11} />
+                        <span>{formatDate(doc.created_at)}</span>
                       </span>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: 'auto' }}>
@@ -1431,7 +1442,7 @@ export default function DocumentList({
                         {/* Download */}
                         <a
                           href={apiUrl(`/api/documents/${doc.id}/download`)}
-                          download={doc.filename}
+                          download={getCleanFileName(doc.filename)}
                           className="btn btn-secondary btn-sm"
                           style={{ padding: '4px 8px', fontSize: '0.75rem', textDecoration: 'none' }}
                           title="Tải về máy tính"
@@ -1473,10 +1484,30 @@ export default function DocumentList({
                 <thead>
                   <tr style={{ background: '#fcfcfc', borderBottom: '1px solid #eeeeee', textAlign: 'left', color: '#555555' }}>
                     <th style={{ padding: '0.75rem 1rem', width: '70px' }}>Định dạng</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Tên tài liệu</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '160px' }}>Đường dẫn</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '100px' }}>Dung lượng</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '110px' }}>Ngày tải</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <FileText size={13} style={{ color: '#555555' }} />
+                        <span>Tên tài liệu</span>
+                      </span>
+                    </th>
+                    <th style={{ padding: '0.75rem 1rem', width: '160px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Folders size={13} style={{ color: '#555555' }} />
+                        <span>Đường dẫn</span>
+                      </span>
+                    </th>
+                    <th style={{ padding: '0.75rem 1rem', width: '100px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={13} style={{ color: '#555555' }} />
+                        <span>Dung lượng</span>
+                      </span>
+                    </th>
+                    <th style={{ padding: '0.75rem 1rem', width: '110px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Calendar size={13} style={{ color: '#555555' }} />
+                        <span>Ngày tải</span>
+                      </span>
+                    </th>
                     <th style={{ padding: '0.75rem 1rem', width: '180px', textAlign: 'right' }}>Thao tác</th>
                   </tr>
                 </thead>
@@ -1484,6 +1515,7 @@ export default function DocumentList({
                   {displayedDocs.map(doc => {
                     const isWord = doc.file_type === 'docx' || doc.file_type === 'doc';
                     const isPdf = doc.file_type === 'pdf';
+                    const isEditing = editingDocId === doc.id;
 
                     return (
                       <tr key={doc.id} style={{ borderBottom: '1px solid #eeeeee' }}>
@@ -1502,16 +1534,73 @@ export default function DocumentList({
                           </span>
                         </td>
                         <td style={{ padding: '0.65rem 1rem', fontWeight: 400, color: '#333333' }}>
-                          {doc.title || doc.filename}
+                          {isEditing ? (
+                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                              <input
+                                type="text"
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveRenameDoc(doc.id);
+                                  if (e.key === 'Escape') setEditingDocId(null);
+                                }}
+                                style={{
+                                  fontSize: '0.85rem',
+                                  padding: '0.25rem 0.5rem',
+                                  borderRadius: '4px',
+                                  border: '1px solid #eeeeee',
+                                  background: '#ffffff',
+                                  color: '#333333',
+                                  minWidth: '180px',
+                                  maxWidth: '300px'
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveRenameDoc(doc.id)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '3px 6px' }}
+                                title="Lưu tên"
+                              >
+                                <Check size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingDocId(null)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '3px 6px' }}
+                                title="Hủy"
+                              >
+                                <X size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <span
+                              onDoubleClick={() => handleStartRenameDoc(doc)}
+                              style={{ cursor: 'pointer' }}
+                              title="Nháy đúp để đổi tên"
+                            >
+                              {getCleanFileName(doc.title || doc.filename)}
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '0.65rem 1rem', color: '#666666', fontSize: '0.8rem' }}>
-                          {doc.folder_path || '—'}
+                          {doc.folder_path ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Folders size={12} style={{ color: '#666666', flexShrink: 0 }} />
+                              <span>{doc.folder_path}</span>
+                            </span>
+                          ) : '—'}
                         </td>
                         <td style={{ padding: '0.65rem 1rem', color: '#555555' }}>
                           {formatFileSize(doc.file_size)}
                         </td>
                         <td style={{ padding: '0.65rem 1rem', color: '#666666', fontSize: '0.8rem' }}>
-                          {formatDate(doc.created_at)}
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <Calendar size={11} style={{ color: '#666666' }} />
+                            <span>{formatDate(doc.created_at)}</span>
+                          </span>
                         </td>
                         <td style={{ padding: '0.65rem 1rem', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
@@ -1540,7 +1629,7 @@ export default function DocumentList({
                             )}
                             <a
                               href={apiUrl(`/api/documents/${doc.id}/download`)}
-                              download={doc.filename}
+                              download={getCleanFileName(doc.filename)}
                               className="btn btn-secondary btn-sm"
                               style={{ padding: '3px 6px' }}
                               title="Tải về"
@@ -1550,11 +1639,11 @@ export default function DocumentList({
                             <button
                               type="button"
                               className="btn btn-secondary btn-sm"
-                              onClick={() => handleStartRenameDoc(doc)}
+                              onClick={() => isEditing ? handleSaveRenameDoc(doc.id) : handleStartRenameDoc(doc)}
                               style={{ padding: '3px 6px' }}
-                              title="Đổi tên"
+                              title={isEditing ? "Lưu tên" : "Đổi tên"}
                             >
-                              <Edit3 size={12} />
+                              {isEditing ? <Check size={12} /> : <Edit3 size={12} />}
                             </button>
                             <button
                               type="button"
@@ -1616,14 +1705,14 @@ export default function DocumentList({
                   PDF
                 </span>
                 <span style={{ fontSize: '1rem', fontWeight: 400, color: '#333333' }}>
-                  {previewDoc.title || previewDoc.filename}
+                  {getCleanFileName(previewDoc.title || previewDoc.filename)}
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <a
                   href={apiUrl(`/api/documents/${previewDoc.id}/download`)}
-                  download={previewDoc.filename}
+                  download={getCleanFileName(previewDoc.filename)}
                   className="btn btn-secondary btn-sm"
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
                 >
@@ -1644,7 +1733,7 @@ export default function DocumentList({
             <div style={{ flex: 1, position: 'relative', background: '#f4f4f5', borderRadius: '6px', overflow: 'hidden' }}>
               <iframe
                 src={apiUrl(`/api/documents/${previewDoc.id}/view`)}
-                title={previewDoc.title}
+                title={getCleanFileName(previewDoc.title)}
                 style={{ width: '100%', height: '100%', border: 'none' }}
               />
             </div>

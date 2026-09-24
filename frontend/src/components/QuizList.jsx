@@ -449,14 +449,17 @@ export default function QuizList({
               className="breadcrumb-chip root"
               onClick={onClearFilter}
               title="Xem tất cả đề thi"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
-              Tất cả
+              <Folders size={12} />
+              <span>Tất cả</span>
             </button>
             {(selectedFilter.path || [selectedFilter.name]).map((crumb, idx, arr) => (
               <React.Fragment key={idx}>
                 <ChevronRight size={13} style={{ color: '#94a3b8' }} />
-                <span className={`breadcrumb-chip ${idx === arr.length - 1 ? 'active' : ''}`}>
-                  {crumb}
+                <span className={`breadcrumb-chip ${idx === arr.length - 1 ? 'active' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Folders size={11} style={{ color: '#555555' }} />
+                  <span>{crumb}</span>
                 </span>
               </React.Fragment>
             ))}
@@ -476,7 +479,8 @@ export default function QuizList({
       <div className="card" style={{ padding: '0.85rem 1.25rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 400, color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {filterContextTitle ? filterContextTitle : 'Danh sách đề thi'}
+            <FileText size={18} style={{ color: '#333333' }} />
+            <span>{filterContextTitle ? filterContextTitle : 'Danh sách đề thi'}</span>
             <span className="badge">
               {displayedQuizzesCount} đề thi
             </span>
@@ -1007,6 +1011,8 @@ function QuizCardItem({
   loadingQuizId
 }) {
   const isLoading = loadingQuizId === quiz.id;
+  const cleanTitle = (quiz.title || '').replace(/\\/g, '/').split('/').pop();
+  const cleanFilename = (quiz.filename || '').replace(/\\/g, '/').split('/').pop();
 
   return (
     <div
@@ -1050,19 +1056,24 @@ function QuizCardItem({
               <GripVertical size={14} />
             </span>
 
-            <span className="badge" style={{ fontSize: '0.72rem' }}>
-              {quiz.question_count} câu
+            <span className="badge" style={{ fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <HelpCircle size={11} />
+              <span>{quiz.question_count} câu</span>
             </span>
 
             <span
               style={{
                 fontSize: '0.68rem',
                 color: '#555555',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px'
               }}
               title={`Ngày tạo: ${new Date(quiz.created_at).toLocaleDateString('vi-VN')}`}
             >
-              • {new Date(quiz.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+              • <Calendar size={10} />
+              <span>{new Date(quiz.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}</span>
             </span>
           </div>
 
@@ -1099,9 +1110,9 @@ function QuizCardItem({
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden'
           }}
-          title={quiz.title}
+          title={cleanTitle}
         >
-          {quiz.title}
+          {cleanTitle}
         </h4>
 
         {/* Word Filename */}
@@ -1117,11 +1128,11 @@ function QuizCardItem({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap'
           }}
-          title={quiz.filename}
+          title={cleanFilename}
         >
           <FileText size={12} style={{ flexShrink: 0, color: '#333333' }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {quiz.filename}
+            {cleanFilename}
           </span>
         </p>
 

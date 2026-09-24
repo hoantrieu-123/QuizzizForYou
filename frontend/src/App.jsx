@@ -10,6 +10,7 @@ import QuizPlayer from './components/QuizPlayer';
 import ResultView from './components/ResultView';
 import { apiUrl } from './apiConfig';
 import { getQuizDetail, updateCachedQuiz, getCachedQuizSync } from './services/dataCache';
+import { FileText, Folders, HelpCircle, CheckCircle2 } from './components/UIcons';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -211,8 +212,18 @@ export default function App() {
               {/* Header Title Bar with Mode Tabs */}
               <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <h1 style={{ fontSize: '1.2rem', fontWeight: 400, color: '#333333', margin: 0 }}>
-                    {activeHomeTab === 'documents' ? 'Kho tài liệu Word & PDF' : 'Quản lý đề thi & học tập'}
+                  <h1 style={{ fontSize: '1.2rem', fontWeight: 400, color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {activeHomeTab === 'documents' ? (
+                      <>
+                        <Folders size={20} style={{ color: '#333333' }} />
+                        <span>Kho tài liệu Word & PDF</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={20} style={{ color: '#333333' }} />
+                        <span>Quản lý đề thi & học tập</span>
+                      </>
+                    )}
                   </h1>
                 </div>
 
@@ -234,10 +245,14 @@ export default function App() {
                       background: activeHomeTab === 'quizzes' ? '#f4f4f5' : '#ffffff',
                       color: '#333333',
                       border: '1px solid #eeeeee',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
                     }}
                   >
-                    Đề thi ({totalQuizzesCount})
+                    <FileText size={14} style={{ color: '#333333' }} />
+                    <span>Đề thi ({totalQuizzesCount})</span>
                   </button>
                   <button
                     type="button"
@@ -255,10 +270,14 @@ export default function App() {
                       background: activeHomeTab === 'documents' ? '#f4f4f5' : '#ffffff',
                       color: '#333333',
                       border: '1px solid #eeeeee',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
                     }}
                   >
-                    Tài liệu
+                    <Folders size={14} style={{ color: '#333333' }} />
+                    <span>Tài liệu</span>
                   </button>
                 </div>
               </div>
@@ -289,27 +308,36 @@ export default function App() {
                   {/* 3 Thẻ Thống Kê KPI Gọn Gàng */}
                   <div className="kpi-grid">
                     <div className="kpi-card">
-                      <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#555555', textTransform: 'uppercase' }}>
-                        Tổng số đề thi
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#555555', textTransform: 'uppercase' }}>
+                          Tổng số đề thi
+                        </span>
+                        <FileText size={16} style={{ color: '#71717a' }} />
+                      </div>
                       <div style={{ fontSize: '1.5rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
                         {totalQuizzesCount}
                       </div>
                     </div>
 
                     <div className="kpi-card">
-                      <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#555555', textTransform: 'uppercase' }}>
-                        Tổng số câu hỏi
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#555555', textTransform: 'uppercase' }}>
+                          Tổng số câu hỏi
+                        </span>
+                        <HelpCircle size={16} style={{ color: '#71717a' }} />
+                      </div>
                       <div style={{ fontSize: '1.5rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
                         {totalQuestionsCount}
                       </div>
                     </div>
 
                     <div className="kpi-card">
-                      <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#555555', textTransform: 'uppercase' }}>
-                        Đã hoàn thành
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#555555', textTransform: 'uppercase' }}>
+                          Đã hoàn thành
+                        </span>
+                        <CheckCircle2 size={16} style={{ color: '#71717a' }} />
+                      </div>
                       <div style={{ fontSize: '1.5rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
                         {completedCount}
                       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Clock, ArrowLeft, ArrowRight, CheckCircle2,
-  Send, Grid, X, Edit3, Shuffle
+  Send, Grid, X, Edit3, Shuffle, UploadCloud
 } from './UIcons';
 
 export const cleanQuestionPrompt = (text) => {
@@ -939,6 +939,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               borderRadius: '6px',
               border: '1px solid #eeeeee'
             }}>
+              <CheckCircle2 size={16} style={{ color: '#333333' }} />
               <div>
                 <div style={{ fontSize: '10px', color: '#555555', fontWeight: 400, textTransform: 'uppercase' }}>Tiến độ</div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 400, color: '#333333' }}>
@@ -957,6 +958,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               borderRadius: '6px',
               border: '1px solid #eeeeee'
             }}>
+              <UploadCloud size={16} style={{ color: '#333333' }} />
               <div>
                 <div style={{ fontSize: '10px', color: '#555555', fontWeight: 400, textTransform: 'uppercase' }}>Trạng thái</div>
                 <div style={{ fontSize: '0.825rem', fontWeight: 400, color: '#333333' }}>Đã lưu tự động</div>
@@ -973,6 +975,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               padding: '0.45rem 0.95rem',
               borderRadius: '6px'
             }}>
+              <Clock size={16} style={{ color: timeLeft < 300 ? '#b91c1c' : '#333333' }} />
               <div>
                 <div style={{ fontSize: '10px', color: '#555555', fontWeight: 400, textTransform: 'uppercase' }}>
                   Thời gian còn lại
@@ -1734,28 +1737,31 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleShuffleQuestions}
-              style={{ fontSize: '0.78rem', borderRadius: '6px' }}
+              style={{ fontSize: '0.78rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
               title="Đảo thứ tự câu hỏi"
             >
-              Đảo câu hỏi
+              <Shuffle size={12} />
+              <span>Đảo câu hỏi</span>
             </button>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleShuffleAllAnswers}
-              style={{ fontSize: '0.78rem', borderRadius: '6px' }}
+              style={{ fontSize: '0.78rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
               title="Đảo tất cả đáp án"
             >
-              Đảo tất cả đáp án
+              <Shuffle size={12} />
+              <span>Đảo tất cả đáp án</span>
             </button>
             {onEdit && (
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={onEdit}
-                style={{ fontSize: '0.78rem', borderRadius: '6px' }}
+                style={{ fontSize: '0.78rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
               >
-                Chỉnh sửa đề thi
+                <Edit3 size={12} />
+                <span>Chỉnh sửa đề thi</span>
               </button>
             )}
           </div>
@@ -1765,7 +1771,10 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'sticky', top: '5rem' }}>
           <div className="card" style={{ padding: '1.25rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 400, color: '#333333', margin: 0 }}>Bảng câu hỏi</h3>
+              <h3 style={{ fontSize: '1rem', fontWeight: 400, color: '#333333', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Grid size={15} style={{ color: '#333333' }} />
+                <span>Bảng câu hỏi</span>
+              </h3>
               <span style={{ fontSize: '11px', fontWeight: 400, background: '#ffffff', color: '#555555', border: '1px solid #eeeeee', padding: '2px 8px', borderRadius: '4px' }}>
                 {questions.length} câu
               </span>

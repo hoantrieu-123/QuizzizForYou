@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Folders, AddFolder, ChevronDown, ChevronRight,
-  Plus, Edit3, Trash2, Check, X, Calendar, Layers, GripVertical, FileText
+  Plus, Edit3, Trash2, Check, X, Calendar, Layers, GripVertical, FileText, UploadCloud
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
 
@@ -38,18 +38,8 @@ export default function SidebarTree({
       const data = await res.json();
       setTreeData(data);
 
-      // Default expand all if not set yet
-      setExpandedNodes(prev => {
-        if (Object.keys(prev).length > 0) return prev;
-        const initialExpanded = {};
-        (data.classes || []).forEach(cls => {
-          initialExpanded[`class_${cls.id}`] = true;
-          (cls.semesters || []).forEach(sem => {
-            initialExpanded[`semester_${sem.id}`] = true;
-          });
-        });
-        return initialExpanded;
-      });
+      // Keep tree branches collapsed by default on initial load
+      setExpandedNodes(prev => prev);
     } catch (err) {
       console.error('Lỗi khi tải cây cấu trúc:', err);
     } finally {
@@ -401,6 +391,7 @@ export default function SidebarTree({
           title="Kéo thả file Word để tạo bài thi"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <UploadCloud size={16} />
             <span>Import Word (.docx)</span>
           </div>
         </a>
@@ -412,21 +403,30 @@ export default function SidebarTree({
           className={`sidebar-nav-item ${selectedFilter?.type === 'all' && activeHomeTab === 'quizzes' ? 'active' : ''}`}
           onClick={() => onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] }, 'quizzes')}
         >
-          <span>Tất cả đề thi</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText size={15} style={{ color: '#333333', flexShrink: 0 }} />
+            <span>Tất cả đề thi</span>
+          </div>
           {treeData?.total_quizzes > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{treeData.total_quizzes}</span>}
         </div>
         <div
           className={`sidebar-nav-item ${(selectedFilter?.type === 'documents' || activeHomeTab === 'documents') && selectedFilter?.type !== 'uncategorized' && selectedFilter?.type !== 'subject' && selectedFilter?.type !== 'semester' && selectedFilter?.type !== 'class' ? 'active' : ''}`}
           onClick={() => onSelectFilter({ type: 'documents', id: 'documents', name: 'Tất cả tài liệu', path: ['Tài liệu'] }, 'documents')}
         >
-          <span>Tài liệu</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Folders size={15} style={{ color: '#333333', flexShrink: 0 }} />
+            <span>Tài liệu</span>
+          </div>
           {treeData?.total_documents > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{treeData.total_documents}</span>}
         </div>
         <div
           className={`sidebar-nav-item ${selectedFilter?.type === 'uncategorized' ? 'active' : ''}`}
           onClick={() => onSelectFilter({ type: 'uncategorized', id: 'uncategorized', name: 'Chưa phân loại', path: ['Chưa phân loại'] })}
         >
-          <span>Đề chưa phân loại</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText size={15} style={{ color: '#71717a', flexShrink: 0 }} />
+            <span>Đề chưa phân loại</span>
+          </div>
           {uncategorizedCount > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{uncategorizedCount}</span>}
         </div>
       </div>
@@ -515,7 +515,7 @@ export default function SidebarTree({
           </div>
         )}
         {classes.map((cls) => {
-          const isClassExpanded = expandedNodes[`class_${cls.id}`] ?? true;
+          const isClassExpanded = !!expandedNodes[`class_${cls.id}`];
           const isClassActive = isSelected('class', cls.id);
           const isClassEditing = editingState?.type === 'class' && editingState?.id === cls.id;
 
@@ -655,7 +655,7 @@ export default function SidebarTree({
                   )}
 
                   {(cls.semesters || []).map((sem) => {
-                    const isSemExpanded = expandedNodes[`semester_${sem.id}`] ?? true;
+                    const isSemExpanded = !!expandedNodes[`semester_${sem.id}`];
                     const isSemActive = isSelected('semester', sem.id);
                     const isSemEditing = editingState?.type === 'semester' && editingState?.id === sem.id;
                     const isSemDragOver = dragOverTarget === `sem_${sem.id}`;
