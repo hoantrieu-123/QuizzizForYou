@@ -41,6 +41,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from starlette.requests import Request
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Server Error: {str(exc)}"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
 @app.on_event("startup")
 def startup_event():
     init_db()
@@ -376,14 +392,19 @@ def get_breadcrumbs(folder_id: str):
 def create_folder(payload: CreateFolderRequest):
     if not payload.name or not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên thư mục không được để trống")
-    folder = create_document_folder(
-        name=payload.name.strip(),
-        parent_id=payload.parent_id or '',
-        subject_id=payload.subject_id or '',
-        semester_id=payload.semester_id or '',
-        class_id=payload.class_id or ''
-    )
-    return {"success": True, "folder": folder}
+    try:
+        folder = create_document_folder(
+            name=payload.name.strip(),
+            parent_id=payload.parent_id or '',
+            subject_id=payload.subject_id or '',
+            semester_id=payload.semester_id or '',
+            class_id=payload.class_id or ''
+        )
+        return {"success": True, "folder": folder}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Lỗi tạo thư mục: {str(e)}")
 
 
 @app.put("/api/document-folders/{folder_id}")
@@ -395,12 +416,17 @@ def edit_folder(folder_id: str, payload: UpdateFolderRequest):
     if payload.name is not None and not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên thư mục không được để trống")
 
-    updated = update_document_folder(
-        folder_id,
-        name=payload.name.strip() if payload.name is not None else None,
-        parent_id=payload.parent_id
-    )
-    return {"success": True, "folder": updated}
+    try:
+        updated = update_document_folder(
+            folder_id,
+            name=payload.name.strip() if payload.name is not None else None,
+            parent_id=payload.parent_id
+        )
+        return {"success": True, "folder": updated}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Lỗi đổi tên thư mục: {str(e)}")
 
 
 @app.delete("/api/document-folders/{folder_id}")
@@ -409,16 +435,21 @@ def remove_folder(folder_id: str):
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy thư mục")
 
-    # Delete folder and all descendants recursively, returns files to delete
-    files_to_delete = delete_document_folder(folder_id)
-    for fpath in files_to_delete:
-        if fpath and os.path.exists(fpath):
-            try:
-                os.remove(fpath)
-            except Exception as e:
-                print(f"Lỗi xóa file {fpath}: {e}")
+    try:
+        # Delete folder and all descendants recursively, returns files to delete
+        files_to_delete = delete_document_folder(folder_id)
+        for fpath in files_to_delete:
+            if fpath and os.path.exists(fpath):
+                try:
+                    os.remove(fpath)
+                except Exception as e:
+                    print(f"Lỗi xóa file {fpath}: {e}")
 
-    return {"success": True, "message": "Xóa thư mục thành công"}
+        return {"success": True, "message": "Xóa thư mục thành công"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Lỗi xóa thư mục: {str(e)}")
 
 
 # ==============================================================================
@@ -440,96 +471,101 @@ async def upload_documents(
     if not files:
         raise HTTPException(status_code=400, detail="Không có file nào được tải lên")
 
-    parsed_paths = []
-    if folder_paths:
-        try:
-            parsed_paths = json.loads(folder_paths)
-        except Exception:
-            parsed_paths = []
+    try:
+        parsed_paths = []
+        if folder_paths:
+            try:
+                parsed_paths = json.loads(folder_paths)
+            except Exception:
+                parsed_paths = []
 
-    uploaded_docs = []
-    errors = []
-    folder_cache = {}
+        uploaded_docs = []
+        errors = []
+        folder_cache = {}
 
-    for idx, f in enumerate(files):
-        filename = f.filename or "untitled"
-        # Determine extension
-        ext = os.path.splitext(filename)[1].lower()
-        if ext not in [".docx", ".doc", ".pdf"]:
-            errors.append(f"{filename}: Định dạng không được hỗ trợ (chỉ nhận .docx, .doc, .pdf)")
-            continue
+        for idx, f in enumerate(files):
+            filename = f.filename or "untitled"
+            # Determine extension
+            ext = os.path.splitext(filename)[1].lower()
+            if ext not in [".docx", ".doc", ".pdf"]:
+                errors.append(f"{filename}: Định dạng không được hỗ trợ (chỉ nhận .docx, .doc, .pdf)")
+                continue
 
-        file_type = ext.replace(".", "")
-        content = await f.read()
-        file_size = len(content)
+            file_type = ext.replace(".", "")
+            content = await f.read()
+            file_size = len(content)
 
-        if file_size == 0:
-            errors.append(f"{filename}: File rỗng (0 bytes)")
-            continue
+            if file_size == 0:
+                errors.append(f"{filename}: File rỗng (0 bytes)")
+                continue
 
-        # Safe unique storage filename
-        unique_prefix = uuid.uuid4().hex[:8]
-        safe_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
-        disk_filename = f"{unique_prefix}_{safe_filename}"
-        disk_path = os.path.join(DOCUMENTS_DIR, disk_filename)
+            # Safe unique storage filename
+            unique_prefix = uuid.uuid4().hex[:8]
+            safe_filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
+            disk_filename = f"{unique_prefix}_{safe_filename}"
+            disk_path = os.path.join(DOCUMENTS_DIR, disk_filename)
 
-        with open(disk_path, "wb") as out_f:
-            out_f.write(content)
+            with open(disk_path, "wb") as out_f:
+                out_f.write(content)
 
-        relative_folder = ""
-        target_folder_id = folder_id or ''
+            relative_folder = ""
+            target_folder_id = folder_id or ''
 
-        if idx < len(parsed_paths) and parsed_paths[idx]:
-            rel_path = str(parsed_paths[idx]).replace("\\", "/")
-            rel_dir = os.path.dirname(rel_path)
-            relative_folder = rel_dir
-            if rel_dir:
-                parts = [p.strip() for p in rel_dir.split('/') if p.strip()]
-                current_parent = folder_id or ''
-                for part in parts:
-                    cache_key = (current_parent, part)
-                    if cache_key in folder_cache:
-                        current_parent = folder_cache[cache_key]
-                    else:
-                        existing_folders = get_document_folders(parent_id=current_parent, subject_id=subject_id or '')
-                        match = next((fol for fol in existing_folders if fol['name'].lower() == part.lower()), None)
-                        if match:
-                            f_id = match['id']
+            if idx < len(parsed_paths) and parsed_paths[idx]:
+                rel_path = str(parsed_paths[idx]).replace("\\", "/")
+                rel_dir = os.path.dirname(rel_path)
+                relative_folder = rel_dir
+                if rel_dir:
+                    parts = [p.strip() for p in rel_dir.split('/') if p.strip()]
+                    current_parent = folder_id or ''
+                    for part in parts:
+                        cache_key = (current_parent, part)
+                        if cache_key in folder_cache:
+                            current_parent = folder_cache[cache_key]
                         else:
-                            new_f = create_document_folder(
-                                name=part,
-                                parent_id=current_parent,
-                                subject_id=subject_id or '',
-                                semester_id=semester_id or '',
-                                class_id=class_id or ''
-                            )
-                            f_id = new_f['id']
-                        folder_cache[cache_key] = f_id
-                        current_parent = f_id
-                target_folder_id = current_parent
+                            existing_folders = get_document_folders(parent_id=current_parent, subject_id=subject_id or '')
+                            match = next((fol for fol in existing_folders if fol['name'].lower() == part.lower()), None)
+                            if match:
+                                f_id = match['id']
+                            else:
+                                new_f = create_document_folder(
+                                    name=part,
+                                    parent_id=current_parent,
+                                    subject_id=subject_id or '',
+                                    semester_id=semester_id or '',
+                                    class_id=class_id or ''
+                                )
+                                f_id = new_f['id']
+                            folder_cache[cache_key] = f_id
+                            current_parent = f_id
+                    target_folder_id = current_parent
 
-        title = os.path.splitext(filename)[0]
+            title = os.path.splitext(filename)[0]
 
-        doc = create_document(
-            title=title,
-            filename=filename,
-            file_path=disk_path,
-            file_size=file_size,
-            file_type=file_type,
-            folder_id=target_folder_id,
-            subject_id=subject_id or '',
-            semester_id=semester_id or '',
-            class_id=class_id or '',
-            folder_path=relative_folder
-        )
-        uploaded_docs.append(doc)
+            doc = create_document(
+                title=title,
+                filename=filename,
+                file_path=disk_path,
+                file_size=file_size,
+                file_type=file_type,
+                folder_id=target_folder_id,
+                subject_id=subject_id or '',
+                semester_id=semester_id or '',
+                class_id=class_id or '',
+                folder_path=relative_folder
+            )
+            uploaded_docs.append(doc)
 
-    return {
-        "success": True,
-        "count": len(uploaded_docs),
-        "documents": uploaded_docs,
-        "errors": errors
-    }
+        return {
+            "success": True,
+            "count": len(uploaded_docs),
+            "documents": uploaded_docs,
+            "errors": errors
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Lỗi tải lên tài liệu: {str(e)}")
 
 
 @app.get("/api/documents")

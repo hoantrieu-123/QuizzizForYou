@@ -514,9 +514,9 @@ def create_subject(name: str, semester_id: Optional[str] = None, class_id: Optio
     cls_val = class_id.strip() if class_id else ''
     if sem_val and not cls_val:
         cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_val,))
-        r = cursor.fetchone()
+        r = row_to_dict(cursor, cursor.fetchone())
         if r:
-            cls_val = r['class_id'] or ''
+            cls_val = r.get('class_id') or ''
     cursor.execute(
         "INSERT INTO subjects (id, name, semester_id, class_id, order_idx) VALUES (?, ?, ?, ?, ?)",
         (subject_id, name.strip(), sem_val, cls_val, next_order)
@@ -548,9 +548,9 @@ def update_subject(subject_id: str, name: str, semester_id: Optional[str] = None
         cls_val = class_id.strip() if class_id else ''
         if sem_val and not cls_val:
             cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_val,))
-            r = cursor.fetchone()
+            r = row_to_dict(cursor, cursor.fetchone())
             if r:
-                cls_val = r['class_id'] or ''
+                cls_val = r.get('class_id') or ''
         cursor.execute("UPDATE subjects SET name = ?, semester_id = ?, class_id = ? WHERE id = ?", (name.strip(), sem_val, cls_val, subject_id))
         cursor.execute("UPDATE quizzes SET semester_id = ?, class_id = ? WHERE subject_id = ?", (sem_val, cls_val, subject_id))
     else:
@@ -569,9 +569,9 @@ def move_subject(subject_id: str, semester_id: str, class_id: Optional[str] = No
     cls_val = class_id.strip() if class_id else ''
     if sem_val and not cls_val:
         cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_val,))
-        r = cursor.fetchone()
+        r = row_to_dict(cursor, cursor.fetchone())
         if r:
-            cls_val = r['class_id'] or ''
+            cls_val = r.get('class_id') or ''
     cursor.execute("UPDATE subjects SET semester_id = ?, class_id = ? WHERE id = ?", (sem_val, cls_val, subject_id))
     cursor.execute("UPDATE quizzes SET semester_id = ?, class_id = ? WHERE subject_id = ?", (sem_val, cls_val, subject_id))
     conn.commit()
@@ -740,18 +740,18 @@ def update_quiz_placement(
 
     if sub_id:
         cursor.execute("SELECT semester_id, class_id FROM subjects WHERE id = ?", (sub_id,))
-        row = cursor.fetchone()
+        row = row_to_dict(cursor, cursor.fetchone())
         if row:
             if not sem_id:
-                sem_id = row['semester_id'] or ''
+                sem_id = row.get('semester_id') or ''
             if not cls_id:
-                cls_id = row['class_id'] or ''
+                cls_id = row.get('class_id') or ''
 
     if sem_id and not cls_id:
         cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_id,))
-        row = cursor.fetchone()
+        row = row_to_dict(cursor, cursor.fetchone())
         if row:
-            cls_id = row['class_id'] or ''
+            cls_id = row.get('class_id') or ''
 
     cursor.execute("""
     UPDATE quizzes
@@ -787,11 +787,11 @@ def create_document_folder(
     # Inherit subject_id, semester_id, class_id from parent folder if not provided
     if clean_parent and not subject_id:
         cursor.execute("SELECT subject_id, semester_id, class_id FROM document_folders WHERE id = ?", (clean_parent,))
-        p_row = cursor.fetchone()
+        p_row = row_to_dict(cursor, cursor.fetchone())
         if p_row:
-            subject_id = p_row['subject_id'] or ''
-            semester_id = p_row['semester_id'] or ''
-            class_id = p_row['class_id'] or ''
+            subject_id = p_row.get('subject_id') or ''
+            semester_id = p_row.get('semester_id') or ''
+            class_id = p_row.get('class_id') or ''
 
     cursor.execute("""
     INSERT INTO document_folders (
@@ -894,7 +894,10 @@ def get_document_folders_tree(
 
     # Query document counts grouped by folder_id
     cursor.execute("SELECT folder_id, COUNT(*) as cnt FROM documents GROUP BY folder_id")
-    folder_doc_counts = {r['folder_id']: r['cnt'] for r in cursor.fetchall() if r['folder_id']}
+    folder_doc_counts = {}
+    for r in rows_to_dicts(cursor, cursor.fetchall()):
+        if r.get('folder_id'):
+            folder_doc_counts[r['folder_id']] = r.get('cnt', 0)
     conn.close()
 
     # Build folder lookup and hierarchy
@@ -1060,27 +1063,27 @@ def create_document(
     # If folder_id provided and no subject_id, inherit from folder
     if clean_folder_id and (not sub_id or not sem_id or not cls_id):
         cursor.execute("SELECT subject_id, semester_id, class_id FROM document_folders WHERE id = ?", (clean_folder_id,))
-        f_row = cursor.fetchone()
+        f_row = row_to_dict(cursor, cursor.fetchone())
         if f_row:
-            if not sub_id: sub_id = f_row['subject_id'] or ''
-            if not sem_id: sem_id = f_row['semester_id'] or ''
-            if not cls_id: cls_id = f_row['class_id'] or ''
+            if not sub_id: sub_id = f_row.get('subject_id') or ''
+            if not sem_id: sem_id = f_row.get('semester_id') or ''
+            if not cls_id: cls_id = f_row.get('class_id') or ''
 
     # Auto-resolve semester_id and class_id if subject_id is supplied
     if sub_id and (not sem_id or not cls_id):
         cursor.execute("SELECT semester_id, class_id FROM subjects WHERE id = ?", (sub_id,))
-        row = cursor.fetchone()
+        row = row_to_dict(cursor, cursor.fetchone())
         if row:
             if not sem_id:
-                sem_id = row['semester_id'] or ''
+                sem_id = row.get('semester_id') or ''
             if not cls_id:
-                cls_id = row['class_id'] or ''
+                cls_id = row.get('class_id') or ''
 
     if sem_id and not cls_id:
         cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_id,))
-        row = cursor.fetchone()
+        row = row_to_dict(cursor, cursor.fetchone())
         if row:
-            cls_id = row['class_id'] or ''
+            cls_id = row.get('class_id') or ''
 
     cursor.execute("""
     INSERT INTO documents (
@@ -1210,18 +1213,18 @@ def update_document(
 
         if sub_id and (not sem_id or not cls_id):
             cursor.execute("SELECT semester_id, class_id FROM subjects WHERE id = ?", (sub_id,))
-            s_row = cursor.fetchone()
+            s_row = row_to_dict(cursor, cursor.fetchone())
             if s_row:
                 if not sem_id:
-                    sem_id = s_row['semester_id'] or ''
+                    sem_id = s_row.get('semester_id') or ''
                 if not cls_id:
-                    cls_id = s_row['class_id'] or ''
+                    cls_id = s_row.get('class_id') or ''
 
         if sem_id and not cls_id:
             cursor.execute("SELECT class_id FROM semesters WHERE id = ?", (sem_id,))
-            c_row = cursor.fetchone()
+            c_row = row_to_dict(cursor, cursor.fetchone())
             if c_row:
-                cls_id = c_row['class_id'] or ''
+                cls_id = c_row.get('class_id') or ''
 
         updates.extend(["subject_id = ?", "semester_id = ?", "class_id = ?"])
         params.extend([sub_id, sem_id, cls_id])

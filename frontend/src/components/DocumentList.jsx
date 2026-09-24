@@ -249,8 +249,12 @@ export default function DocumentList({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Lỗi tạo thư mục');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = data.detail;
+          const msg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join(', ') : (detail ? JSON.stringify(detail) : 'Lỗi tạo thư mục'));
+          throw new Error(msg);
+        }
 
         showToast(`Đã tạo thư mục "${data.folder.name}" thành công!`);
         if (modalState.parentId) {
@@ -270,8 +274,12 @@ export default function DocumentList({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: trimmed })
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Lỗi đổi tên thư mục');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = data.detail;
+          const msg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join(', ') : (detail ? JSON.stringify(detail) : 'Lỗi đổi tên thư mục'));
+          throw new Error(msg);
+        }
 
         showToast(`Đã đổi tên thành "${data.folder.name}"!`);
         await fetchFolderTree();
@@ -281,8 +289,12 @@ export default function DocumentList({
         const res = await fetch(apiUrl(`/api/document-folders/${modalState.folderId}`), {
           method: 'DELETE'
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Lỗi xóa thư mục');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = data.detail;
+          const msg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join(', ') : (detail ? JSON.stringify(detail) : 'Lỗi xóa thư mục'));
+          throw new Error(msg);
+        }
 
         showToast('Đã xóa thư mục và các tệp bên trong thành công!');
         if (currentFolderId === modalState.folderId) {
@@ -293,7 +305,10 @@ export default function DocumentList({
         onTreeUpdated?.();
       }
     } catch (err) {
-      alert(err.message);
+      const displayMsg = err.message === 'Failed to fetch'
+        ? 'Không thể kết nối đến máy chủ backend (Failed to fetch). Vui lòng kiểm tra lại dịch vụ backend hoặc thử lại.'
+        : err.message;
+      alert(displayMsg);
     } finally {
       setModalState(null);
       setModalInputName('');
@@ -321,43 +336,66 @@ export default function DocumentList({
       setUploading(true);
       setUploadStats({ current: 0, total: validFiles.length });
 
-      const formData = new FormData();
-      const relativePaths = [];
-
-      validFiles.forEach(f => {
-        formData.append('files', f);
-        relativePaths.push(f.webkitRelativePath || '');
-      });
-
-      formData.append('folder_paths', JSON.stringify(relativePaths));
-
-      // Target folder ID
       const targetFolder = currentFolderId && currentFolderId !== 'root' ? currentFolderId : '';
-      if (targetFolder) {
-        formData.append('folder_id', targetFolder);
+      const CHUNK_SIZE = 8;
+      let totalImported = 0;
+      let uploadErrors = [];
+
+      for (let i = 0; i < validFiles.length; i += CHUNK_SIZE) {
+        const chunk = validFiles.slice(i, i + CHUNK_SIZE);
+        const formData = new FormData();
+        const relativePaths = [];
+
+        chunk.forEach(f => {
+          formData.append('files', f);
+          relativePaths.push(f.webkitRelativePath || '');
+        });
+
+        formData.append('folder_paths', JSON.stringify(relativePaths));
+        if (targetFolder) {
+          formData.append('folder_id', targetFolder);
+        }
+
+        // Append filter context if selected
+        if (selectedFilter) {
+          if (selectedFilter.type === 'class') formData.append('class_id', selectedFilter.id);
+          if (selectedFilter.type === 'semester') formData.append('semester_id', selectedFilter.id);
+          if (selectedFilter.type === 'subject') formData.append('subject_id', selectedFilter.id);
+        }
+
+        const res = await fetch(apiUrl('/api/documents/upload'), {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = data.detail;
+          const msg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join(', ') : (detail ? JSON.stringify(detail) : 'Lỗi tải lên tài liệu'));
+          throw new Error(msg);
+        }
+
+        totalImported += (data.count || 0);
+        if (data.errors && data.errors.length > 0) {
+          uploadErrors = uploadErrors.concat(data.errors);
+        }
+
+        setUploadStats({ current: Math.min(i + CHUNK_SIZE, validFiles.length), total: validFiles.length });
       }
 
-      // Append filter context if selected
-      if (selectedFilter) {
-        if (selectedFilter.type === 'class') formData.append('class_id', selectedFilter.id);
-        if (selectedFilter.type === 'semester') formData.append('semester_id', selectedFilter.id);
-        if (selectedFilter.type === 'subject') formData.append('subject_id', selectedFilter.id);
+      let toastMsg = `Đã import thành công ${totalImported} tài liệu!`;
+      if (uploadErrors.length > 0) {
+        toastMsg += ` (${uploadErrors.length} file bị bỏ qua do lỗi)`;
       }
-
-      const res = await fetch(apiUrl('/api/documents/upload'), {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Lỗi tải lên tài liệu');
-
-      showToast(`Đã import thành công ${data.count} tài liệu!`);
+      showToast(toastMsg);
       await fetchFolderTree();
       await fetchDocuments();
       onTreeUpdated?.();
     } catch (err) {
-      alert('Lỗi tải tài liệu: ' + err.message);
+      const displayMsg = err.message === 'Failed to fetch'
+        ? 'Không thể kết nối đến máy chủ backend (Failed to fetch). Vui lòng kiểm tra lại kết nối mạng hoặc thử lại.'
+        : err.message;
+      alert('Lỗi tải tài liệu: ' + displayMsg);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
