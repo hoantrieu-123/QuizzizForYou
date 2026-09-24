@@ -311,8 +311,50 @@ export default function QuizList({
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '2.5rem', color: '#7c3aed', fontWeight: 400}}>
-        Đang tải danh sách bài kiểm tra & phân loại môn học...
+      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Top Filter & Action Bar Skeleton */}
+        <div className="card" style={{ padding: '0.85rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="skeleton" style={{ width: '160px', height: '22px' }} />
+            <div className="skeleton" style={{ width: '55px', height: '20px', borderRadius: '6px' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="skeleton" style={{ width: '90px', height: '30px' }} />
+            <div className="skeleton" style={{ width: '100px', height: '30px' }} />
+          </div>
+        </div>
+
+        {/* Section Skeletons */}
+        {[1, 2, 3].map(sec => (
+          <div key={sec} className="card" style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div className="skeleton" style={{ width: '28px', height: '28px', borderRadius: '6px' }} />
+                <div className="skeleton" style={{ width: `${140 + sec * 30}px`, height: '18px' }} />
+              </div>
+              <div className="skeleton" style={{ width: '60px', height: '20px' }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.85rem' }}>
+              {[1, 2].map(card => (
+                <div key={card} className="card" style={{ padding: '1.15rem', border: '1px solid #eeeeee', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div className="skeleton" style={{ width: '75%', height: '18px' }} />
+                    <div className="skeleton" style={{ width: '45px', height: '18px' }} />
+                  </div>
+                  <div className="skeleton" style={{ width: '40%', height: '12px', marginTop: '4px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.65rem', borderTop: '1px solid #f4f4f5' }}>
+                    <div className="skeleton" style={{ width: '70px', height: '20px' }} />
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <div className="skeleton" style={{ width: '70px', height: '28px', borderRadius: '6px' }} />
+                      <div className="skeleton" style={{ width: '70px', height: '28px', borderRadius: '6px' }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -396,7 +438,7 @@ export default function QuizList({
   };
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Filter Breadcrumb Bar */}
       {selectedFilter && selectedFilter.type !== 'all' && (
         <div className="filter-breadcrumb-bar">

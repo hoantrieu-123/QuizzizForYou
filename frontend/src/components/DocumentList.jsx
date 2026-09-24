@@ -812,6 +812,22 @@ export default function DocumentList({
         </div>
       </div>
 
+      {/* Animated Upload Progress Bar */}
+      {uploading && (
+        <div style={{ marginBottom: '1rem' }} className="animate-fade-in">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '0.8rem', color: '#555555' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <Loader2 size={14} className="spin" />
+              <span>Đang tải lên tài liệu vào hệ thống...</span>
+            </span>
+            <span style={{ fontWeight: 400 }}>{uploadStats.current} / {uploadStats.total}</span>
+          </div>
+          <div className="indeterminate-progress-container">
+            <div className="indeterminate-progress-bar" />
+          </div>
+        </div>
+      )}
+
       {/* Main Dual-Pane Container: Left Folder Tree & Right Documents View */}
       <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'stretch' }}>
         {/* LEFT PANE: Folder Tree Explorer */}
@@ -913,9 +929,11 @@ export default function DocumentList({
               borderTop: '1px solid #eeeeee'
             }}>
               {loadingTree ? (
-                <div style={{ padding: '1rem', textAlign: 'center', color: '#888888', fontSize: '0.8rem' }}>
-                  <Loader2 size={16} className="spin" style={{ margin: '0 auto 0.35rem' }} />
-                  <span>Đang tải thư mục...</span>
+                <div style={{ padding: '0.75rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div className="skeleton" style={{ width: '85%', height: '24px' }} />
+                  <div className="skeleton" style={{ width: '70%', height: '22px', marginLeft: '12px' }} />
+                  <div className="skeleton" style={{ width: '78%', height: '22px', marginLeft: '12px' }} />
+                  <div className="skeleton" style={{ width: '88%', height: '24px' }} />
                 </div>
               ) : folderTree.length === 0 ? (
                 <div style={{ padding: '1rem 0.5rem', textAlign: 'center', color: '#888888', fontSize: '0.78rem' }}>
@@ -1208,12 +1226,31 @@ export default function DocumentList({
 
           {/* Main Document Content */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem 0', color: '#666666' }}>
-              <Loader2 size={24} className="spin" style={{ margin: '0 auto 0.5rem' }} />
-              <span>Đang tải danh sách tài liệu...</span>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '1rem'
+            }}>
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="card" style={{ padding: '1rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                    <div className="skeleton" style={{ width: '38px', height: '22px', borderRadius: '4px' }} />
+                    <div className="skeleton" style={{ width: '60px', height: '14px', borderRadius: '4px' }} />
+                  </div>
+                  <div className="skeleton" style={{ width: '85%', height: '16px', borderRadius: '4px', marginBottom: '0.5rem' }} />
+                  <div className="skeleton" style={{ width: '60%', height: '14px', borderRadius: '4px', marginBottom: '1rem' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.65rem', borderTop: '1px solid #eeeeee' }}>
+                    <div className="skeleton" style={{ width: '70px', height: '12px', borderRadius: '4px' }} />
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <div className="skeleton" style={{ width: '28px', height: '24px', borderRadius: '4px' }} />
+                      <div className="skeleton" style={{ width: '28px', height: '24px', borderRadius: '4px' }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : displayedDocs.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+            <div className="card animate-fade-in" style={{ textAlign: 'center', padding: '3rem 1.5rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
               <FileText size={36} style={{ color: '#888888', margin: '0 auto 0.75rem' }} />
               <h3 style={{ fontSize: '1rem', fontWeight: 400, color: '#333333', marginBottom: '0.35rem' }}>
                 Chưa có tài liệu nào trong thư mục này
@@ -1232,7 +1269,7 @@ export default function DocumentList({
             </div>
           ) : viewMode === 'grid' ? (
             /* GRID VIEW */
-            <div style={{
+            <div className="animate-fade-in" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
               gap: '1rem'
@@ -1245,7 +1282,7 @@ export default function DocumentList({
                 return (
                   <div
                     key={doc.id}
-                    className="card"
+                    className="card doc-card"
                     style={{
                       padding: '1rem',
                       border: '1px solid #eeeeee',
@@ -1431,7 +1468,7 @@ export default function DocumentList({
             </div>
           ) : (
             /* TABLE VIEW */
-            <div className="card" style={{ border: '1px solid #eeeeee', borderRadius: '8px', overflowX: 'auto' }}>
+            <div className="card animate-fade-in" style={{ border: '1px solid #eeeeee', borderRadius: '8px', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: '#fcfcfc', borderBottom: '1px solid #eeeeee', textAlign: 'left', color: '#555555' }}>

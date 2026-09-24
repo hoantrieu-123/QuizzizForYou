@@ -164,15 +164,17 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', position: 'relative' }}>
       {loadingQuizId && (
-        <div style={{
+        <div className="indeterminate-progress-container" style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           height: '3px',
-          background: 'linear-gradient(90deg, #333333 0%, #888888 50%, #333333 100%)',
-          zIndex: 9999
-        }} />
+          zIndex: 9999,
+          borderRadius: 0
+        }}>
+          <div className="indeterminate-progress-bar" />
+        </div>
       )}
       <Navbar
         currentView={currentView}
@@ -184,7 +186,7 @@ export default function App() {
       <main className="main-container main-container-wide" style={{ flex: 1 }}>
         {/* VIEW 1: HOME DASHBOARD */}
         {currentView === 'home' && (
-          <div className="home-layout">
+          <div className="home-layout animate-fade-in">
             {/* Left Column: Sidebar Tree Navigation & Hierarchy */}
             <SidebarTree
               selectedFilter={selectedTreeFilter}
@@ -263,25 +265,27 @@ export default function App() {
 
               {activeHomeTab === 'documents' ? (
                 /* VIEW: DOCUMENT MANAGER */
-                <DocumentList
-                  selectedFilter={selectedTreeFilter}
-                  onClearFilter={() => setSelectedTreeFilter({ type: 'documents', id: 'documents', name: 'Tất cả tài liệu', path: ['Tài liệu'] })}
-                  searchQuery={searchQuery}
-                  onConvertDocToQuiz={(quiz) => {
-                    setCurrentQuiz(quiz);
-                    setCurrentView('preview');
-                    setRefreshListTrigger(prev => prev + 1);
-                    setRefreshTreeTrigger(prev => prev + 1);
-                  }}
-                  onTreeUpdated={() => {
-                    setRefreshTreeTrigger(prev => prev + 1);
-                    setRefreshDocTrigger(prev => prev + 1);
-                  }}
-                  refreshTrigger={refreshDocTrigger}
-                />
+                <div key="tab-documents" className="animate-tab-content">
+                  <DocumentList
+                    selectedFilter={selectedTreeFilter}
+                    onClearFilter={() => setSelectedTreeFilter({ type: 'documents', id: 'documents', name: 'Tất cả tài liệu', path: ['Tài liệu'] })}
+                    searchQuery={searchQuery}
+                    onConvertDocToQuiz={(quiz) => {
+                      setCurrentQuiz(quiz);
+                      setCurrentView('preview');
+                      setRefreshListTrigger(prev => prev + 1);
+                      setRefreshTreeTrigger(prev => prev + 1);
+                    }}
+                    onTreeUpdated={() => {
+                      setRefreshTreeTrigger(prev => prev + 1);
+                      setRefreshDocTrigger(prev => prev + 1);
+                    }}
+                    refreshTrigger={refreshDocTrigger}
+                  />
+                </div>
               ) : (
                 /* VIEW: QUIZZES DASHBOARD */
-                <>
+                <div key="tab-quizzes" className="animate-tab-content">
                   {/* 3 Thẻ Thống Kê KPI Gọn Gàng */}
                   <div className="kpi-grid">
                     <div className="kpi-card">
@@ -345,7 +349,7 @@ export default function App() {
                       />
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -353,12 +357,14 @@ export default function App() {
 
         {/* VIEW 2: PREVIEW & EDIT */}
         {currentView === 'preview' && currentQuiz && (
-          <PreviewEditor
-            quiz={currentQuiz}
-            onSave={handleSaveQuiz}
-            onStartQuiz={handleStartQuiz}
-            onBack={() => setCurrentView('home')}
-          />
+          <div className="animate-fade-in">
+            <PreviewEditor
+              quiz={currentQuiz}
+              onSave={handleSaveQuiz}
+              onStartQuiz={handleStartQuiz}
+              onBack={() => setCurrentView('home')}
+            />
+          </div>
         )}
 
         {/* VIEW 3: INTERACTIVE QUIZ TAKING */}
@@ -374,16 +380,18 @@ export default function App() {
 
         {/* VIEW 4: RESULTS & GRADING */}
         {currentView === 'result' && currentQuiz && currentResult && (
-          <ResultView
-            result={currentResult}
-            quiz={currentQuiz}
-            onRetake={() => {
-              setPlayerSessionKey(prev => prev + 1);
-              setCurrentView('player');
-            }}
-            onEdit={() => setCurrentView('preview')}
-            onHome={() => setCurrentView('home')}
-          />
+          <div className="animate-fade-in">
+            <ResultView
+              result={currentResult}
+              quiz={currentQuiz}
+              onRetake={() => {
+                setPlayerSessionKey(prev => prev + 1);
+                setCurrentView('player');
+              }}
+              onEdit={() => setCurrentView('preview')}
+              onHome={() => setCurrentView('home')}
+            />
+          </div>
         )}
       </main>
 

@@ -369,9 +369,16 @@ export default function SidebarTree({
 
   if (loading && !treeData) {
     return (
-      <div className="sidebar-tree-container" style={{ padding: '1.25rem', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>
-        Đang tải cây đào tạo...
-      </div>
+      <aside className="sidebar-tree-container" style={{ padding: '1rem' }}>
+        <div className="skeleton" style={{ height: '36px', borderRadius: '6px', marginBottom: '1rem' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          <div className="skeleton" style={{ height: '28px', width: '80%', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '28px', width: '90%', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '28px', width: '75%', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '28px', width: '85%', borderRadius: '4px' }} />
+          <div className="skeleton" style={{ height: '28px', width: '65%', borderRadius: '4px' }} />
+        </div>
+      </aside>
     );
   }
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   CheckCircle2, AlertTriangle, Play, Save, ArrowLeft,
   Edit2, Plus, Trash2, Check, Circle, Sparkles,
-  Shuffle, Package, GripVertical, X, Layers, Settings2
+  Shuffle, Package, GripVertical, X, Layers, Settings2, Loader2
 } from './UIcons';
 import { cleanQuestionPrompt, cleanItemText, createScrambledRights, createScrambledBlanks } from './QuizPlayer';
 
@@ -1073,7 +1073,47 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
   };
 
   return (
-    <div style={{ paddingBottom: '4rem' }}>
+    <div className="animate-fade-in" style={{ paddingBottom: '4rem', position: 'relative' }}>
+      {toastMessage && (
+        <div className="animate-toast" style={{
+          position: 'fixed',
+          top: '5rem',
+          right: '2rem',
+          zIndex: 9999,
+          background: '#ffffff',
+          border: '1px solid #eeeeee',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+          color: '#333333',
+          padding: '0.75rem 1.25rem',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.875rem'
+        }}>
+          {toastMessage}
+        </div>
+      )}
+      {saveSuccess && (
+        <div className="animate-toast" style={{
+          position: 'fixed',
+          top: '5rem',
+          right: '2rem',
+          zIndex: 9999,
+          background: '#ffffff',
+          border: '1px solid #eeeeee',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+          color: '#15803d',
+          padding: '0.75rem 1.25rem',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.875rem'
+        }}>
+          <CheckCircle2 size={16} /> Đã lưu bài thi thành công!
+        </div>
+      )}
       {/* 1. Header & File Info */}
       <div className="card" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
@@ -2616,7 +2656,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
               borderRadius: '12px'
             }}
           >
-            <Save size={16} />
+            {isSaving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
             {isSaving ? 'Đang lưu vào ngân hàng...' : 'Lưu vào Ngân hàng câu hỏi'}
           </button>
 

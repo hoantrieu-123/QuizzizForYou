@@ -155,10 +155,13 @@ export default function UploadSection({ onUploadSuccess }) {
             onClick={() => !isUploading && fileInputRef.current?.click()}
           >
             {isUploading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 0' }}>
-                <Loader2 size={32} className="spin-animate" style={{ color: '#333333' }} />
-                <div style={{ fontWeight: 400, fontSize: '0.95rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem', padding: '0.75rem 0', width: '100%', maxWidth: '240px', margin: '0 auto' }}>
+                <Loader2 size={28} className="spin-animate" style={{ color: '#333333' }} />
+                <div style={{ fontWeight: 400, fontSize: '0.9rem', color: '#333333' }}>
                   Đang bóc tách file Word...
+                </div>
+                <div className="indeterminate-progress-container" style={{ width: '100%' }}>
+                  <div className="indeterminate-progress-bar" />
                 </div>
               </div>
             ) : (
@@ -178,7 +181,7 @@ export default function UploadSection({ onUploadSuccess }) {
 
       {/* Error Message */}
       {errorMsg && (
-        <div style={{
+        <div className="animate-toast" style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',

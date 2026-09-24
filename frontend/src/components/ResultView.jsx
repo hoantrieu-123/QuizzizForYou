@@ -70,7 +70,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
   };
 
   return (
-    <div style={{ maxWidth: '1800px', margin: '0 auto', paddingBottom: '5rem' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '1800px', margin: '0 auto', paddingBottom: '5rem' }}>
       {/* 1. Top Banner / Hero */}
       <div style={{
         borderRadius: '8px',

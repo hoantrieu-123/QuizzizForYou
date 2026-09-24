@@ -891,7 +891,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
   };
 
   return (
-    <div style={{ maxWidth: '1800px', margin: '0 auto', paddingBottom: '7.5rem' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '1800px', margin: '0 auto', paddingBottom: '7.5rem' }}>
       {/* 1. Top Exam Pinned Status Bar */}
       <header style={{
         position: 'sticky',
@@ -1041,7 +1041,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
       </header>
 
       {toastMessage && (
-        <div style={{
+        <div className="animate-toast" style={{
           background: '#ffffff',
           border: '1px solid #eeeeee',
           color: '#333333',
@@ -1062,7 +1062,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
         {/* LEFT COLUMN: Main Question Focus Arena */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0 }}>
           {/* Main Question Card */}
-          <div className="card" style={{ padding: '2rem', position: 'relative', overflow: 'hidden' }}>
+          <div key={currentIndex} className="card question-arena-enter" style={{ padding: '2rem', position: 'relative', overflow: 'hidden' }}>
             {/* Question Meta Chips */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
