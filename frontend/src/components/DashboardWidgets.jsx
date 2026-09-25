@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Clock, FileText, RotateCcw } from './UIcons';
+import { PlayCircle, Clock, FileText, RotateCcw } from './UIcons';
 import { prefetchQuizDetail } from '../services/dataCache';
 
 export default function DashboardWidgets({
@@ -50,24 +50,25 @@ export default function DashboardWidgets({
       {inProgressQuiz && (
         <aside className="card" style={{ padding: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontWeight: 400, fontSize: '0.9rem', color: '#333333', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <RotateCcw size={15} style={{ color: '#333333' }} />
+            <span style={{ fontWeight: 500, fontSize: '0.9rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <RotateCcw size={15} style={{ color: 'var(--warning)' }} />
               <span>Bài làm chưa nộp</span>
             </span>
-            <span className="badge" style={{ fontSize: '0.72rem' }}>
+            <span className="badge badge-warning" style={{ fontSize: '0.72rem' }}>
               Đang dở
             </span>
           </div>
 
           <div style={{
             padding: '0.75rem',
-            borderRadius: '6px',
-            background: '#ffffff',
-            border: '1px solid #eeeeee',
+            borderRadius: '8px',
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.5rem',
-            fontSize: '0.825rem'
+            fontSize: '0.825rem',
+            color: 'var(--text)'
           }}>
             <div>
               Bài thi: <strong>"{inProgressQuiz.title || 'Đang làm'}"</strong>
@@ -99,11 +100,11 @@ export default function DashboardWidgets({
       {/* WIDGET 2: File Word gần đây */}
       <aside className="card" style={{ padding: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-          <span style={{ fontWeight: 400, fontSize: '0.9rem', color: '#333333', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <Clock size={15} style={{ color: '#333333' }} />
+          <span style={{ fontWeight: 500, fontSize: '0.9rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <Clock size={16} style={{ color: 'var(--text-secondary)' }} />
             <span>Đề thi gần đây</span>
           </span>
-          <span style={{ fontSize: '0.75rem', color: '#555555', fontWeight: 400}}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>
             {recentFiles.length} file
           </span>
         </div>
@@ -118,34 +119,36 @@ export default function DashboardWidgets({
                   onMouseEnter={() => prefetchQuizDetail(q.id)}
                   style={{
                     padding: '0.65rem 0.75rem',
-                    borderRadius: '6px',
-                    background: '#ffffff',
-                    border: '1px solid #eeeeee',
+                    borderRadius: '8px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '0.65rem'
+                    gap: '0.65rem',
+                    transition: 'border-color 0.15s ease'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
                     <div style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '4px',
-                      background: '#ffffff',
-                      border: '1px solid #eeeeee',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '6px',
+                      background: 'var(--primary-light)',
+                      color: 'var(--primary)',
+                      border: '1px solid var(--border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0
                     }}>
-                      <FileText size={14} style={{ color: '#333333' }} />
+                      <FileText size={16} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                      <span style={{ fontSize: '0.825rem', fontWeight: 400, color: '#333333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ fontSize: '0.825rem', fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {getCleanFileName(q.title || q.filename)}
                       </span>
-                      <span style={{ fontSize: '0.72rem', color: '#555555' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         {q.questions_count || q.questions?.length || 0} câu
                       </span>
                     </div>
@@ -157,10 +160,13 @@ export default function DashboardWidgets({
                     disabled={isLoading}
                     className="btn btn-secondary btn-sm"
                     style={{
-                      padding: '4px 8px',
-                      fontSize: '0.75rem',
+                      padding: '4px 10px',
+                      fontSize: '0.78rem',
                       cursor: isLoading ? 'wait' : 'pointer',
-                      opacity: isLoading ? 0.65 : 1
+                      opacity: isLoading ? 0.65 : 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                     title="Làm bài thi"
                   >
@@ -168,7 +174,8 @@ export default function DashboardWidgets({
                       <span>Đang mở...</span>
                     ) : (
                       <>
-                        <Play size={12} /> Làm bài
+                        <PlayCircle size={14} style={{ color: 'var(--primary)' }} />
+                        <span>Làm bài</span>
                       </>
                     )}
                   </button>
@@ -176,7 +183,7 @@ export default function DashboardWidgets({
               );
             })
           ) : (
-            <div style={{ fontSize: '0.8rem', color: '#666666', textAlign: 'center', padding: '0.75rem 0' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem 0' }}>
               Chưa có file nào được tải lên
             </div>
           )}

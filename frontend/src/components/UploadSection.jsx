@@ -92,26 +92,34 @@ export default function UploadSection({ onUploadSuccess }) {
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', alignItems: 'center' }}>
-        {/* Left Column: Heading & Actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        {/* Left Column: Heading, Subtitle & Actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
           <h2 style={{
             fontSize: '1.35rem',
-            fontWeight: 400,
+            fontWeight: 500,
             margin: 0,
-            color: '#333333',
+            color: 'var(--text)',
             letterSpacing: '-0.02em'
           }}>
             Tạo bài trắc nghiệm từ file Word (.docx)
           </h2>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
+          <p style={{
+            fontSize: '0.85rem',
+            color: 'var(--text-secondary)',
+            margin: 0
+          }}>
+            Trích xuất câu hỏi, đáp án tự động chỉ trong vài giây
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center', marginTop: '0.5rem' }}>
             <button
               type="button"
               className="btn btn-primary"
               onClick={() => !isUploading && fileInputRef.current?.click()}
               disabled={isUploading}
             >
-              <UploadCloud size={16} />
+              <FileText size={16} />
               <span>Chọn file Word (.docx)</span>
             </button>
 
@@ -128,24 +136,23 @@ export default function UploadSection({ onUploadSuccess }) {
               href={apiUrl('/api/sample-file')}
               download="Mau_De_Thi.docx"
               style={{
-                color: '#333333',
+                color: 'var(--text)',
                 fontSize: '0.85rem',
-                textDecoration: 'underline',
-                textUnderlineOffset: '3px',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '5px',
                 cursor: 'pointer',
-                marginLeft: '4px'
+                marginLeft: '4px',
+                textDecoration: 'none'
               }}
             >
-              <Download size={14} />
+              <Download size={15} style={{ color: 'var(--text-secondary)' }} />
               <span>Tải file mẫu</span>
             </a>
           </div>
         </div>
 
-        {/* Right Column: Clean B&W Dropzone */}
+        {/* Right Column: Sage Olive Dropzone with Circular Icon Box */}
         <div>
           <div
             className={`hero-dropzone ${isDragging ? 'active' : ''}`}
@@ -156,8 +163,8 @@ export default function UploadSection({ onUploadSuccess }) {
           >
             {isUploading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem', padding: '0.75rem 0', width: '100%', maxWidth: '240px', margin: '0 auto' }}>
-                <Loader2 size={28} className="spin-animate" style={{ color: '#333333' }} />
-                <div style={{ fontWeight: 400, fontSize: '0.9rem', color: '#333333' }}>
+                <Loader2 size={28} className="spin-animate" style={{ color: 'var(--primary)' }} />
+                <div style={{ fontWeight: 400, fontSize: '0.9rem', color: 'var(--text)' }}>
                   Đang bóc tách file Word...
                 </div>
                 <div className="indeterminate-progress-container" style={{ width: '100%' }}>
@@ -166,11 +173,23 @@ export default function UploadSection({ onUploadSuccess }) {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <UploadCloud size={30} style={{ color: '#333333' }} />
-                <div style={{ fontWeight: 400, fontSize: '0.95rem', color: '#333333' }}>
+                <div style={{
+                  width: '46px',
+                  height: '46px',
+                  borderRadius: '50%',
+                  background: 'var(--primary-light)',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '2px'
+                }}>
+                  <UploadCloud size={24} />
+                </div>
+                <div style={{ fontWeight: 500, fontSize: '0.95rem', color: 'var(--text)' }}>
                   Kéo thả file .docx vào đây
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#555555' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   hoặc bấm để chọn file từ máy tính
                 </div>
               </div>
@@ -186,10 +205,10 @@ export default function UploadSection({ onUploadSuccess }) {
           alignItems: 'center',
           gap: '0.5rem',
           padding: '0.65rem 0.85rem',
-          borderRadius: '6px',
-          background: '#ffffff',
-          border: '1px solid #b91c1c',
-          color: '#b91c1c',
+          borderRadius: '8px',
+          background: 'var(--danger-light)',
+          border: '1px solid var(--danger)',
+          color: 'var(--danger)',
           marginTop: '1rem',
           fontSize: '0.85rem',
           fontWeight: 400

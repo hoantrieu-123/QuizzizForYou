@@ -1,76 +1,72 @@
-/* EduDocx Design System - Black & White Bordered Theme */
+/* EduDocx Design System - Sage Olive Theme */
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 :root {
   --font-sans: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
   --font-heading: 'Segoe UI Variable Display', 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
 
-  /* Primary Palette (Soft Black & White) */
-  --primary: #333333;
-  --primary-dark: #333333;
-  --primary-hover: #444444;
-  --primary-container: #ffffff;
-  --on-primary: #333333;
-  --primary-light: #f4f4f5;
-  --primary-fixed: #e4e4e7;
-  --primary-fixed-dim: #d4d4d8;
-  --on-primary-fixed: #333333;
-  --primary-border: #eeeeee;
+  /* Primary Palette (Sage Olive) */
+  --primary: #68734D;
+  --primary-hover: #525D3B;
+  --primary-light: #EEF1E7;
+  --primary-dark: #40492E;
+  --primary-container: #EEF1E7;
+  --on-primary: #FFFFFF;
+  --primary-border: #DFE1D7;
 
-  /* Secondary & Neutral Palette */
-  --secondary: #333333;
-  --secondary-container: #f4f4f5;
-  --secondary-fixed: #e4e4e7;
-  --secondary-fixed-dim: #d4d4d8;
-  --on-secondary-fixed: #333333;
+  /* Secondary & Surfaces */
+  --bg: #F7F7F2;
+  --background: #F7F7F2;
+  --bg-main: #F7F7F2;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #F0F0E9;
+
+  --surface: #FFFFFF;
+  --surface-hover: #F0F0E9;
+  --surface-low: #F7F7F2;
+  --surface-container: #F7F7F2;
+  --surface-container-high: #EEF1E7;
+  --surface-container-highest: #DFE1D7;
+  --surface-lowest: #FFFFFF;
+
+  /* Text & Neutrals */
+  --text: #292D24;
+  --text-main: #292D24;
+  --on-surface: #292D24;
+  --text-secondary: #6D7165;
+  --on-surface-variant: #6D7165;
+  --text-muted: #9A9E91;
+  --text-light: #9A9E91;
+
+  --border: #DFE1D7;
+  --outline: #DFE1D7;
+  --outline-variant: #DFE1D7;
+  --border-subtle: #DFE1D7;
+  --border-focus: #68734D;
 
   /* Status Colors */
-  --success: #15803d;
-  --success-light: #f0fdf4;
-  --success-border: #eeeeee;
-  --success-text: #15803d;
+  --success: #527A52;
+  --success-light: #EEF7EE;
+  --success-border: #DFE1D7;
+  --success-text: #527A52;
 
-  --warning: #b45309;
-  --warning-light: #fffbeb;
-  --warning-border: #eeeeee;
-  --warning-text: #b45309;
+  --warning: #B98532;
+  --warning-light: #FDF6E9;
+  --warning-border: #DFE1D7;
+  --warning-text: #B98532;
 
-  --error: #b91c1c;
-  --danger: #b91c1c;
-  --error-container: #fef2f2;
-  --danger-light: #fef2f2;
-  --danger-border: #eeeeee;
-  --on-error-container: #7f1d1d;
-  --danger-text: #b91c1c;
+  --error: #B85C55;
+  --danger: #B85C55;
+  --error-container: #FBF0EF;
+  --danger-light: #FBF0EF;
+  --danger-border: #DFE1D7;
+  --on-error-container: #B85C55;
+  --danger-text: #B85C55;
 
-  /* Surface & Background Canvas (Pure White) */
-  --background: #ffffff;
-  --bg-main: #ffffff;
-  --bg-card: #ffffff;
-  --bg-subtle: #f9fafb;
-  --surface: #ffffff;
-  --surface-low: #f9fafb;
-  --surface-container: #f4f4f5;
-  --surface-container-high: #e4e4e7;
-  --surface-container-highest: #d4d4d8;
-  --surface-lowest: #ffffff;
-
-  /* Text & Neutrals - Enhanced Sharpness & Contrast */
-  --on-surface: #262626;
-  --text-main: #262626;
-  --on-surface-variant: #383838;
-  --text-muted: #4e4e4e;
-  --text-light: #5c5c5c;
-  --outline: #eeeeee;
-  --outline-variant: #eeeeee;
-  --border: #eeeeee;
-  --border-subtle: #eeeeee;
-  --border-focus: #262626;
-
-  /* Shadows (minimal/none for clean borders) */
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(41, 45, 36, 0.04);
+  --shadow-md: 0 4px 12px rgba(41, 45, 36, 0.05);
+  --shadow-lg: 0 8px 24px rgba(41, 45, 36, 0.08);
 
   /* Border Radii */
   --radius-sm: 6px;
@@ -95,9 +91,9 @@ html {
 body {
   font-family: var(--font-sans);
   font-optical-sizing: auto;
-  font-weight: 450;
-  background-color: var(--background);
-  color: var(--on-surface);
+  font-weight: 400;
+  background-color: var(--bg);
+  color: var(--text);
   line-height: 1.5;
   -webkit-font-smoothing: subpixel-antialiased;
   -moz-osx-font-smoothing: auto;
@@ -108,7 +104,7 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 500;
-  color: var(--text-main);
+  color: var(--text);
   letter-spacing: -0.015em;
   -webkit-font-smoothing: subpixel-antialiased;
   text-rendering: optimizeLegibility;
@@ -133,10 +129,10 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   Header Navbar (Clean Black & White)
+   Header Navbar (Sage Olive Modern)
    ========================================================================== */
 .app-header {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -154,7 +150,7 @@ button, input, select, textarea {
   text-decoration: none;
   cursor: pointer;
   user-select: none;
-  color: #333333;
+  color: var(--text);
 }
 
 .nav-search-box {
@@ -171,18 +167,22 @@ button, input, select, textarea {
   height: 38px;
   padding-left: 2.25rem;
   padding-right: 1rem;
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9999px;
   font-size: 0.875rem;
-  color: #333333;
+  color: var(--text);
   transition: all 0.15s ease;
   outline: none;
 }
 
+.nav-search-input::placeholder {
+  color: var(--text-muted);
+}
+
 .nav-search-input:focus {
-  border-color: #333333;
-  box-shadow: 0 0 0 1px #333333;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 .user-profile-badge {
@@ -192,8 +192,13 @@ button, input, select, textarea {
   padding: 0.35rem 0.65rem;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: #ffffff;
+  background: var(--surface);
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.user-profile-badge:hover {
+  background: var(--surface-hover);
 }
 
 /* ==========================================================================
@@ -228,9 +233,9 @@ button, input, select, textarea {
 
 /* Cards */
 .card {
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 1.25rem;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -255,7 +260,7 @@ button, input, select, textarea {
 
 .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 6px rgba(41, 45, 36, 0.05);
 }
 
 .btn:active {
@@ -264,52 +269,53 @@ button, input, select, textarea {
 }
 
 .btn-primary {
-  background-color: #ffffff;
-  color: #333333;
-  border: 1px solid var(--border);
-  font-weight: 400;
+  background-color: var(--primary);
+  color: #FFFFFF;
+  border: 1px solid var(--primary);
+  font-weight: 450;
 }
 
 .btn-primary:hover {
-  background-color: #f4f4f5;
-  color: #111111;
-  border-color: #cccccc;
+  background-color: var(--primary-hover);
+  color: #FFFFFF;
+  border-color: var(--primary-hover);
 }
 
 .btn-secondary {
-  background-color: #ffffff;
-  color: #333333;
+  background-color: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   font-weight: 400;
 }
 
 .btn-secondary:hover {
-  background-color: #f4f4f5;
-  color: #333333;
-  border-color: #cccccc;
+  background-color: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--border);
 }
 
 .btn-success {
-  background-color: #ffffff;
-  color: #333333;
-  border: 1px solid var(--border);
-  font-weight: 400;
+  background-color: var(--success);
+  color: #FFFFFF;
+  border: 1px solid var(--success);
+  font-weight: 450;
 }
 
 .btn-success:hover {
-  background-color: #f4f4f5;
-  color: #111111;
-  border-color: #cccccc;
+  background-color: #436643;
+  color: #FFFFFF;
+  border-color: #436643;
 }
 
 .btn-danger {
-  background-color: #ffffff;
-  color: #b91c1c;
-  border-color: #b91c1c;
+  background-color: var(--surface);
+  color: var(--danger);
+  border-color: var(--border);
 }
 
 .btn-danger:hover {
-  background-color: #fef2f2;
+  background-color: var(--danger-light);
+  border-color: var(--danger);
 }
 
 .btn-sm {
@@ -324,46 +330,46 @@ button, input, select, textarea {
   align-items: center;
   gap: 0.35rem;
   font-size: 0.75rem;
-  font-weight: 400;
-  padding: 0.2rem 0.6rem;
-  border-radius: 6px;
+  font-weight: 450;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
   border: 1px solid var(--border);
-  background: #ffffff;
-  color: #333333;
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .badge-highlight {
-  background: #ffffff;
-  color: #333333;
+  background: var(--primary-light);
+  color: var(--primary);
   border: 1px solid var(--border);
 }
 
 .badge-success {
-  background: #ffffff;
-  color: #15803d;
-  border: 1px solid #15803d;
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success);
 }
 
 .badge-warning {
-  background: #ffffff;
-  color: #b45309;
-  border: 1px solid #b45309;
+  background: var(--warning-light);
+  color: var(--warning);
+  border: 1px solid var(--warning);
 }
 
 .badge-blue {
-  background: #ffffff;
-  color: #333333;
-  border: 1px solid #eeeeee;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--border);
 }
 
 .badge-neutral {
-  background: #ffffff;
-  color: #555555;
-  border: 1px solid #eeeeee;
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
 }
 
 /* ==========================================================================
-   Header Greeting & KPI Row (Clean B&W Bordered)
+   Header Greeting & KPI Row (Sage Olive Style)
    ========================================================================== */
 .edudocx-greeting-card {
   display: flex;
@@ -377,7 +383,7 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: #ffffff;
+  background: var(--surface);
   padding: 0.65rem 1rem;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -391,9 +397,9 @@ button, input, select, textarea {
 }
 
 .kpi-card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 1.15rem;
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -403,8 +409,8 @@ button, input, select, textarea {
 
 .kpi-card:hover {
   transform: translateY(-2px);
-  border-color: #cccccc;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
 }
 
 .kpi-icon-box {
@@ -412,8 +418,8 @@ button, input, select, textarea {
   height: 32px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: #ffffff;
-  color: #333333;
+  background: var(--primary-light);
+  color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -425,13 +431,13 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   Hero Banner Import Word (Clean White Bordered Box)
+   Hero Banner Import Word
    ========================================================================== */
 .hero-banner {
   position: relative;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #333333;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
   padding: 1.75rem;
   border: 1px solid var(--border);
 }
@@ -442,25 +448,25 @@ button, input, select, textarea {
 
 /* Dropzone */
 .hero-dropzone {
-  border: 2px dashed #cccccc;
-  background: #ffffff;
-  border-radius: 8px;
+  border: 2px dashed var(--border);
+  background: var(--surface);
+  border-radius: 10px;
   padding: 1.75rem 1.25rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #333333;
+  color: var(--text);
 }
 
 .hero-dropzone:hover, .hero-dropzone.active {
-  background: #f4f4f5;
-  border-color: #333333;
+  background: var(--surface-hover);
+  border-color: var(--primary);
   transform: scale(1.008);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
 }
 
 /* ==========================================================================
-   Sidebar Navigation & Tree Styling (Clean White Bordered)
+   Sidebar Navigation & Tree Styling
    ========================================================================== */
 .sidebar-tree-container {
   width: 330px;
@@ -470,9 +476,9 @@ button, input, select, textarea {
   max-height: calc(100vh - 90px);
   overflow-y: auto;
   overflow-x: hidden;
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 1rem 0.85rem;
   display: flex;
   flex-direction: column;
@@ -483,7 +489,7 @@ button, input, select, textarea {
   width: 5px;
 }
 .sidebar-tree-container::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+  background: var(--border);
   border-radius: 4px;
 }
 
@@ -492,20 +498,21 @@ button, input, select, textarea {
   align-items: center;
   justify-content: space-between;
   padding: 0.65rem 0.85rem;
-  background: #ffffff;
-  color: #333333;
+  background: var(--surface);
+  color: var(--text);
   border-radius: 8px;
   font-weight: 400;
   font-size: 0.875rem;
   text-decoration: none;
   cursor: pointer;
   border: 1px solid var(--border);
+  transition: all 0.15s ease;
 }
 
 .sidebar-cta-btn:hover {
-  background: #f4f4f5;
-  border-color: #cccccc;
-  color: #111111;
+  background: var(--surface-hover);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .sidebar-nav-item {
@@ -516,22 +523,23 @@ button, input, select, textarea {
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 400;
-  color: #333333;
+  color: var(--text);
   cursor: pointer;
   border: 1px solid transparent;
   user-select: none;
+  transition: all 0.15s ease;
 }
 
 .sidebar-nav-item:hover {
-  background: #f4f4f5;
-  border-color: #eeeeee;
+  background: var(--surface-hover);
+  border-color: var(--border);
 }
 
 .sidebar-nav-item.active {
-  background: #f4f4f5;
-  color: #333333;
-  border-color: #eeeeee;
-  font-weight: 400;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--border);
+  font-weight: 450;
 }
 
 /* Tree Nodes */
@@ -545,25 +553,26 @@ button, input, select, textarea {
   user-select: none;
   margin-bottom: 2px;
   font-size: 0.825rem;
-  color: #333333;
+  color: var(--text);
   border: 1px solid transparent;
+  transition: all 0.15s ease;
 }
 
 .tree-node:hover {
-  background: #f4f4f5;
-  border-color: #eeeeee;
+  background: var(--surface-hover);
+  border-color: var(--border);
 }
 
 .tree-node.active {
-  background: #f4f4f5 !important;
-  color: #333333 !important;
-  font-weight: 400;
-  border-color: #eeeeee !important;
+  background: var(--primary-light) !important;
+  color: var(--primary) !important;
+  font-weight: 450;
+  border-color: var(--border) !important;
 }
 
 .tree-node.drag-over {
-  background: #f4f4f5 !important;
-  border: 1.5px dashed #333333 !important;
+  background: var(--primary-light) !important;
+  border: 1.5px dashed var(--primary) !important;
 }
 
 .tree-node-left {
@@ -583,16 +592,22 @@ button, input, select, textarea {
 }
 
 .tree-node-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 4px;
-  border: 1px solid #eeeeee;
-  background: #ffffff;
-  color: #333333;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.tree-node.active .tree-node-icon {
+  background: var(--surface);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .tree-node-title {
@@ -600,24 +615,24 @@ button, input, select, textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.825rem;
-  color: #333333;
+  color: var(--text);
 }
 
 .tree-badge {
   font-size: 0.68rem;
-  font-weight: 400;
-  background: #ffffff;
-  color: #333333;
-  border: 1px solid #eeeeee;
-  padding: 1px 6px;
-  border-radius: 4px;
-  line-height: 1.2;
+  font-weight: 450;
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 1px 7px;
+  border-radius: 9999px;
+  line-height: 1.3;
 }
 
 .tree-node.active .tree-badge {
-  background: #ffffff;
-  color: #333333;
-  border-color: #cccccc;
+  background: var(--primary);
+  color: #FFFFFF;
+  border-color: var(--primary);
 }
 
 .tree-expand-btn {
@@ -625,7 +640,7 @@ button, input, select, textarea {
   border: none;
   padding: 2px;
   cursor: pointer;
-  color: #333333;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -633,12 +648,12 @@ button, input, select, textarea {
 }
 
 .tree-expand-btn:hover {
-  background: #f4f4f5;
+  background: var(--surface-hover);
 }
 
 .ml-tree-1, .ml-tree-2 {
   margin-left: 0.75rem;
-  border-left: 1px solid #eeeeee;
+  border-left: 1px solid var(--border);
   padding-left: 0.35rem;
 }
 
@@ -655,7 +670,7 @@ button, input, select, textarea {
 .tree-hover-btn {
   background: none;
   border: 1px solid transparent;
-  color: #333333;
+  color: var(--text-secondary);
   padding: 2px 3px;
   cursor: pointer;
   border-radius: 4px;
@@ -664,18 +679,19 @@ button, input, select, textarea {
 }
 
 .tree-hover-btn:hover {
-  background: #f4f4f5;
-  border-color: #eeeeee;
+  background: var(--surface-hover);
+  border-color: var(--border);
+  color: var(--text);
 }
 
 .tree-hover-btn.btn-danger-hover:hover {
-  color: #b91c1c;
-  background: #fef2f2;
-  border-color: #b91c1c;
+  color: var(--danger);
+  background: var(--danger-light);
+  border-color: var(--danger);
 }
 
 /* ==========================================================================
-   Question Options & Interactive Controls (Bordered B&W)
+   Question Options & Interactive Controls
    ========================================================================== */
 .option-item {
   display: flex;
@@ -683,17 +699,17 @@ button, input, select, textarea {
   gap: 0.85rem;
   padding: 0.85rem 1.15rem;
   border-radius: 8px;
-  border: 1px solid #eeeeee;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--surface);
   margin-bottom: 0.65rem;
   cursor: pointer;
   transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #333333;
+  color: var(--text);
 }
 
 .option-item:hover {
-  border-color: #cccccc;
-  background: #f9fafb;
+  border-color: var(--primary);
+  background: var(--surface-hover);
   transform: translateX(4px);
 }
 
@@ -702,47 +718,47 @@ button, input, select, textarea {
 }
 
 .option-item.selected {
-  border: 1.5px solid #333333;
-  background-color: #f4f4f5;
-  color: #333333;
+  border: 1.5px solid var(--primary);
+  background-color: var(--primary-light);
+  color: var(--text);
   animation: selectPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .option-item.correct {
-  border: 2px solid #15803d;
-  background-color: #f0fdf4;
+  border: 2px solid var(--success);
+  background-color: var(--success-light);
 }
 
 .option-item.wrong {
-  border: 2px solid #b91c1c;
-  background-color: #fef2f2;
+  border: 2px solid var(--danger);
+  background-color: var(--danger-light);
 }
 
 .option-badge {
   width: 2rem;
   height: 2rem;
   border-radius: 6px;
-  border: 1px solid #eeeeee;
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 400;
+  font-weight: 450;
   font-size: 0.85rem;
-  background: #ffffff;
-  color: #333333;
+  background: var(--surface);
+  color: var(--text);
   flex-shrink: 0;
 }
 
 .option-item.selected .option-badge {
-  background: #ffffff;
-  color: #333333;
-  border: 2px solid #333333;
+  background: var(--primary);
+  color: #FFFFFF;
+  border: 1.5px solid var(--primary);
 }
 
 .option-item.correct .option-badge {
-  background: #15803d;
-  color: #ffffff;
-  border-color: #15803d;
+  background: var(--success);
+  color: #FFFFFF;
+  border-color: var(--success);
 }
 
 /* Drag Chip & Drop Slot */
@@ -750,20 +766,20 @@ button, input, select, textarea {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: #ffffff;
-  border: 1px solid #eeeeee;
+  background: var(--surface);
+  border: 1px solid var(--border);
   padding: 0.45rem 0.85rem;
   border-radius: 6px;
   cursor: grab;
   font-weight: 400;
   font-size: 0.875rem;
   user-select: none;
-  color: #333333;
+  color: var(--text);
 }
 
 .drag-chip:hover {
-  background: #f4f4f5;
-  border-color: #333333;
+  background: var(--surface-hover);
+  border-color: var(--primary);
 }
 
 .drag-chip.placed {
@@ -780,26 +796,26 @@ button, input, select, textarea {
   justify-content: center;
   gap: 0.4rem;
   padding: 0.35rem 0.75rem;
-  border: 1.5px dashed #cccccc;
+  border: 1.5px dashed var(--border);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--surface);
   font-weight: 400;
-  color: #333333;
+  color: var(--text);
   cursor: pointer;
 }
 
 .drop-slot.drag-over, .drop-slot.filled {
   border-style: solid;
-  border-color: #333333;
-  background: #f4f4f5;
+  border-color: var(--primary);
+  background: var(--primary-light);
 }
 
 .drop-slot-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: #ffffff;
-  color: #333333;
+  background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   padding: 0.2rem 0.55rem;
   border-radius: 4px;
@@ -811,7 +827,7 @@ button, input, select, textarea {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #333333;
+  color: var(--text-secondary);
   padding: 0;
   display: inline-flex;
 }
@@ -826,56 +842,57 @@ button, input, select, textarea {
 
 .match-left-item {
   padding: 0.85rem;
-  border: 1px solid #eeeeee;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface);
   font-weight: 400;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #333333;
+  color: var(--text);
 }
 
 .match-left-item:hover {
-  border-color: #333333;
+  border-color: var(--primary);
+  background: var(--surface-hover);
 }
 
 .match-left-item.selected {
-  border: 2px solid #333333;
-  background-color: #f4f4f5;
+  border: 2px solid var(--primary);
+  background-color: var(--primary-light);
 }
 
 .match-right-slot {
   padding: 0.85rem;
-  border: 1.5px dashed #cccccc;
+  border: 1.5px dashed var(--border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--surface);
   cursor: pointer;
   min-height: 70px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  color: #333333;
+  color: var(--text);
 }
 
 .match-right-slot.targeted {
   border-style: solid;
-  border-color: #333333;
-  background-color: #f4f4f5;
+  border-color: var(--primary);
+  background-color: var(--primary-light);
 }
 
 .match-right-slot.matched {
   border-style: solid;
-  border-color: #15803d;
-  background-color: #f0fdf4;
+  border-color: var(--success);
+  background-color: var(--success-light);
 }
 
 /* ==========================================================================
    Quiz Subject Dropzone in List
    ========================================================================== */
 .subject-section {
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 8px;
   border: 1px solid var(--border);
   margin-bottom: 0.85rem;
@@ -883,8 +900,8 @@ button, input, select, textarea {
 }
 
 .subject-section.drag-over {
-  border: 2px dashed #333333 !important;
-  background-color: #f4f4f5 !important;
+  border: 2px dashed var(--primary) !important;
+  background-color: var(--primary-light) !important;
 }
 
 .subject-header {
@@ -892,14 +909,15 @@ button, input, select, textarea {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: #ffffff;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   user-select: none;
+  transition: background-color 0.15s ease;
 }
 
 .subject-header:hover {
-  background: #f9fafb;
+  background: var(--surface-hover);
 }
 
 .subject-dropzone {
@@ -912,25 +930,25 @@ button, input, select, textarea {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 1.5px dashed #eeeeee;
+  border: 1.5px dashed var(--border);
   border-radius: 6px;
   margin: 0.25rem;
   padding: 1.5rem 1rem;
-  color: #555555;
-  background: #ffffff;
+  color: var(--text-muted);
+  background: var(--surface);
 }
 
 .quiz-card-draggable {
   cursor: grab;
   border: 1px solid var(--border) !important;
   border-radius: 8px !important;
-  background: #ffffff !important;
+  background: var(--surface) !important;
   box-shadow: none !important;
 }
 
 .quiz-card-draggable:hover {
-  border-color: #cccccc !important;
-  background: #f9fafb !important;
+  border-color: var(--primary) !important;
+  background: var(--surface-hover) !important;
 }
 
 .quiz-card-draggable.is-dragging {
@@ -939,12 +957,66 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
+   Filter Breadcrumb Bar
+   ========================================================================== */
+.filter-breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.breadcrumb-chip.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--border);
+}
+
+.btn-clear-filter {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-clear-filter:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+/* ==========================================================================
    Modals & Utilities
    ========================================================================== */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(41, 45, 36, 0.45);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -955,13 +1027,13 @@ button, input, select, textarea {
 }
 
 .modal-content {
-  background: #ffffff;
-  border: 1px solid #eeeeee;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   max-width: 500px;
   width: 100%;
   padding: 1.5rem;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-lg);
   animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   z-index: 100000;
@@ -987,7 +1059,7 @@ button, input, select, textarea {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f4f4f5 25%, #e9e9eb 37%, #f4f4f5 63%);
+  background: linear-gradient(90deg, #F0F0E9 25%, #E5E7DC 37%, #F0F0E9 63%);
   background-size: 300% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
   border-radius: 6px;
@@ -1104,8 +1176,8 @@ button, input, select, textarea {
 .doc-folder-card:hover,
 .doc-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  border-color: #cccccc !important;
+  box-shadow: 0 4px 14px rgba(41, 45, 36, 0.06);
+  border-color: var(--primary) !important;
 }
 
 /* Indeterminate Loading Progress Bar */
@@ -1114,13 +1186,13 @@ button, input, select, textarea {
   width: 100%;
   position: relative;
   overflow: hidden;
-  background-color: #f4f4f5;
+  background-color: var(--primary-light);
   border-radius: 2px;
 }
 
 .indeterminate-progress-bar {
   position: absolute;
-  background-color: #333333;
+  background-color: var(--primary);
   top: 0;
   bottom: 0;
   will-change: left, right;

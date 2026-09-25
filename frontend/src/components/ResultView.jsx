@@ -143,96 +143,96 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
       {/* 2. Score KPI Grid (4 Cards) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
         {/* Card 1: Score & Rank */}
-        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid var(--border)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 400, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
               Tổng điểm đạt được
             </span>
-            <span style={{ padding: '3px 10px', borderRadius: '4px', border: '1px solid #eeeeee', background: '#ffffff', color: '#333333', fontSize: '11px', fontWeight: 400}}>
+            <span style={{ padding: '3px 10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '11px', fontWeight: 500 }}>
               Xếp loại: {rankLabel}
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 500, color: 'var(--text)', lineHeight: 1 }}>
               {earnedScore}
             </span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 400, color: '#555555' }}>
+            <span style={{ fontSize: '1.1rem', fontWeight: 400, color: 'var(--text-secondary)' }}>
               / {totalScore} điểm
             </span>
           </div>
 
-          <div style={{ width: '100%', height: '8px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: `${percentage}%`, height: '100%', background: '#333333' }} />
+          <div style={{ width: '100%', height: '8px', background: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ width: `${percentage}%`, height: '100%', background: 'var(--primary)' }} />
           </div>
 
-          <div style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 400}}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
             {percentage >= 65 ? 'Đạt yêu cầu chứng chỉ môn học (≥65đ)' : 'Cần rèn luyện thêm để vượt mốc 65%'}
           </div>
         </div>
 
         {/* Card 2: Accuracy & Count */}
-        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid var(--border)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 400, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
               Tỷ lệ chính xác
             </span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#333333' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--text-secondary)' }}>
               {correctCount} / {questionResults.length} câu
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 500, color: 'var(--text)', lineHeight: 1 }}>
               {percentage}%
             </span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#555555' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--text-secondary)' }}>
               chuẩn đầu ra
             </span>
           </div>
 
-          <div style={{ display: 'flex', height: '8px', width: '100%', borderRadius: '4px', overflow: 'hidden', background: '#ffffff', border: '1px solid #eeeeee' }}>
-            <div style={{ width: `${(correctCount / Math.max(1, questionResults.length)) * 100}%`, background: '#333333' }} />
-            <div style={{ width: `${(wrongCount / Math.max(1, questionResults.length)) * 100}%`, background: '#71717a' }} />
+          <div style={{ display: 'flex', height: '8px', width: '100%', borderRadius: '4px', overflow: 'hidden', background: 'var(--surface-hover)', border: '1px solid var(--border)' }}>
+            <div style={{ width: `${(correctCount / Math.max(1, questionResults.length)) * 100}%`, background: 'var(--success)' }} />
+            <div style={{ width: `${(wrongCount / Math.max(1, questionResults.length)) * 100}%`, background: 'var(--danger)' }} />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#555555' }}>
-            <span>Đúng: <strong style={{ color: '#333333' }}>{correctCount}</strong></span>
-            <span>Sai: <strong style={{ color: '#333333' }}>{wrongCount}</strong></span>
-            <span>Bỏ: <strong style={{ color: '#333333' }}>{skippedCount}</strong></span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            <span>Đúng: <strong style={{ color: 'var(--success)' }}>{correctCount}</strong></span>
+            <span>Sai: <strong style={{ color: 'var(--danger)' }}>{wrongCount}</strong></span>
+            <span>Bỏ: <strong style={{ color: 'var(--text-muted)' }}>{skippedCount}</strong></span>
           </div>
         </div>
 
         {/* Card 3: Wrong / Omitted breakdown */}
-        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid var(--border)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 400, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
               Cần cải thiện
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
             <div>
-              <span style={{ fontSize: '2.5rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
+              <span style={{ fontSize: '2.5rem', fontWeight: 500, color: 'var(--danger)', lineHeight: 1 }}>
                 {wrongCount}
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#555555', marginLeft: '4px' }}>Câu sai</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '4px' }}>Câu sai</span>
             </div>
-            <div style={{ width: '1px', height: '24px', background: '#eeeeee' }} />
+            <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
             <div>
-              <span style={{ fontSize: '2rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
+              <span style={{ fontSize: '2rem', fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1 }}>
                 {skippedCount}
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#555555', marginLeft: '4px' }}>Bỏ trống</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '4px' }}>Bỏ trống</span>
             </div>
           </div>
 
           <div style={{
             padding: '8px 12px',
             borderRadius: '6px',
-            border: '1px solid #eeeeee',
-            background: '#ffffff',
-            color: '#333333',
+            border: '1px solid var(--border)',
+            background: 'var(--surface-hover)',
+            color: 'var(--text)',
             fontSize: '0.775rem',
             fontWeight: 400
           }}>
@@ -241,27 +241,27 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
         </div>
 
         {/* Card 4: Pace / Speed */}
-        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid #eeeeee', borderRadius: '8px' }}>
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid var(--border)', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 400, textTransform: 'uppercase', color: '#333333', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
               Tốc độ làm bài
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 400, color: '#333333', lineHeight: 1 }}>
+            <span style={{ fontSize: '2.5rem', fontWeight: 500, color: 'var(--text)', lineHeight: 1 }}>
               {avgPaceSec}
             </span>
-            <span style={{ fontSize: '0.9rem', color: '#555555' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
               giây / câu
             </span>
           </div>
 
-          <div style={{ width: '100%', height: '8px', background: '#ffffff', border: '1px solid #eeeeee', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{ width: '65%', height: '100%', background: '#333333' }} />
+          <div style={{ width: '100%', height: '8px', background: 'var(--surface-hover)', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ width: '65%', height: '100%', background: 'var(--primary)' }} />
           </div>
 
-          <div style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 400}}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
             Tốc độ xử lý tốt, đảm bảo thời gian quy định
           </div>
         </div>

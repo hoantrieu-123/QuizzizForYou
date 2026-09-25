@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Folders, AddFolder, ChevronDown, ChevronRight,
-  Plus, Edit3, Trash2, Check, X, Calendar, Layers, GripVertical, FileText, UploadCloud
+  Plus, Edit3, Trash2, Check, X, Calendar, Layers, GripVertical, FileText, UploadCloud, HelpCircle
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
 
@@ -398,23 +398,35 @@ export default function SidebarTree({
       </div>
 
       {/* Quick Navigation Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '0.5rem', paddingBottom: '0.65rem', borderBottom: '1px solid #eeeeee' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '0.5rem', paddingBottom: '0.65rem', borderBottom: '1px solid var(--border)' }}>
         <div
           className={`sidebar-nav-item ${selectedFilter?.type === 'all' && activeHomeTab === 'quizzes' ? 'active' : ''}`}
           onClick={() => onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] }, 'quizzes')}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FileText size={15} style={{ color: '#333333', flexShrink: 0 }} />
+            <FileText size={15} style={{ color: selectedFilter?.type === 'all' && activeHomeTab === 'quizzes' ? 'var(--primary)' : 'var(--text-secondary)', flexShrink: 0 }} />
             <span>Tất cả đề thi</span>
           </div>
-          {treeData?.total_quizzes > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{treeData.total_quizzes}</span>}
+          {treeData?.total_quizzes > 0 && (
+            <span
+              className="tree-badge"
+              style={{
+                marginLeft: 'auto',
+                background: selectedFilter?.type === 'all' && activeHomeTab === 'quizzes' ? 'var(--primary)' : 'var(--primary-light)',
+                color: selectedFilter?.type === 'all' && activeHomeTab === 'quizzes' ? '#FFFFFF' : 'var(--primary)',
+                borderColor: selectedFilter?.type === 'all' && activeHomeTab === 'quizzes' ? 'var(--primary)' : 'var(--border)'
+              }}
+            >
+              {treeData.total_quizzes}
+            </span>
+          )}
         </div>
         <div
           className={`sidebar-nav-item ${(selectedFilter?.type === 'documents' || activeHomeTab === 'documents') && selectedFilter?.type !== 'uncategorized' && selectedFilter?.type !== 'subject' && selectedFilter?.type !== 'semester' && selectedFilter?.type !== 'class' ? 'active' : ''}`}
           onClick={() => onSelectFilter({ type: 'documents', id: 'documents', name: 'Tất cả tài liệu', path: ['Tài liệu'] }, 'documents')}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Folders size={15} style={{ color: '#333333', flexShrink: 0 }} />
+            <Folders size={15} style={{ color: (selectedFilter?.type === 'documents' || activeHomeTab === 'documents') ? 'var(--primary)' : 'var(--text-secondary)', flexShrink: 0 }} />
             <span>Tài liệu</span>
           </div>
           {treeData?.total_documents > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{treeData.total_documents}</span>}
@@ -424,7 +436,7 @@ export default function SidebarTree({
           onClick={() => onSelectFilter({ type: 'uncategorized', id: 'uncategorized', name: 'Chưa phân loại', path: ['Chưa phân loại'] })}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FileText size={15} style={{ color: '#71717a', flexShrink: 0 }} />
+            <HelpCircle size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
             <span>Đề chưa phân loại</span>
           </div>
           {uncategorizedCount > 0 && <span className="tree-badge" style={{ marginLeft: 'auto' }}>{uncategorizedCount}</span>}
@@ -434,8 +446,8 @@ export default function SidebarTree({
       {/* Sidebar Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.25rem 0.25rem 0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <Layers size={16} style={{ color: '#333333' }} />
-          <span style={{ fontWeight: 400, fontSize: '0.875rem', color: '#333333' }}>
+          <Layers size={16} style={{ color: 'var(--text)' }} />
+          <span style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text)' }}>
             Cấu trúc đào tạo
           </span>
         </div>
@@ -449,9 +461,9 @@ export default function SidebarTree({
             setAddingName('');
           }}
           style={{
-            background: '#ffffff',
-            color: '#333333',
-            border: '1px solid #eeeeee',
+            background: 'var(--surface)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
             padding: '2px 8px',
             borderRadius: '6px',
             fontSize: '0.78rem',
@@ -500,7 +512,7 @@ export default function SidebarTree({
           onClick={() => onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] })}
         >
           <div className="tree-node-left">
-            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
+            <div className="tree-node-icon">
               <Folders size={14} />
             </div>
             <span className="tree-node-title">Tất cả đề thi</span>
@@ -541,7 +553,7 @@ export default function SidebarTree({
                     {isClassExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </button>
 
-                  <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
+                  <div className="tree-node-icon">
                     <Layers size={13} />
                   </div>
 
@@ -686,7 +698,7 @@ export default function SidebarTree({
                               {isSemExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                             </button>
 
-                            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
+                            <div className="tree-node-icon">
                               <Calendar size={12} />
                             </div>
 
@@ -836,7 +848,7 @@ export default function SidebarTree({
                                       <GripVertical size={11} />
                                     </span>
 
-                                    <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
+                                    <div className="tree-node-icon">
                                       <Folders size={12} />
                                     </div>
 
@@ -917,14 +929,14 @@ export default function SidebarTree({
           title="Kéo thả đề thi vào đây để gỡ ra khỏi mục"
         >
           <div className="tree-node-left">
-            <div className="tree-node-icon" style={{ background: '#ffffff', color: '#333333', border: '1px solid #eeeeee' }}>
+            <div className="tree-node-icon">
               <FileText size={12} />
             </div>
-            <span className="tree-node-title" style={{ color: '#555555' }}>
+            <span className="tree-node-title" style={{ color: 'var(--text-secondary)' }}>
               Đề chưa phân loại
             </span>
           </div>
-          <span className="tree-badge" style={{ background: '#ffffff', color: '#555555', border: '1px solid #eeeeee' }}>
+          <span className="tree-badge">
             {uncategorizedCount}
           </span>
         </div>
