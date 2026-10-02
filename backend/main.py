@@ -101,6 +101,7 @@ class ChangePinRequest(BaseModel):
 @app.middleware("http")
 async def visitor_logger_middleware(request: Request, call_next):
     path = request.url.path
+    method = request.method
     
     # Fast path: Skip static assets, vite internals, assets, favicon, and admin log endpoints
     is_static = (
