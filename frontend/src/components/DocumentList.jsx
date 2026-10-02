@@ -5,7 +5,6 @@ import {
   Folders, Play, Loader2, ChevronRight, ChevronDown, AddFolder, Home, Clock, Calendar
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
-import { useAdminAuth } from '../utils/adminAuth';
 
 export default function DocumentList({
   selectedFilter,
@@ -15,7 +14,6 @@ export default function DocumentList({
   onTreeUpdated,
   refreshTrigger = 0
 }) {
-  const { isAdmin, getHeaders } = useAdminAuth();
   const [documents, setDocuments] = useState([]);
   const [folderTree, setFolderTree] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState(null); // null: all, 'root': root, string: folder_id
@@ -280,12 +278,8 @@ export default function DocumentList({
         updateBreadcrumbs(currentFolderId);
         onTreeUpdated?.();
       } else if (modalState.type === 'delete') {
-        if (!isAdmin) {
-          throw new Error('Bạn cần đăng nhập chế độ Quản trị viên để xóa thư mục!');
-        }
         const res = await fetch(apiUrl(`/api/document-folders/${modalState.folderId}`), {
-          method: 'DELETE',
-          headers: getHeaders()
+          method: 'DELETE'
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -415,16 +409,11 @@ export default function DocumentList({
   };
 
   const handleDeleteDoc = async (doc) => {
-    if (!isAdmin) {
-      alert('Bạn cần đăng nhập chế độ Quản trị viên để xóa tài liệu!');
-      return;
-    }
     const displayName = getCleanFileName(doc.title || doc.filename);
     if (!window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${displayName}"?`)) return;
     try {
       const res = await fetch(apiUrl(`/api/documents/${doc.id}`), {
-        method: 'DELETE',
-        headers: getHeaders()
+        method: 'DELETE'
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
@@ -615,17 +604,6 @@ export default function DocumentList({
             >
               <Edit3 size={11} />
             </button>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => openDeleteFolderModal(node)}
-                className="btn btn-secondary btn-sm"
-                style={{ padding: '2px 4px', height: '20px', minWidth: '20px' }}
-                title="Xóa thư mục (Quản trị viên)"
-              >
-                <Trash2 size={11} />
-              </button>
-            )}
           </div>
         </div>
 
@@ -1011,20 +989,18 @@ export default function DocumentList({
                   >
                     <Edit3 size={12} /> Sửa tên
                   </button>
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const f = findFolderInTree(folderTree, currentFolderId);
-                        if (f) openDeleteFolderModal(f);
-                      }}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                      title="Xóa thư mục hiện tại (Quản trị viên)"
-                    >
-                      <Trash2 size={12} /> Xóa
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const f = findFolderInTree(folderTree, currentFolderId);
+                      if (f) openDeleteFolderModal(f);
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                    title="Xóa thư mục hiện tại"
+                  >
+                    <Trash2 size={12} /> Xóa
+                  </button>
                 </div>
               )}
             </div>
@@ -1111,17 +1087,15 @@ export default function DocumentList({
                       >
                         <Edit3 size={11} />
                       </button>
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => openDeleteFolderModal(sub)}
-                          className="btn btn-secondary btn-sm"
-                          style={{ padding: '2px 5px' }}
-                          title="Xóa thư mục (Quản trị viên)"
-                        >
-                          <Trash2 size={11} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => openDeleteFolderModal(sub)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '2px 5px' }}
+                        title="Xóa thư mục"
+                      >
+                        <Trash2 size={11} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1486,17 +1460,15 @@ export default function DocumentList({
                         </button>
 
                         {/* Delete */}
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => handleDeleteDoc(doc)}
-                            style={{ padding: '4px 6px' }}
-                            title="Xóa tài liệu (Quản trị viên)"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleDeleteDoc(doc)}
+                          style={{ padding: '4px 6px' }}
+                          title="Xóa tài liệu"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1671,17 +1643,15 @@ export default function DocumentList({
                             >
                               {isEditing ? <Check size={12} /> : <Edit3 size={12} />}
                             </button>
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => handleDeleteDoc(doc)}
-                                style={{ padding: '3px 6px' }}
-                                title="Xóa (Quản trị viên)"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => handleDeleteDoc(doc)}
+                              style={{ padding: '3px 6px' }}
+                              title="Xóa tài liệu"
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         </td>
                       </tr>

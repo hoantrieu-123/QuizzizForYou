@@ -482,10 +482,15 @@ export default function App() {
         EduDocx — Nền tảng tạo đề trắc nghiệm thông minh từ Highlight Word (.docx)
       </footer>
 
-      {/* Visitor IP & Access Logs Modal */}
+      {/* Visitor IP & Access Logs / Document Recovery Modal */}
       <VisitorLogModal
         isOpen={showVisitorLogModal}
         onClose={() => setShowVisitorLogModal(false)}
+        onRestored={() => {
+          setRefreshListTrigger(prev => prev + 1);
+          setRefreshDocTrigger(prev => prev + 1);
+          setRefreshTreeTrigger(prev => prev + 1);
+        }}
       />
     </div>
   );

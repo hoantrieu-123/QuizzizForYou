@@ -1,10 +1,8 @@
 import React from 'react';
-import { Download, Home, Search, X, FileText, Globe, Shield } from './UIcons';
+import { Download, Home, Search, X, FileText, Globe } from './UIcons';
 import { apiUrl } from '../apiConfig';
-import { useAdminAuth } from '../utils/adminAuth';
 
 export default function Navbar({ currentView, onNavigate, searchQuery = '', onSearchChange, onSecretAdminTrigger }) {
-  const { isAdmin } = useAdminAuth();
   const logoClicksRef = React.useRef(0);
   const logoTimerRef = React.useRef(null);
 
@@ -105,31 +103,6 @@ export default function Navbar({ currentView, onNavigate, searchQuery = '', onSe
         >
           <Download size={15} /> Tải file mẫu (.docx)
         </button>
-
-        {isAdmin && (
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={onSecretAdminTrigger}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 8px',
-              fontSize: '0.78rem',
-              fontWeight: 500,
-              background: '#ecfdf5',
-              border: '1px solid #a7f3d0',
-              color: '#065f46',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-            title="Đang bật Chế độ Quản trị viên (Nhấn để xem nhật ký IP / đổi mã PIN / khóa)"
-          >
-            <Shield size={13} color="#059669" />
-            <span>Quản trị viên</span>
-          </button>
-        )}
 
         <div style={{ height: '20px', width: '1px', backgroundColor: 'var(--border)', margin: '0 4px' }}></div>
 

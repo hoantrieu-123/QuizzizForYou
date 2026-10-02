@@ -157,6 +157,10 @@ def init_db():
         cursor.execute("ALTER TABLE quizzes ADD COLUMN semester_id TEXT DEFAULT ''")
     if 'class_id' not in quiz_columns:
         cursor.execute("ALTER TABLE quizzes ADD COLUMN class_id TEXT DEFAULT ''")
+    if 'is_deleted' not in quiz_columns:
+        cursor.execute("ALTER TABLE quizzes ADD COLUMN is_deleted INTEGER DEFAULT 0")
+    if 'deleted_at' not in quiz_columns:
+        cursor.execute("ALTER TABLE quizzes ADD COLUMN deleted_at TIMESTAMP")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classes (
@@ -273,6 +277,10 @@ def init_db():
     doc_cols = [col[1] for col in cursor.fetchall()]
     if 'folder_id' not in doc_cols:
         cursor.execute("ALTER TABLE documents ADD COLUMN folder_id TEXT DEFAULT ''")
+    if 'is_deleted' not in doc_cols:
+        cursor.execute("ALTER TABLE documents ADD COLUMN is_deleted INTEGER DEFAULT 0")
+    if 'deleted_at' not in doc_cols:
+        cursor.execute("ALTER TABLE documents ADD COLUMN deleted_at TIMESTAMP")
 
     # Performance Indexes
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_questions_quiz_id ON questions(quiz_id);")
@@ -368,9 +376,10 @@ def save_quiz(title: str, filename: str, questions: List[Dict[str, Any]]) -> str
     return quiz_id
 
 
-def get_quizzes(conn=None) -> List[Dict[str, Any]]:
-    """Retrieve list of all quizzes with in-memory caching."""
-    cached = cache_get("quizzes_list")
+def get_quizzes(conn=None, include_deleted=False) -> List[Dict[str, Any]]:
+    """Retrieve list of all active quizzes with in-memory caching."""
+    cache_key = "quizzes_list_all" if include_deleted else "quizzes_list"
+    cached = cache_get(cache_key)
     if cached is not None:
         return cached
 
@@ -380,13 +389,16 @@ def get_quizzes(conn=None) -> List[Dict[str, Any]]:
         should_close = True
 
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM quizzes ORDER BY created_at DESC")
+    if include_deleted:
+        cursor.execute("SELECT * FROM quizzes ORDER BY created_at DESC")
+    else:
+        cursor.execute("SELECT * FROM quizzes WHERE COALESCE(is_deleted, 0) = 0 ORDER BY created_at DESC")
     rows = cursor.fetchall()
     result = rows_to_dicts(cursor, rows)
     if should_close:
         conn.close()
 
-    cache_set("quizzes_list", result, ttl=180)
+    cache_set(cache_key, result, ttl=180)
     return result
 
 
@@ -478,7 +490,29 @@ def update_quiz_questions(quiz_id: str, questions: List[Dict[str, Any]], title: 
 
 
 def delete_quiz(quiz_id: str) -> bool:
-    """Delete a quiz, its questions, and its attempts."""
+    """Soft delete a quiz (movable to trash bin)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE quizzes SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id = ?", (quiz_id,))
+    conn.commit()
+    conn.close()
+    invalidate_quiz_cache(quiz_id)
+    return True
+
+
+def restore_quiz(quiz_id: str) -> bool:
+    """Restore a soft-deleted quiz."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE quizzes SET is_deleted = 0, deleted_at = NULL WHERE id = ?", (quiz_id,))
+    conn.commit()
+    conn.close()
+    invalidate_quiz_cache(quiz_id)
+    return True
+
+
+def permanent_delete_quiz(quiz_id: str) -> bool:
+    """Permanently delete a quiz, its questions, and its attempts."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM questions WHERE quiz_id = ?", (quiz_id,))
@@ -1136,10 +1170,11 @@ def get_documents(
     folder_id: Optional[str] = None,
     search: Optional[str] = None,
     file_type: Optional[str] = None,
+    include_deleted: bool = False,
     conn = None
 ) -> List[Dict[str, Any]]:
     """Retrieve list of documents filtered by class, semester, subject, folder, or search term."""
-    cache_key = f"documents_{class_id or ''}_{semester_id or ''}_{subject_id or ''}_{folder_id or ''}_{file_type or ''}_{search or ''}"
+    cache_key = f"documents_{class_id or ''}_{semester_id or ''}_{subject_id or ''}_{folder_id or ''}_{file_type or ''}_{search or ''}_{include_deleted}"
     cached = cache_get(cache_key)
     if cached is not None:
         return cached
@@ -1151,6 +1186,8 @@ def get_documents(
 
     cursor = conn.cursor()
     query = "SELECT * FROM documents WHERE 1=1"
+    if not include_deleted:
+        query += " AND COALESCE(is_deleted, 0) = 0"
     params = []
 
     if folder_id is not None:
@@ -1286,7 +1323,45 @@ def update_document(
 
 
 def delete_document(doc_id: str) -> Optional[Dict[str, Any]]:
-    """Delete document from database and return its metadata so file can be removed from disk."""
+    """Soft delete document from database without removing physical file from disk."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
+    row = row_to_dict(cursor, cursor.fetchone())
+    if not row:
+        conn.close()
+        return None
+
+    cursor.execute("UPDATE documents SET is_deleted = 1, deleted_at = CURRENT_TIMESTAMP WHERE id = ?", (doc_id,))
+    conn.commit()
+    conn.close()
+
+    invalidate_doc_cache(doc_id)
+    return row
+
+
+def restore_document(doc_id: str) -> Optional[Dict[str, Any]]:
+    """Restore a soft-deleted document."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
+    row = row_to_dict(cursor, cursor.fetchone())
+    if not row:
+        conn.close()
+        return None
+
+    cursor.execute("UPDATE documents SET is_deleted = 0, deleted_at = NULL WHERE id = ?", (doc_id,))
+    conn.commit()
+    cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
+    restored = row_to_dict(cursor, cursor.fetchone())
+    conn.close()
+
+    invalidate_doc_cache(doc_id)
+    return restored
+
+
+def permanent_delete_document(doc_id: str) -> Optional[Dict[str, Any]]:
+    """Permanently delete document from database and return its metadata so file can be removed from disk."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
@@ -1301,6 +1376,80 @@ def delete_document(doc_id: str) -> Optional[Dict[str, Any]]:
 
     invalidate_doc_cache(doc_id)
     return row
+
+
+def get_trash_items() -> Dict[str, Any]:
+    """Retrieve all soft-deleted documents and quizzes."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM documents WHERE COALESCE(is_deleted, 0) = 1 ORDER BY deleted_at DESC")
+    deleted_docs = rows_to_dicts(cursor, cursor.fetchall())
+
+    cursor.execute("SELECT * FROM quizzes WHERE COALESCE(is_deleted, 0) = 1 ORDER BY deleted_at DESC")
+    deleted_quizzes = rows_to_dicts(cursor, cursor.fetchall())
+
+    conn.close()
+    return {
+        "documents": deleted_docs,
+        "quizzes": deleted_quizzes,
+        "total": len(deleted_docs) + len(deleted_quizzes)
+    }
+
+
+def restore_all_trash() -> Dict[str, Any]:
+    """Restore all soft-deleted documents and quizzes in one action."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM documents WHERE COALESCE(is_deleted, 0) = 1")
+    doc_row = cursor.fetchone()
+    doc_count = doc_row[0] if doc_row else 0
+    cursor.execute("UPDATE documents SET is_deleted = 0, deleted_at = NULL WHERE COALESCE(is_deleted, 0) = 1")
+
+    cursor.execute("SELECT COUNT(*) FROM quizzes WHERE COALESCE(is_deleted, 0) = 1")
+    quiz_row = cursor.fetchone()
+    quiz_count = quiz_row[0] if quiz_row else 0
+    cursor.execute("UPDATE quizzes SET is_deleted = 0, deleted_at = NULL WHERE COALESCE(is_deleted, 0) = 1")
+
+    conn.commit()
+    conn.close()
+
+    cache_clear_all()
+    return {
+        "success": True,
+        "restored_docs": doc_count,
+        "restored_quizzes": quiz_count,
+        "message": f"Đã khôi phục thành công {doc_count} tài liệu và {quiz_count} đề thi!"
+    }
+
+
+def clear_trash_permanently() -> Dict[str, Any]:
+    """Permanently delete all soft-deleted documents and quizzes."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT file_path FROM documents WHERE COALESCE(is_deleted, 0) = 1")
+    doc_files = [r[0] for r in cursor.fetchall() if r[0]]
+
+    cursor.execute("DELETE FROM documents WHERE COALESCE(is_deleted, 0) = 1")
+
+    cursor.execute("SELECT id FROM quizzes WHERE COALESCE(is_deleted, 0) = 1")
+    quiz_ids = [r[0] for r in cursor.fetchall()]
+    for qid in quiz_ids:
+        cursor.execute("DELETE FROM questions WHERE quiz_id = ?", (qid,))
+        cursor.execute("DELETE FROM attempts WHERE quiz_id = ?", (qid,))
+    cursor.execute("DELETE FROM quizzes WHERE COALESCE(is_deleted, 0) = 1")
+
+    conn.commit()
+    conn.close()
+
+    cache_clear_all()
+    return {
+        "files_to_remove": doc_files,
+        "deleted_docs": len(doc_files),
+        "deleted_quizzes": len(quiz_ids)
+    }
 
 
 def get_full_tree() -> Dict[str, Any]:

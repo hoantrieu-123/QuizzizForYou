@@ -27,7 +27,9 @@ from backend.database import (
     create_document_folder, get_document_folders, get_document_folders_tree,
     get_document_folder, get_folder_breadcrumbs, update_document_folder, delete_document_folder,
     log_visitor, get_visitor_logs, clear_visitor_logs,
-    get_admin_pin, set_admin_pin, verify_admin_pin
+    get_admin_pin, set_admin_pin, verify_admin_pin,
+    restore_document, permanent_delete_document, restore_quiz, permanent_delete_quiz,
+    get_trash_items, restore_all_trash, clear_trash_permanently
 )
 from fastapi.middleware.gzip import GZipMiddleware
 from backend.grading import grade_submission
@@ -331,8 +333,7 @@ def update_quiz_data(quiz_id: str, payload: UpdateQuizRequest):
 
 
 @app.delete("/api/quizzes/{quiz_id}")
-def remove_quiz(quiz_id: str, request: Request):
-    require_admin(request)
+def remove_quiz(quiz_id: str):
     success = delete_quiz(quiz_id)
     return {"success": success, "message": "Xóa bài thi thành công"}
 
@@ -382,8 +383,7 @@ def edit_class_route(class_id: str, payload: UpdateClassRequest):
 
 
 @app.delete("/api/classes/{class_id}")
-def remove_class_route(class_id: str, request: Request):
-    require_admin(request)
+def remove_class_route(class_id: str):
     delete_class(class_id)
     return {"success": True, "message": "Xóa lớp thành công"}
 
@@ -410,8 +410,7 @@ def edit_semester_route(semester_id: str, payload: UpdateSemesterRequest):
 
 
 @app.delete("/api/semesters/{semester_id}")
-def remove_semester_route(semester_id: str, request: Request):
-    require_admin(request)
+def remove_semester_route(semester_id: str):
     delete_semester(semester_id)
     return {"success": True, "message": "Xóa kỳ học thành công"}
 
@@ -438,8 +437,7 @@ def edit_subject(subject_id: str, payload: UpdateSubjectRequest):
 
 
 @app.delete("/api/subjects/{subject_id}")
-def remove_subject(subject_id: str, request: Request):
-    require_admin(request)
+def remove_subject(subject_id: str):
     delete_subject(subject_id)
     return {"success": True, "message": "Xóa môn học thành công"}
 
@@ -536,8 +534,7 @@ def edit_folder(folder_id: str, payload: UpdateFolderRequest):
 
 
 @app.delete("/api/document-folders/{folder_id}")
-def remove_folder(folder_id: str, request: Request):
-    require_admin(request)
+def remove_folder(folder_id: str):
     existing = get_document_folder(folder_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy thư mục")
@@ -801,20 +798,10 @@ def view_document_inline(doc_id: str):
 
 
 @app.delete("/api/documents/{doc_id}")
-def remove_document(doc_id: str, request: Request):
-    require_admin(request)
+def remove_document(doc_id: str):
     doc = delete_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
-
-    # Delete physical file
-    actual_path = get_document_actual_path(doc)
-    if actual_path and os.path.exists(actual_path):
-        try:
-            os.remove(actual_path)
-        except Exception as e:
-            print(f"Lỗi xóa file vật lý: {e}")
-
     return {"success": True, "message": "Xóa tài liệu thành công"}
 
 
@@ -885,12 +872,76 @@ def convert_document_to_quiz(doc_id: str):
 
 
 # ==============================================================================
+# Trash & Document/Quiz Recovery API (Thùng rác & Khôi phục)
+# ==============================================================================
+@app.get("/api/trash")
+def api_get_trash():
+    """Retrieve all soft-deleted documents and quizzes."""
+    return get_trash_items()
+
+
+@app.post("/api/documents/{doc_id}/restore")
+def api_restore_document(doc_id: str):
+    """Restore a soft-deleted document."""
+    doc = restore_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu để khôi phục")
+    return {"success": True, "message": "Khôi phục tài liệu thành công", "document": doc}
+
+
+@app.post("/api/quizzes/{quiz_id}/restore")
+def api_restore_quiz(quiz_id: str):
+    """Restore a soft-deleted quiz."""
+    success = restore_quiz(quiz_id)
+    return {"success": success, "message": "Khôi phục bài thi thành công"}
+
+
+@app.post("/api/trash/restore-all")
+def api_restore_all_trash():
+    """Restore all soft-deleted items."""
+    return restore_all_trash()
+
+
+@app.delete("/api/trash/clear")
+def api_clear_trash():
+    """Permanently delete all items currently in trash."""
+    result = clear_trash_permanently()
+    for fpath in result.get("files_to_remove", []):
+        if fpath and os.path.exists(fpath):
+            try:
+                os.remove(fpath)
+            except Exception:
+                pass
+    return {"success": True, "message": "Đã xóa vĩnh viễn thùng rác"}
+
+
+@app.delete("/api/documents/{doc_id}/permanent")
+def api_permanent_delete_document(doc_id: str):
+    """Permanently delete document from database and disk."""
+    doc = permanent_delete_document(doc_id)
+    if doc:
+        actual_path = get_document_actual_path(doc)
+        if actual_path and os.path.exists(actual_path):
+            try:
+                os.remove(actual_path)
+            except Exception:
+                pass
+    return {"success": True, "message": "Đã xóa vĩnh viễn tài liệu"}
+
+
+@app.delete("/api/quizzes/{quiz_id}/permanent")
+def api_permanent_delete_quiz(quiz_id: str):
+    """Permanently delete quiz from database."""
+    permanent_delete_quiz(quiz_id)
+    return {"success": True, "message": "Đã xóa vĩnh viễn bài thi"}
+
+
+# ==============================================================================
 # Visitor IP & Access Logs API (Cloudflare + Turso)
 # ==============================================================================
 @app.get("/api/admin/visitor-logs")
 def api_get_visitor_logs(request: Request, limit: int = 100, offset: int = 0, search: str = ""):
     """Retrieve visitor logs with total count, unique IP count, and caller's IP."""
-    require_admin(request)
     my_ip = get_client_ip(request)
     data = get_visitor_logs(limit=limit, offset=offset, search=search)
     data["my_ip"] = my_ip
@@ -898,9 +949,8 @@ def api_get_visitor_logs(request: Request, limit: int = 100, offset: int = 0, se
 
 
 @app.delete("/api/admin/visitor-logs")
-def api_clear_visitor_logs(request: Request):
+def api_clear_visitor_logs():
     """Clear all visitor logs."""
-    require_admin(request)
     clear_visitor_logs()
     return {"success": True, "message": "Đã xóa toàn bộ nhật ký truy cập"}
 

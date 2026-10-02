@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { apiUrl } from '../apiConfig';
-import { Globe, Activity, Shield, X, Search, RefreshCw, Trash2, Check, Copy, Key } from './UIcons';
+import {
+  Globe, Activity, Shield, X, Search, RefreshCw, Trash2, Check, Copy, Key,
+  FileText, Play, RotateCcw, AlertTriangle, AlertCircle
+} from './UIcons';
 import {
   DEFAULT_ADMIN_PIN,
   getAdminPin,
   setAdminPinInStorage,
-  isAdminUnlocked,
-  setAdminUnlocked,
   getAdminHeaders
 } from '../utils/adminAuth';
 
@@ -23,7 +24,7 @@ function formatCountry(countryCode, ip) {
   const code = countryCode.toUpperCase();
   const flagMap = {
     VN: '🇻🇳', US: '🇺🇸', JP: '🇯🇵', KR: '🇰🇷', SG: '🇸🇬',
-    TH: '🇹🇭', GB: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷', CN: '🇨🇳',
+    TH: '🇹🇭', GB: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷', CN: 'Trung Quốc',
     AU: '🇦🇺', CA: '🇨🇦', IN: '🇮🇳', RU: '🇷🇺', TW: '🇹🇼'
   };
 
@@ -81,13 +82,191 @@ function formatDateTime(isoOrSqliteStr) {
   }
 }
 
-export default function VisitorLogModal({ isOpen, onClose }) {
-  const [isUnlocked, setIsUnlocked] = useState(isAdminUnlocked);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+// Format file size
+function formatBytes(bytes, decimals = 1) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
 
-  // Change PIN dialog state
+export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
+  // Main Tab: 'trash' (default) or 'logs'
+  const [activeTab, setActiveTab] = useState('trash');
+
+  // ===========================================================================
+  // TRASH & RECOVERY STATE
+  // ===========================================================================
+  const [trashData, setTrashData] = useState({ documents: [], quizzes: [] });
+  const [trashLoading, setTrashLoading] = useState(false);
+  const [trashFilter, setTrashFilter] = useState('all'); // 'all' | 'documents' | 'quizzes'
+  const [restoringAction, setRestoringAction] = useState(null); // id or 'all'
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg, isError = false) => {
+    setToastMessage({ text: msg, isError });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const fetchTrash = async () => {
+    try {
+      setTrashLoading(true);
+      const res = await fetch(apiUrl('/api/trash'));
+      if (res.ok) {
+        const json = await res.json();
+        setTrashData(json);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải thùng rác:', err);
+    } finally {
+      setTrashLoading(false);
+    }
+  };
+
+  const handleRestoreDocument = async (docId, title) => {
+    try {
+      setRestoringAction(`doc_${docId}`);
+      const res = await fetch(apiUrl(`/api/documents/${docId}/restore`), {
+        method: 'POST'
+      });
+      if (res.ok) {
+        showToast(`Đã khôi phục tài liệu "${title || 'tài liệu'}" thành công!`);
+        await fetchTrash();
+        onRestored?.();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'Không thể khôi phục tài liệu', true);
+      }
+    } catch (err) {
+      showToast('Lỗi kết nối khi khôi phục: ' + err.message, true);
+    } finally {
+      setRestoringAction(null);
+    }
+  };
+
+  const handleRestoreQuiz = async (quizId, title) => {
+    try {
+      setRestoringAction(`quiz_${quizId}`);
+      const res = await fetch(apiUrl(`/api/quizzes/${quizId}/restore`), {
+        method: 'POST'
+      });
+      if (res.ok) {
+        showToast(`Đã khôi phục bài thi "${title || 'đề thi'}" thành công!`);
+        await fetchTrash();
+        onRestored?.();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'Không thể khôi phục bài thi', true);
+      }
+    } catch (err) {
+      showToast('Lỗi kết nối khi khôi phục: ' + err.message, true);
+    } finally {
+      setRestoringAction(null);
+    }
+  };
+
+  const handleRestoreAll = async () => {
+    const totalCount = trashData.documents.length + trashData.quizzes.length;
+    if (totalCount === 0) return;
+
+    if (!window.confirm(`Bạn có chắc muốn khôi phục toàn bộ ${totalCount} mục trong thùng rác?`)) {
+      return;
+    }
+
+    try {
+      setRestoringAction('all');
+      const res = await fetch(apiUrl('/api/trash/restore-all'), {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const result = await res.json();
+        showToast(`Đã khôi phục thành công ${result.restored_documents || 0} tài liệu và ${result.restored_quizzes || 0} bài thi!`);
+        await fetchTrash();
+        onRestored?.();
+      } else {
+        showToast('Không thể khôi phục toàn bộ thùng rác', true);
+      }
+    } catch (err) {
+      showToast('Lỗi khi khôi phục: ' + err.message, true);
+    } finally {
+      setRestoringAction(null);
+    }
+  };
+
+  const handlePermanentDeleteDoc = async (docId, title) => {
+    if (!window.confirm(`Hành động này sẽ xóa VĨNH VIỄN tài liệu "${title}" khỏi hệ thống và không thể khôi phục. Bạn có chắc chắn?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(apiUrl(`/api/documents/${docId}/permanent`), {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast(`Đã xóa vĩnh viễn tài liệu "${title}"`);
+        await fetchTrash();
+      } else {
+        showToast('Không thể xóa vĩnh viễn tài liệu', true);
+      }
+    } catch (err) {
+      showToast('Lỗi xóa vĩnh viễn: ' + err.message, true);
+    }
+  };
+
+  const handlePermanentDeleteQuiz = async (quizId, title) => {
+    if (!window.confirm(`Hành động này sẽ xóa VĨNH VIỄN bài thi "${title}" khỏi hệ thống và không thể khôi phục. Bạn có chắc chắn?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(apiUrl(`/api/quizzes/${quizId}/permanent`), {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast(`Đã xóa vĩnh viễn bài thi "${title}"`);
+        await fetchTrash();
+      } else {
+        showToast('Không thể xóa vĩnh viễn bài thi', true);
+      }
+    } catch (err) {
+      showToast('Lỗi xóa vĩnh viễn: ' + err.message, true);
+    }
+  };
+
+  const handleClearTrash = async () => {
+    const totalCount = trashData.documents.length + trashData.quizzes.length;
+    if (totalCount === 0) return;
+
+    if (!window.confirm(`CẢNH BÁO: Bạn sắp dọn sạch thùng rác và xóa VĨNH VIỄN ${totalCount} mục. Dữ liệu sẽ mất hoàn toàn và không thể khôi phục lại. Bạn có chắc chắn tiếp tục?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(apiUrl('/api/trash/clear'), {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast('Đã dọn sạch thùng rác!');
+        await fetchTrash();
+      } else {
+        showToast('Không thể dọn sạch thùng rác', true);
+      }
+    } catch (err) {
+      showToast('Lỗi dọn thùng rác: ' + err.message, true);
+    }
+  };
+
+  // ===========================================================================
+  // VISITOR LOGS STATE
+  // ===========================================================================
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState('');
+  const [logsData, setLogsData] = useState({ total: 0, unique_ips: 0, my_ip: '', logs: [] });
+  const [search, setSearch] = useState('');
+  const [copiedIp, setCopiedIp] = useState(null);
+  const [isClearingLogs, setIsClearingLogs] = useState(false);
+
+  // Change PIN state
   const [showChangePin, setShowChangePin] = useState(false);
   const [oldPin, setOldPin] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -95,17 +274,10 @@ export default function VisitorLogModal({ isOpen, onClose }) {
   const [changePinError, setChangePinError] = useState('');
   const [changePinSuccess, setChangePinSuccess] = useState('');
 
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [data, setData] = useState({ total: 0, unique_ips: 0, my_ip: '', logs: [] });
-  const [search, setSearch] = useState('');
-  const [copiedIp, setCopiedIp] = useState(null);
-  const [isClearing, setIsClearing] = useState(false);
-
   const fetchLogs = async (searchTerm = search) => {
     try {
-      setLoading(true);
-      setErrorMsg('');
+      setLogsLoading(true);
+      setLogsError('');
       const url = apiUrl(`/api/admin/visitor-logs?limit=150&search=${encodeURIComponent(searchTerm)}`);
       const res = await fetch(url, {
         headers: getAdminHeaders()
@@ -114,74 +286,45 @@ export default function VisitorLogModal({ isOpen, onClose }) {
         if (res.status === 404) {
           throw new Error('Máy chủ Backend trên Render chưa cập nhật phiên bản mới (Lỗi 404). Vui lòng vào dashboard.render.com -> chọn Web Service backend -> nhấn "Manual Deploy" -> "Deploy latest commit" để kích hoạt tính năng!');
         }
-        if (res.status === 403) {
-          throw new Error('Mã PIN Quản trị viên không hợp lệ để xem nhật ký!');
-        }
         throw new Error(`Máy chủ phản hồi lỗi HTTP ${res.status}`);
       }
       const json = await res.json();
-      setData(json);
+      setLogsData(json);
     } catch (err) {
       console.error('Error fetching visitor logs:', err);
-      setErrorMsg(err.message);
+      setLogsError(err.message);
     } finally {
-      setLoading(false);
+      setLogsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (isOpen && isUnlocked) {
-      fetchLogs('');
-    }
-  }, [isOpen, isUnlocked]);
-
-  const handleUnlock = async (e) => {
-    e.preventDefault();
-    const enteredPin = pinInput.trim();
-    if (!enteredPin) {
-      setPinError('Vui lòng nhập mã PIN!');
+  const handleClearLogs = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử IP truy cập này không?')) {
       return;
     }
-
     try {
-      const res = await fetch(apiUrl('/api/admin/verify-pin'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: enteredPin })
+      setIsClearingLogs(true);
+      const res = await fetch(apiUrl('/api/admin/visitor-logs'), {
+        method: 'DELETE',
+        headers: getAdminHeaders()
       });
       if (res.ok) {
-        setAdminPinInStorage(enteredPin);
-        if (rememberMe) {
-          setAdminUnlocked(true);
-        }
-        setIsUnlocked(true);
-        setPinError('');
         fetchLogs('');
-        return;
+        showToast('Đã xóa lịch sử IP thành công!');
+      } else {
+        alert('Không thể xóa nhật ký.');
       }
-    } catch {
-      // Fallback check against stored or default pin if offline
-      if (enteredPin === getAdminPin()) {
-        setAdminPinInStorage(enteredPin);
-        if (rememberMe) {
-          setAdminUnlocked(true);
-        }
-        setIsUnlocked(true);
-        setPinError('');
-        fetchLogs('');
-        return;
-      }
+    } catch (err) {
+      alert('Lỗi: ' + err.message);
+    } finally {
+      setIsClearingLogs(false);
     }
-
-    setPinError('Mã PIN không chính xác! Vui lòng thử lại.');
   };
 
-  const handleLock = () => {
-    setIsUnlocked(false);
-    setAdminUnlocked(false);
-    setPinInput('');
-    setPinError('');
-    setShowChangePin(false);
+  const handleCopy = (ip) => {
+    navigator.clipboard?.writeText(ip);
+    setCopiedIp(ip);
+    setTimeout(() => setCopiedIp(null), 1800);
   };
 
   const handleChangePin = async (e) => {
@@ -241,40 +384,34 @@ export default function VisitorLogModal({ isOpen, onClose }) {
     }
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    fetchLogs(search);
-  };
-
-  const handleClearLogs = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử IP truy cập này không?')) {
-      return;
-    }
-    try {
-      setIsClearing(true);
-      const res = await fetch(apiUrl('/api/admin/visitor-logs'), {
-        method: 'DELETE',
-        headers: getAdminHeaders()
-      });
-      if (res.ok) {
+  // ===========================================================================
+  // LIFECYCLE & KEYBOARD HANDLERS
+  // ===========================================================================
+  useEffect(() => {
+    if (isOpen) {
+      fetchTrash();
+      if (activeTab === 'logs') {
         fetchLogs('');
-      } else {
-        alert('Không thể xóa nhật ký.');
       }
-    } catch (err) {
-      alert('Lỗi: ' + err.message);
-    } finally {
-      setIsClearing(false);
     }
-  };
+  }, [isOpen, activeTab]);
 
-  const handleCopy = (ip) => {
-    navigator.clipboard?.writeText(ip);
-    setCopiedIp(ip);
-    setTimeout(() => setCopiedIp(null), 1800);
-  };
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const totalTrashCount = trashData.documents.length + trashData.quizzes.length;
+
+  const filteredDocs = trashFilter === 'quizzes' ? [] : trashData.documents;
+  const filteredQuizzes = trashFilter === 'documents' ? [] : trashData.quizzes;
 
   return createPortal(
     <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 1200 }}>
@@ -282,127 +419,520 @@ export default function VisitorLogModal({ isOpen, onClose }) {
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: isUnlocked ? '960px' : '440px',
-          width: '94%',
-          maxHeight: '88vh',
+          maxWidth: '960px',
+          width: '95%',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           padding: '1.25rem 1.5rem',
-          borderRadius: '10px',
+          borderRadius: '12px',
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          boxShadow: 'var(--shadow-lg)',
-          transition: 'max-width 0.25s ease'
+          boxShadow: 'var(--shadow-lg)'
         }}
       >
         {/* ================================================================= */}
-        {/* SCREEN 1: PIN AUTHENTICATION REQUIRED (IF LOCKED)                */}
+        {/* MODAL HEADER                                                      */}
         {/* ================================================================= */}
-        {!isUnlocked ? (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Shield size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-                  Xác Thực Quản Trị Viên
-                </h3>
-              </div>
-              <button
-                onClick={onClose}
-                className="btn btn-secondary btn-sm"
-                style={{ padding: '3px 6px', borderRadius: '4px' }}
-                title="Đóng"
-              >
-                <X size={15} />
-              </button>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingBottom: '0.85rem',
+          borderBottom: '1px solid var(--border)',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '9px',
+              background: 'var(--primary-light)',
+              color: 'var(--primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid var(--border)'
+            }}>
+              <RotateCcw size={20} />
             </div>
-
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-              Đây là khu vực bảo mật riêng tư. Vui lòng nhập mã PIN quản trị để xem danh sách IP truy cập website.
-            </p>
-
-            <form onSubmit={handleUnlock}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: 'var(--text)', marginBottom: '0.35rem' }}>
-                  Mã PIN bảo mật (Mặc định: 1234):
-                </label>
-                <input
-                  type="password"
-                  className="input-field"
-                  placeholder="Nhập mã PIN..."
-                  value={pinInput}
-                  onChange={(e) => { setPinInput(e.target.value); setPinError(''); }}
-                  autoFocus
-                  style={{ width: '100%', height: '38px', fontSize: '1rem', letterSpacing: '2px', textAlign: 'center' }}
-                />
-                {pinError && (
-                  <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '0.35rem', fontWeight: 500 }}>
-                    {pinError}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '1.25rem' }}>
-                <input
-                  type="checkbox"
-                  id="remember-admin-pin"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ cursor: 'pointer' }}
-                />
-                <label htmlFor="remember-admin-pin" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                  Ghi nhớ phiên đăng nhập trên trình duyệt này
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
-                <button type="button" onClick={onClose} className="btn btn-secondary btn-sm">
-                  Hủy bỏ
-                </button>
-                <button type="submit" className="btn btn-primary btn-sm">
-                  Mở khóa
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          /* ================================================================= */
-          /* SCREEN 2: UNLOCKED ADMIN DASHBOARD                               */
-          /* ================================================================= */
-          <>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '8px',
-                  background: 'var(--primary-light)',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                  Trung Tâm Khôi Phục & Quản Trị
+                </h2>
+                <span style={{
+                  fontSize: '11px',
+                  background: 'var(--surface-hover)',
+                  color: 'var(--text-muted)',
+                  padding: '2px 7px',
+                  borderRadius: '4px',
+                  fontWeight: 500,
                   border: '1px solid var(--border)'
                 }}>
-                  <Globe size={20} />
+                  Ctrl + Shift + L
+                </span>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                Khôi phục lại tài liệu hoặc đề thi đã xóa, kiểm tra nhật ký truy cập riêng tư
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '5px 8px', borderRadius: '6px' }}
+            title="Đóng (Phím tắt: Esc)"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* ================================================================= */}
+        {/* TOAST FEEDBACK                                                    */}
+        {/* ================================================================= */}
+        {toastMessage && (
+          <div style={{
+            background: toastMessage.isError ? 'rgba(184, 92, 85, 0.15)' : 'rgba(82, 122, 82, 0.15)',
+            color: toastMessage.isError ? 'var(--danger)' : 'var(--success)',
+            border: `1px solid ${toastMessage.isError ? 'rgba(184, 92, 85, 0.3)' : 'rgba(82, 122, 82, 0.3)'}`,
+            padding: '0.55rem 0.9rem',
+            borderRadius: '6px',
+            fontSize: '0.85rem',
+            marginBottom: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 500
+          }}>
+            {toastMessage.isError ? <AlertTriangle size={15} /> : <Check size={15} />}
+            <span>{toastMessage.text}</span>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* TOP TABS                                                          */}
+        {/* ================================================================= */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderBottom: '1px solid var(--border)',
+          marginBottom: '1rem',
+          paddingBottom: '0.25rem'
+        }}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('trash')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: activeTab === 'trash' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'trash' ? '#FFFFFF' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'trash' ? 600 : 500,
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <RotateCcw size={15} />
+            <span>Khôi phục tài liệu & Đề thi</span>
+            {totalTrashCount > 0 && (
+              <span style={{
+                background: activeTab === 'trash' ? 'rgba(255, 255, 255, 0.3)' : 'var(--primary-light)',
+                color: activeTab === 'trash' ? '#FFFFFF' : 'var(--primary)',
+                fontSize: '11px',
+                padding: '1px 6px',
+                borderRadius: '10px',
+                fontWeight: 600
+              }}>
+                {totalTrashCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('logs')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: activeTab === 'logs' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'logs' ? '#FFFFFF' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'logs' ? 600 : 500,
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Globe size={15} />
+            <span>Nhật ký IP truy cập</span>
+          </button>
+        </div>
+
+        {/* ================================================================= */}
+        {/* TAB 1: RECOVERY / TRASH PANEL                                     */}
+        {/* ================================================================= */}
+        {activeTab === 'trash' && (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            {/* Toolbar */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              marginBottom: '0.85rem'
+            }}>
+              {/* Filter Pills */}
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setTrashFilter('all')}
+                  className={`btn btn-sm ${trashFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: '0.78rem', padding: '3px 9px' }}
+                >
+                  Tất cả ({totalTrashCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTrashFilter('documents')}
+                  className={`btn btn-sm ${trashFilter === 'documents' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: '0.78rem', padding: '3px 9px' }}
+                >
+                  Tài liệu ({trashData.documents.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTrashFilter('quizzes')}
+                  className={`btn btn-sm ${trashFilter === 'quizzes' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: '0.78rem', padding: '3px 9px' }}
+                >
+                  Đề thi ({trashData.quizzes.length})
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {totalTrashCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleRestoreAll}
+                    disabled={restoringAction === 'all'}
+                    className="btn btn-primary btn-sm"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 12px',
+                      background: 'var(--success, #2e7d32)',
+                      borderColor: 'var(--success, #2e7d32)',
+                      color: '#ffffff',
+                      fontWeight: 600
+                    }}
+                    title="Khôi phục lại toàn bộ tài liệu và bài thi trong thùng rác"
+                  >
+                    <RotateCcw size={14} className={restoringAction === 'all' ? 'animate-spin' : ''} />
+                    <span>{restoringAction === 'all' ? 'Đang khôi phục...' : 'Khôi phục tất cả'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={fetchTrash}
+                  disabled={trashLoading}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  title="Làm mới thùng rác"
+                >
+                  <RefreshCw size={13} className={trashLoading ? 'animate-spin' : ''} />
+                  <span>Làm mới</span>
+                </button>
+
+                {totalTrashCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearTrash}
+                    className="btn btn-danger btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    title="Xóa vĩnh viễn tất cả các mục trong thùng rác"
+                  >
+                    <Trash2 size={13} />
+                    <span>Dọn sạch thùng rác</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* List / Table of Items */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              background: 'var(--surface)'
+            }}>
+              {trashLoading && totalTrashCount === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--primary)', marginBottom: '0.5rem' }} />
+                  <div>Đang tải thùng rác...</div>
                 </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-                      Nhật Ký IP Truy Cập (Private Admin)
-                    </h2>
-                    <span style={{ fontSize: '11px', background: 'rgba(82, 122, 82, 0.15)', color: 'var(--success)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                      Đã mở khóa
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-                    Tự động ghi nhận qua Cloudflare & lưu trữ vĩnh viễn trên Turso Cloud. Chỉ hiển thị với bạn.
+              ) : (filteredDocs.length === 0 && filteredQuizzes.length === 0) ? (
+                <div style={{ padding: '3.5rem 1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <RotateCcw size={42} style={{ color: 'var(--border)', marginBottom: '0.75rem', opacity: 0.6 }} />
+                  <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 0.35rem 0' }}>
+                    Thùng rác đang trống
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.4 }}>
+                    Khi bạn hoặc ai đó xóa tài liệu hay đề thi, chúng sẽ được lưu an toàn tại đây để bạn có thể khôi phục lại bất kỳ lúc nào.
                   </p>
                 </div>
+              ) : (
+                <table className="quiz-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--surface-hover)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '90px' }}>Loại</th>
+                      <th style={{ padding: '0.65rem 0.85rem' }}>Tên tệp / Bài thi</th>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '150px' }}>Thông tin</th>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '160px' }}>Thời điểm xóa</th>
+                      <th style={{ padding: '0.65rem 0.85rem', width: '190px', textAlign: 'right' }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Render Deleted Documents */}
+                    {filteredDocs.map((doc) => {
+                      const isRestoring = restoringAction === `doc_${doc.id}`;
+                      const cleanTitle = (doc.title || doc.filename || 'Tài liệu').replace(/\\/g, '/').split('/').pop();
+                      const fileExt = (doc.file_type || 'docx').toUpperCase();
+
+                      return (
+                        <tr
+                          key={`doc_${doc.id}`}
+                          style={{
+                            borderBottom: '1px solid var(--border)',
+                            transition: 'background 0.15s ease'
+                          }}
+                        >
+                          {/* Loại */}
+                          <td style={{ padding: '0.6rem 0.85rem' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: doc.file_type === 'pdf' ? 'rgba(217, 83, 79, 0.12)' : 'rgba(43, 114, 186, 0.12)',
+                              color: doc.file_type === 'pdf' ? '#d9534f' : '#2b72ba'
+                            }}>
+                              <FileText size={12} />
+                              <span>{fileExt}</span>
+                            </span>
+                          </td>
+
+                          {/* Tên */}
+                          <td style={{ padding: '0.6rem 0.85rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.88rem' }}>
+                              {cleanTitle}
+                            </div>
+                            {doc.filename && doc.filename !== doc.title && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                File gốc: {doc.filename.replace(/\\/g, '/').split('/').pop()}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Thông tin */}
+                          <td style={{ padding: '0.6rem 0.85rem', color: 'var(--text-secondary)' }}>
+                            {formatBytes(doc.file_size)}
+                          </td>
+
+                          {/* Thời điểm xóa */}
+                          <td style={{ padding: '0.6rem 0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {formatDateTime(doc.deleted_at)}
+                          </td>
+
+                          {/* Thao tác */}
+                          <td style={{ padding: '0.6rem 0.85rem', textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreDocument(doc.id, cleanTitle)}
+                                disabled={isRestoring || restoringAction === 'all'}
+                                className="btn btn-sm"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'var(--success, #2e7d32)',
+                                  borderColor: 'var(--success, #2e7d32)',
+                                  color: '#ffffff',
+                                  padding: '3px 8px',
+                                  fontSize: '0.78rem',
+                                  borderRadius: '5px'
+                                }}
+                                title="Khôi phục tài liệu này về thư mục ban đầu"
+                              >
+                                <RotateCcw size={12} className={isRestoring ? 'animate-spin' : ''} />
+                                <span>{isRestoring ? 'Đang...' : 'Khôi phục'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handlePermanentDeleteDoc(doc.id, cleanTitle)}
+                                disabled={isRestoring || restoringAction === 'all'}
+                                className="btn btn-secondary btn-sm"
+                                style={{
+                                  padding: '3px 6px',
+                                  color: 'var(--danger)',
+                                  borderRadius: '5px'
+                                }}
+                                title="Xóa vĩnh viễn khỏi hệ thống"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* Render Deleted Quizzes */}
+                    {filteredQuizzes.map((quiz) => {
+                      const isRestoring = restoringAction === `quiz_${quiz.id}`;
+                      const cleanTitle = (quiz.title || quiz.filename || 'Bài kiểm tra').replace(/\\/g, '/').split('/').pop();
+
+                      return (
+                        <tr
+                          key={`quiz_${quiz.id}`}
+                          style={{
+                            borderBottom: '1px solid var(--border)',
+                            transition: 'background 0.15s ease'
+                          }}
+                        >
+                          {/* Loại */}
+                          <td style={{ padding: '0.6rem 0.85rem' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(124, 77, 255, 0.12)',
+                              color: '#7c4dff'
+                            }}>
+                              <Play size={12} />
+                              <span>ĐỀ THI</span>
+                            </span>
+                          </td>
+
+                          {/* Tên */}
+                          <td style={{ padding: '0.6rem 0.85rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.88rem' }}>
+                              {cleanTitle}
+                            </div>
+                            {quiz.filename && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                File gốc: {quiz.filename.replace(/\\/g, '/').split('/').pop()}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Thông tin */}
+                          <td style={{ padding: '0.6rem 0.85rem', color: 'var(--text-secondary)' }}>
+                            <span className="badge" style={{ fontSize: '0.75rem' }}>
+                              {quiz.question_count || 0} câu hỏi
+                            </span>
+                          </td>
+
+                          {/* Thời điểm xóa */}
+                          <td style={{ padding: '0.6rem 0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {formatDateTime(quiz.deleted_at)}
+                          </td>
+
+                          {/* Thao tác */}
+                          <td style={{ padding: '0.6rem 0.85rem', textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreQuiz(quiz.id, cleanTitle)}
+                                disabled={isRestoring || restoringAction === 'all'}
+                                className="btn btn-sm"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  background: 'var(--success, #2e7d32)',
+                                  borderColor: 'var(--success, #2e7d32)',
+                                  color: '#ffffff',
+                                  padding: '3px 8px',
+                                  fontSize: '0.78rem',
+                                  borderRadius: '5px'
+                                }}
+                                title="Khôi phục bài thi này"
+                              >
+                                <RotateCcw size={12} className={isRestoring ? 'animate-spin' : ''} />
+                                <span>{isRestoring ? 'Đang...' : 'Khôi phục'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handlePermanentDeleteQuiz(quiz.id, cleanTitle)}
+                                disabled={isRestoring || restoringAction === 'all'}
+                                className="btn btn-secondary btn-sm"
+                                style={{
+                                  padding: '3px 6px',
+                                  color: 'var(--danger)',
+                                  borderRadius: '5px'
+                                }}
+                                title="Xóa vĩnh viễn khỏi hệ thống"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* TAB 2: VISITOR LOGS PANEL                                         */}
+        {/* ================================================================= */}
+        {activeTab === 'logs' && (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            {/* Header controls for Logs */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '0.65rem',
+              flexWrap: 'wrap',
+              marginBottom: '0.75rem'
+            }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Tự động ghi nhận qua Cloudflare & lưu trữ vĩnh viễn trên Turso Cloud.
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
+                  type="button"
                   onClick={() => setShowChangePin(prev => !prev)}
                   className="btn btn-secondary btn-sm"
                   style={{ padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px' }}
@@ -410,30 +940,40 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                 >
                   <Key size={14} /> Đổi PIN
                 </button>
+
                 <button
-                  onClick={handleLock}
+                  type="button"
+                  onClick={() => fetchLogs()}
+                  disabled={logsLoading}
                   className="btn btn-secondary btn-sm"
-                  style={{ padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px' }}
-                  title="Khóa lại để bảo mật"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', height: '32px' }}
+                  title="Tải lại danh sách mới nhất"
                 >
-                  <Shield size={14} /> Khóa lại
+                  <RefreshCw size={13} className={logsLoading ? 'animate-spin' : ''} />
+                  <span>{logsLoading ? 'Đang tải...' : 'Làm mới'}</span>
                 </button>
-                <button
-                  onClick={onClose}
-                  className="btn btn-secondary btn-sm"
-                  style={{ padding: '4px 8px', borderRadius: '6px' }}
-                  title="Đóng (Phím tắt: Esc)"
-                >
-                  <X size={16} />
-                </button>
+
+                {logsData.logs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearLogs}
+                    disabled={isClearingLogs}
+                    className="btn btn-danger btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', height: '32px' }}
+                    title="Xóa tất cả nhật ký"
+                  >
+                    <Trash2 size={13} />
+                    <span>Xóa nhật ký</span>
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Change PIN Form (Sub-view) */}
             {showChangePin && (
               <div className="card" style={{
-                margin: '0.75rem 0',
-                padding: '0.9rem 1.15rem',
+                margin: '0.5rem 0 0.85rem 0',
+                padding: '0.85rem 1rem',
                 border: '1.5px solid var(--primary)',
                 background: 'var(--surface-hover)',
                 borderRadius: '8px'
@@ -519,34 +1059,34 @@ export default function VisitorLogModal({ isOpen, onClose }) {
               </div>
             )}
 
-            {/* Error Message Notice (e.g. Render 404 guide) */}
-            {errorMsg && (
+            {/* Error Message Notice */}
+            {logsError && (
               <div style={{
                 background: '#FFF4E5',
                 color: '#663C00',
                 border: '1px solid #FFE2B8',
-                padding: '0.85rem 1rem',
+                padding: '0.75rem 1rem',
                 borderRadius: '8px',
                 fontSize: '0.825rem',
                 lineHeight: 1.5,
-                margin: '0.65rem 0'
+                margin: '0.5rem 0'
               }}>
-                <strong>⚠️ Thông báo:</strong> {errorMsg}
+                <strong>⚠️ Thông báo:</strong> {logsError}
               </div>
             )}
 
             {/* Overview KPI Cards */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '0.75rem',
-              margin: '0.85rem 0'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '0.65rem',
+              margin: '0.5rem 0 0.85rem 0'
             }}>
               {/* Card 1: Total Visits */}
-              <div className="card" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '8px' }}>
+              <div className="card" style={{ padding: '0.65rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.65rem', borderRadius: '8px' }}>
                 <div style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '6px',
                   background: 'var(--primary-light)',
                   color: 'var(--primary)',
@@ -554,23 +1094,23 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <Activity size={18} />
+                  <Activity size={17} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 500 }}>
-                    Tổng lượt truy cập
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 500 }}>
+                    Tổng lượt xem
                   </div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)' }}>
-                    {data.total}
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)' }}>
+                    {logsData.total}
                   </div>
                 </div>
               </div>
 
               {/* Card 2: Unique IPs */}
-              <div className="card" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '8px' }}>
+              <div className="card" style={{ padding: '0.65rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.65rem', borderRadius: '8px' }}>
                 <div style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '6px',
                   background: '#EEF1E7',
                   color: 'var(--success)',
@@ -578,23 +1118,23 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <Shield size={18} />
+                  <Shield size={17} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 500 }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 500 }}>
                     Số IP duy nhất
                   </div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--success)' }}>
-                    {data.unique_ips}
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--success)' }}>
+                    {logsData.unique_ips}
                   </div>
                 </div>
               </div>
 
               {/* Card 3: Current User IP */}
-              <div className="card" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderRadius: '8px' }}>
+              <div className="card" style={{ padding: '0.65rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.65rem', borderRadius: '8px' }}>
                 <div style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '6px',
                   background: 'var(--surface-hover)',
                   color: 'var(--text)',
@@ -602,85 +1142,38 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <Globe size={18} />
+                  <Globe size={17} />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span>IP của bạn</span>
-                    <span style={{ fontSize: '10px', background: 'var(--primary)', color: '#FFFFFF', padding: '1px 5px', borderRadius: '3px' }}>
-                      Thiết bị này
-                    </span>
                   </div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {data.my_ip || 'Đang xác định...'}
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {logsData.my_ip || 'Đang xác định...'}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Toolbar: Search & Action buttons */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '0.65rem',
-              flexWrap: 'wrap',
-              marginBottom: '0.75rem'
-            }}>
-              <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, maxWidth: '420px' }}>
-                <div style={{ position: 'relative', width: '100%' }}>
-                  <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Tìm IP, quốc gia, hoặc URL..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{ paddingLeft: '2rem', height: '34px', fontSize: '0.825rem' }}
-                  />
-                  {search && (
-                    <button
-                      type="button"
-                      onClick={() => { setSearch(''); fetchLogs(''); }}
-                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-                <button type="submit" className="btn btn-secondary btn-sm" style={{ height: '34px' }}>
-                  Tìm
-                </button>
-              </form>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button
-                  onClick={() => fetchLogs()}
-                  disabled={loading}
-                  className="btn btn-secondary btn-sm"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', height: '34px' }}
-                  title="Tải lại danh sách mới nhất"
-                >
-                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                  <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
-                </button>
-
-                {data.logs.length > 0 && (
-                  <button
-                    onClick={handleClearLogs}
-                    disabled={isClearing}
-                    className="btn btn-danger btn-sm"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', height: '34px' }}
-                    title="Xóa tất cả nhật ký"
-                  >
-                    <Trash2 size={14} />
-                    <span>Xóa nhật ký</span>
-                  </button>
-                )}
+            {/* Search Input */}
+            <div style={{ marginBottom: '0.65rem' }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '420px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Tìm IP, quốc gia, hoặc URL..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    fetchLogs(e.target.value);
+                  }}
+                  style={{ paddingLeft: '2rem', height: '32px', fontSize: '0.8rem' }}
+                />
               </div>
             </div>
 
-            {/* Data Table */}
+            {/* Logs Table */}
             <div style={{
               flex: 1,
               overflowY: 'auto',
@@ -700,7 +1193,7 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {loading && data.logs.length === 0 ? (
+                  {logsLoading && logsData.logs.length === 0 ? (
                     <tr>
                       <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
@@ -709,19 +1202,18 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                         </div>
                       </td>
                     </tr>
-                  ) : data.logs.length === 0 ? (
+                  ) : logsData.logs.length === 0 ? (
                     <tr>
                       <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                           <Globe size={32} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
                           <span>Chưa có lượt truy cập nào được ghi nhận.</span>
-                          {search && <span style={{ fontSize: '0.75rem' }}>Thử xóa từ khóa tìm kiếm để xem tất cả.</span>}
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    data.logs.map((log) => {
-                      const isCurrentMyIp = log.ip_address === data.my_ip;
+                    logsData.logs.map((log) => {
+                      const isCurrentMyIp = log.ip_address === logsData.my_ip;
                       const countryInfo = formatCountry(log.country, log.ip_address);
                       const device = parseUserAgent(log.user_agent);
 
@@ -734,12 +1226,9 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                             transition: 'background 0.15s ease'
                           }}
                         >
-                          {/* Thời gian */}
                           <td style={{ padding: '0.55rem 0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                             {formatDateTime(log.created_at)}
                           </td>
-
-                          {/* IP Address */}
                           <td style={{ padding: '0.55rem 0.85rem', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{
@@ -780,16 +1269,12 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                               </button>
                             </div>
                           </td>
-
-                          {/* Quốc gia */}
                           <td style={{ padding: '0.55rem 0.85rem', whiteSpace: 'nowrap' }}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                               <span>{countryInfo.flag}</span>
                               <span style={{ color: 'var(--text)' }}>{countryInfo.name}</span>
                             </span>
                           </td>
-
-                          {/* Thao tác & Đường dẫn */}
                           <td style={{ padding: '0.55rem 0.85rem', maxWidth: '280px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{
@@ -818,15 +1303,11 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                               </span>
                             </div>
                           </td>
-
-                          {/* Thiết bị */}
                           <td style={{ padding: '0.55rem 0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                             <span title={log.user_agent}>
                               {device}
                             </span>
                           </td>
-
-                          {/* Mã trạng thái */}
                           <td style={{ padding: '0.55rem 0.85rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <span style={{
                               fontSize: '11px',
@@ -846,25 +1327,34 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                 </tbody>
               </table>
             </div>
-
-            {/* Footer info */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingTop: '0.75rem',
-              fontSize: '0.75rem',
-              color: 'var(--text-muted)'
-            }}>
-              <div>
-                Phím tắt bí mật: <kbd style={{ background: 'var(--surface-hover)', padding: '2px 5px', borderRadius: '3px', border: '1px solid var(--border)' }}>Ctrl + Shift + L</kbd>
-              </div>
-              <div>
-                Dữ liệu đồng bộ trực tiếp tới Turso Cloud.
-              </div>
-            </div>
-          </>
+          </div>
         )}
+
+        {/* ================================================================= */}
+        {/* MODAL FOOTER                                                      */}
+        {/* ================================================================= */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingTop: '0.75rem',
+          marginTop: '0.5rem',
+          borderTop: '1px solid var(--border)',
+          fontSize: '0.75rem',
+          color: 'var(--text-muted)'
+        }}>
+          <div>
+            Bật/tắt nhanh bằng phím tắt: <kbd style={{ background: 'var(--surface-hover)', padding: '2px 5px', borderRadius: '3px', border: '1px solid var(--border)' }}>Ctrl + Shift + L</kbd>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '4px 12px' }}
+          >
+            Đóng cửa sổ
+          </button>
+        </div>
       </div>
     </div>,
     document.body
