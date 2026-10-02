@@ -8,6 +8,7 @@ import DocumentList from './components/DocumentList';
 import PreviewEditor from './components/PreviewEditor';
 import QuizPlayer from './components/QuizPlayer';
 import ResultView from './components/ResultView';
+import VisitorLogModal from './components/VisitorLogModal';
 import { apiUrl } from './apiConfig';
 import { getQuizDetail, updateCachedQuiz, getCachedQuizSync } from './services/dataCache';
 import { FileText, Folders, HelpCircle, CheckCircle2, ClipboardList } from './components/UIcons';
@@ -18,6 +19,7 @@ export default function App() {
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [currentResult, setCurrentResult] = useState(null);
   const [quizzesList, setQuizzesList] = useState([]);
+  const [showVisitorLogModal, setShowVisitorLogModal] = useState(false);
   const [refreshListTrigger, setRefreshListTrigger] = useState(0);
   const [refreshTreeTrigger, setRefreshTreeTrigger] = useState(0);
   const [refreshDocTrigger, setRefreshDocTrigger] = useState(0);
@@ -48,6 +50,33 @@ export default function App() {
     loadQuizzes();
     return () => { isMounted = false; };
   }, [refreshListTrigger]);
+
+  // Private Admin Access: Hidden shortcut Ctrl + Shift + L or ?admin_logs=1 in URL
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl + Shift + L or Cmd + Shift + L
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+        e.preventDefault();
+        setShowVisitorLogModal(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Check URL query parameter (e.g. yoursite.pages.dev?admin_logs=1)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('admin_logs') === '1' || params.get('logs') === '1') {
+        setShowVisitorLogModal(true);
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const handleUploadSuccess = (quiz) => {
     setCurrentQuiz(quiz);
@@ -436,6 +465,12 @@ export default function App() {
       }}>
         EduDocx — Nền tảng tạo đề trắc nghiệm thông minh từ Highlight Word (.docx)
       </footer>
+
+      {/* Visitor IP & Access Logs Modal */}
+      <VisitorLogModal
+        isOpen={showVisitorLogModal}
+        onClose={() => setShowVisitorLogModal(false)}
+      />
     </div>
   );
 }

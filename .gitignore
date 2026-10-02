@@ -31,3 +31,7 @@ Thumbs.db
 # Uploaded documents
 backend/uploads/
 
+# Local credentials & configs
+.turso_config.json
+.env
+

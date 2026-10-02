@@ -1,8 +1,8 @@
 import React from 'react';
-import { Download, Home, Search, X, FileText } from './UIcons';
+import { Download, Home, Search, X, FileText, Globe } from './UIcons';
 import { apiUrl } from '../apiConfig';
 
-export default function Navbar({ currentView, onNavigate, searchQuery = '', onSearchChange }) {
+export default function Navbar({ currentView, onNavigate, searchQuery = '', onSearchChange, onOpenVisitorLogs }) {
   const handleDownloadSample = () => {
     window.location.href = apiUrl('/api/sample-file');
   };

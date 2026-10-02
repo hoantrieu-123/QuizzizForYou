@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from backend.word_parser import parse_docx_bytes
 from backend.question_detector import detect_questions_from_elements
+import asyncio
 from backend.database import (
     init_db, save_quiz, get_quizzes, get_quiz,
     update_quiz_questions, delete_quiz, save_attempt,
@@ -24,11 +25,13 @@ from backend.database import (
     update_quiz_placement, get_full_tree, get_subject, move_subject,
     create_document, get_documents, get_document, update_document, delete_document,
     create_document_folder, get_document_folders, get_document_folders_tree,
-    get_document_folder, get_folder_breadcrumbs, update_document_folder, delete_document_folder
+    get_document_folder, get_folder_breadcrumbs, update_document_folder, delete_document_folder,
+    log_visitor, get_visitor_logs, clear_visitor_logs
 )
 from fastapi.middleware.gzip import GZipMiddleware
 from backend.grading import grade_submission
 from backend.sample_generator import create_sample_docx
+from starlette.requests import Request
 
 app = FastAPI(title="Docx Quiz Generator & Player API", version="1.0.0")
 
@@ -41,7 +44,85 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from starlette.requests import Request
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP address from Cloudflare, reverse proxy, or direct connection."""
+    # 1. Cloudflare header (highest priority, guaranteed client IP when proxied by Cloudflare)
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip and cf_ip.strip():
+        return cf_ip.strip()
+    
+    # 2. True-Client-IP (Cloudflare Enterprise / CDN)
+    true_ip = request.headers.get("true-client-ip")
+    if true_ip and true_ip.strip():
+        return true_ip.strip()
+        
+    # 3. X-Forwarded-For (client, proxy1, proxy2... first one is origin)
+    x_forwarded = request.headers.get("x-forwarded-for")
+    if x_forwarded:
+        parts = [p.strip() for p in x_forwarded.split(",") if p.strip()]
+        if parts:
+            return parts[0]
+            
+    # 4. X-Real-IP
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()
+        
+    # 5. Direct socket client
+    if request.client and request.client.host:
+        return request.client.host
+        
+    return "127.0.0.1"
+
+
+@app.middleware("http")
+async def visitor_logger_middleware(request: Request, call_next):
+    path = request.url.path
+    
+    # Fast path: Skip static assets, vite internals, assets, favicon, and admin log endpoints
+    is_static = (
+        path.startswith("/assets") or
+        path.startswith("/@") or
+        path.startswith("/node_modules") or
+        path.startswith("/favicon") or
+        path == "/api/admin/visitor-logs" or
+        path.endswith(".js") or
+        path.endswith(".css") or
+        path.endswith(".png") or
+        path.endswith(".jpg") or
+        path.endswith(".svg") or
+        path.endswith(".ico") or
+        path.endswith(".map")
+    )
+    
+    response = await call_next(request)
+    
+    if not is_static:
+        client_ip = get_client_ip(request)
+        country = request.headers.get("cf-ipcountry", "")
+        city = request.headers.get("cf-ipcity", "")
+        user_agent = request.headers.get("user-agent", "")
+        status_code = response.status_code
+        method = request.method
+        
+        # Async non-blocking execution in background thread
+        try:
+            asyncio.create_task(
+                asyncio.to_thread(
+                    log_visitor,
+                    ip_address=client_ip,
+                    country=country,
+                    city=city,
+                    method=method,
+                    path=path,
+                    user_agent=user_agent[:255] if user_agent else "",
+                    status_code=status_code
+                )
+            )
+        except Exception:
+            pass
+        
+    return response
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -775,6 +856,35 @@ def convert_document_to_quiz(doc_id: str):
     created_quiz = get_quiz(quiz_id)
     return {"success": True, "quiz": created_quiz}
 
+
+# ==============================================================================
+# Visitor IP & Access Logs API (Cloudflare + Turso)
+# ==============================================================================
+@app.get("/api/admin/visitor-logs")
+def api_get_visitor_logs(request: Request, limit: int = 100, offset: int = 0, search: str = ""):
+    """Retrieve visitor logs with total count, unique IP count, and caller's IP."""
+    my_ip = get_client_ip(request)
+    data = get_visitor_logs(limit=limit, offset=offset, search=search)
+    data["my_ip"] = my_ip
+    return data
+
+
+@app.delete("/api/admin/visitor-logs")
+def api_clear_visitor_logs():
+    """Clear all visitor logs."""
+    clear_visitor_logs()
+    return {"success": True, "message": "Đã xóa toàn bộ nhật ký truy cập"}
+
+
+@app.get("/api/admin/my-ip")
+def api_get_my_ip(request: Request):
+    """Return the client's current IP and detected country."""
+    return {
+        "ip": get_client_ip(request),
+        "country": request.headers.get("cf-ipcountry", "VN"),
+        "city": request.headers.get("cf-ipcity", ""),
+        "user_agent": request.headers.get("user-agent", "")
+    }
 
 
 # Serve frontend build if dist folder exists

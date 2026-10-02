@@ -292,6 +292,23 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_folders_parent_id ON document_folders(parent_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_doc_folders_subject_id ON document_folders(subject_id);")
 
+    # Visitor Access Logs (Cloudflare + Turso Permanent Logging)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS visitor_logs (
+        id TEXT PRIMARY KEY,
+        ip_address TEXT NOT NULL,
+        country TEXT DEFAULT '',
+        city TEXT DEFAULT '',
+        method TEXT DEFAULT 'GET',
+        path TEXT NOT NULL,
+        user_agent TEXT DEFAULT '',
+        status_code INTEGER DEFAULT 200,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_visitor_logs_created_at ON visitor_logs(created_at DESC);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_visitor_logs_ip ON visitor_logs(ip_address);")
+
     conn.commit()
     conn.close()
 
@@ -1372,3 +1389,70 @@ def get_full_tree() -> Dict[str, Any]:
     }
     cache_set("full_tree", result, ttl=180)
     return result
+
+
+# ==============================================================================
+# Visitor Access Logs (Cloudflare + Turso IP Tracking)
+# ==============================================================================
+def log_visitor(ip_address: str, country: str = '', city: str = '', method: str = 'GET', path: str = '', user_agent: str = '', status_code: int = 200):
+    """Log an incoming HTTP request/visitor to SQLite or Cloud Turso."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        log_id = f"log_{uuid.uuid4().hex[:12]}"
+        cursor.execute(
+            """INSERT INTO visitor_logs (id, ip_address, country, city, method, path, user_agent, status_code)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (log_id, ip_address, country or '', city or '', method or 'GET', path or '', user_agent or '', status_code or 200)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error logging visitor: {e}")
+
+
+def get_visitor_logs(limit: int = 100, offset: int = 0, search: str = '') -> Dict[str, Any]:
+    """Retrieve visitor logs with total count, unique IP count, and optional search filter."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    where_clause = ""
+    params: List[Any] = []
+    if search and search.strip():
+        s = f"%{search.strip()}%"
+        where_clause = "WHERE ip_address LIKE ? OR country LIKE ? OR path LIKE ? OR user_agent LIKE ?"
+        params = [s, s, s, s]
+
+    cursor.execute(f"SELECT COUNT(*) FROM visitor_logs {where_clause}", params)
+    total_row = cursor.fetchone()
+    total = total_row[0] if total_row else 0
+
+    cursor.execute(f"SELECT COUNT(DISTINCT ip_address) FROM visitor_logs {where_clause}", params)
+    unique_row = cursor.fetchone()
+    unique_ips = unique_row[0] if unique_row else 0
+
+    query = f"""SELECT id, ip_address, country, city, method, path, user_agent, status_code, created_at 
+               FROM visitor_logs {where_clause} 
+               ORDER BY created_at DESC 
+               LIMIT ? OFFSET ?"""
+    cursor.execute(query, params + [limit, offset])
+    rows = cursor.fetchall()
+    logs = rows_to_dicts(cursor, rows)
+    conn.close()
+
+    return {
+        "total": total,
+        "unique_ips": unique_ips,
+        "logs": logs
+    }
+
+
+def clear_visitor_logs() -> bool:
+    """Clear all visitor logs."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM visitor_logs")
+    conn.commit()
+    conn.close()
+    return True
+

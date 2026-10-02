@@ -412,3 +412,45 @@ export const BookOpen = createStrokeIcon(
   </>,
   "BookOpen"
 );
+
+export const Globe = createStrokeIcon(
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </>,
+  "Globe"
+);
+
+export const Activity = createStrokeIcon(
+  <>
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </>,
+  "Activity"
+);
+
+export const Shield = createStrokeIcon(
+  <>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </>,
+  "Shield"
+);
+
+export const RefreshCw = createStrokeIcon(
+  <>
+    <polyline points="23 4 23 10 17 10" />
+    <polyline points="1 20 1 14 7 14" />
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+  </>,
+  "RefreshCw"
+);
+
+export const Copy = createStrokeIcon(
+  <>
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </>,
+  "Copy"
+);
+
+
