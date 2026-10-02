@@ -94,11 +94,124 @@ def invalidate_tree_cache():
 
 
 # ==============================================================================
-# Database Connection with Performance PRAGMAs
+# Database Connection with Resilience & Auto-Retry for Turso Hrana
 # ==============================================================================
-def get_connection():
+class ResilientCursor:
+    def __init__(self, cursor, conn_wrapper):
+        self._cursor = cursor
+        self._conn_wrapper = conn_wrapper
+
+    def execute(self, sql, params=()):
+        for attempt in range(4):
+            try:
+                if params:
+                    return self._cursor.execute(sql, params)
+                return self._cursor.execute(sql)
+            except Exception as e:
+                err = str(e).lower()
+                if ('sqlite_busy' in err or 'stream was idle' in err or 'retry the transaction' in err) and attempt < 3:
+                    time.sleep(0.15 * (attempt + 1))
+                    self._conn_wrapper.reconnect()
+                    self._cursor = self._conn_wrapper._raw_conn.cursor()
+                    continue
+                raise
+
+    def executemany(self, sql, seq_of_params):
+        for attempt in range(4):
+            try:
+                return self._cursor.executemany(sql, seq_of_params)
+            except Exception as e:
+                err = str(e).lower()
+                if ('sqlite_busy' in err or 'stream was idle' in err or 'retry the transaction' in err) and attempt < 3:
+                    time.sleep(0.15 * (attempt + 1))
+                    self._conn_wrapper.reconnect()
+                    self._cursor = self._conn_wrapper._raw_conn.cursor()
+                    continue
+                raise
+
+    def fetchone(self):
+        return self._cursor.fetchone()
+
+    def fetchall(self):
+        return self._cursor.fetchall()
+
+    def fetchmany(self, size=None):
+        return self._cursor.fetchmany(size) if size is not None else self._cursor.fetchmany()
+
+    def __iter__(self):
+        return iter(self._cursor)
+
+    @property
+    def description(self):
+        return self._cursor.description
+
+    @property
+    def rowcount(self):
+        return getattr(self._cursor, 'rowcount', -1)
+
+
+class ResilientConnection:
+    def __init__(self, create_raw_conn_fn):
+        self._create_raw_conn_fn = create_raw_conn_fn
+        self._raw_conn = create_raw_conn_fn()
+
+    def reconnect(self):
+        try:
+            self._raw_conn.close()
+        except Exception:
+            pass
+        self._raw_conn = self._create_raw_conn_fn()
+
+    def cursor(self):
+        return ResilientCursor(self._raw_conn.cursor(), self)
+
+    def execute(self, sql, params=()):
+        c = self.cursor()
+        c.execute(sql, params)
+        return c
+
+    def commit(self):
+        try:
+            return self._raw_conn.commit()
+        except Exception as e:
+            err = str(e).lower()
+            if 'sqlite_busy' in err or 'stream was idle' in err or 'retry the transaction' in err:
+                pass  # With autocommit=True, already committed
+            else:
+                raise
+
+    def rollback(self):
+        try:
+            return self._raw_conn.rollback()
+        except Exception:
+            pass
+
+    def close(self):
+        try:
+            self._raw_conn.close()
+        except Exception:
+            pass
+
+    @property
+    def row_factory(self):
+        return getattr(self._raw_conn, 'row_factory', None)
+
+    @row_factory.setter
+    def row_factory(self, val):
+        self._raw_conn.row_factory = val
+
+
+def get_raw_connection():
     if TURSO_DATABASE_URL and HAS_LIBSQL:
-        return libsql.connect(database=TURSO_DATABASE_URL, auth_token=TURSO_AUTH_TOKEN)
+        url = TURSO_DATABASE_URL
+        if url.startswith("libsql://"):
+            url = "https://" + url[len("libsql://"):]
+        try:
+            return libsql.connect(database=url, auth_token=TURSO_AUTH_TOKEN, autocommit=True)
+        except Exception as e:
+            print(f"Warning: Connecting to Turso via https failed ({e}), falling back to direct URL: {TURSO_DATABASE_URL}")
+            return libsql.connect(database=TURSO_DATABASE_URL, auth_token=TURSO_AUTH_TOKEN, autocommit=True)
+
     conn = sqlite3.connect(DB_FILE, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     try:
@@ -109,6 +222,10 @@ def get_connection():
     except Exception:
         pass
     return conn
+
+
+def get_connection():
+    return ResilientConnection(get_raw_connection)
 
 
 def row_to_dict(cursor, row) -> Optional[Dict[str, Any]]:
@@ -131,8 +248,13 @@ def rows_to_dicts(cursor, rows) -> List[Dict[str, Any]]:
     return [dict(zip(cols, r)) for r in rows]
 
 
+_DB_INITIALIZED = False
+
 def init_db():
     """Create tables and performance indexes if not already existing."""
+    global _DB_INITIALIZED
+    if _DB_INITIALIZED:
+        return
     conn = get_connection()
     cursor = conn.cursor()
 

@@ -120,13 +120,22 @@ async def visitor_logger_middleware(request: Request, call_next):
     
     response = await call_next(request)
     
-    if not is_static:
+    # Only log page visits or modifying user actions (POST, PUT, DELETE), skip passive internal GET data fetches
+    should_log = (
+        not is_static and (
+            method in ["POST", "PUT", "DELETE"] or
+            path == "/" or
+            path == "/index.html" or
+            not path.startswith("/api/")
+        )
+    )
+    
+    if should_log:
         client_ip = get_client_ip(request)
         country = request.headers.get("cf-ipcountry", "")
         city = request.headers.get("cf-ipcity", "")
         user_agent = request.headers.get("user-agent", "")
         status_code = response.status_code
-        method = request.method
         
         # Async non-blocking execution in background thread
         try:
@@ -151,9 +160,14 @@ async def visitor_logger_middleware(request: Request, call_next):
 async def global_exception_handler(request: Request, exc: Exception):
     import traceback
     traceback.print_exc()
+    err_msg = str(exc)
+    if "sqlite_busy" in err_msg.lower() or "stream was idle" in err_msg.lower():
+        clean_msg = "Cơ sở dữ liệu đang bận xử lý (SQLITE_BUSY). Vui lòng thử lại sau giây lát!"
+    else:
+        clean_msg = f"Server Error: {err_msg}"
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Server Error: {str(exc)}"},
+        content={"detail": clean_msg},
         headers={
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "*",
