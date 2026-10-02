@@ -51,6 +51,22 @@ export default function App() {
     return () => { isMounted = false; };
   }, [refreshListTrigger]);
 
+  // Record visitor visit on app mount
+  useEffect(() => {
+    try {
+      fetch(apiUrl('/api/visit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page: (typeof window !== 'undefined' ? (window.location.host + window.location.pathname) : ''),
+          referrer: (typeof document !== 'undefined' ? (document.referrer || '') : '')
+        })
+      }).catch(() => {});
+    } catch {
+      // Ignore background visit ping errors
+    }
+  }, []);
+
   const footerClicksRef = React.useRef(0);
 
   // Private Admin Access: Hidden shortcut (Ctrl + Shift + L, Alt + L, F2) or URL query (?admin=1, ?logs=1)

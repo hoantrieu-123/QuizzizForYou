@@ -1282,8 +1282,12 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
                                 fontWeight: 600,
                                 padding: '1px 5px',
                                 borderRadius: '3px',
-                                background: log.method === 'POST' ? 'rgba(185, 133, 50, 0.15)' : 'var(--surface-hover)',
-                                color: log.method === 'POST' ? 'var(--warning)' : 'var(--text-secondary)',
+                                background: log.method === 'VISIT'
+                                  ? 'rgba(37, 99, 235, 0.12)'
+                                  : (log.method === 'POST' ? 'rgba(185, 133, 50, 0.15)' : (log.method === 'DELETE' ? 'rgba(220, 38, 38, 0.12)' : 'var(--surface-hover)')),
+                                color: log.method === 'VISIT'
+                                  ? '#2563eb'
+                                  : (log.method === 'POST' ? 'var(--warning)' : (log.method === 'DELETE' ? '#dc2626' : 'var(--text-secondary)')),
                                 border: '1px solid var(--border)'
                               }}>
                                 {log.method}

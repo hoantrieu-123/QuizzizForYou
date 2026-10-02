@@ -16,6 +16,8 @@ from pydantic import BaseModel
 from backend.word_parser import parse_docx_bytes
 from backend.question_detector import detect_questions_from_elements
 import asyncio
+import time
+from threading import Lock
 from backend.database import (
     init_db, save_quiz, get_quizzes, get_quiz,
     update_quiz_questions, delete_quiz, save_attempt,
@@ -98,18 +100,23 @@ class ChangePinRequest(BaseModel):
 
 
 
+_LAST_LOGGED_IPS: Dict[str, float] = {}
+_LOG_LOCK = Lock()
+
+
 @app.middleware("http")
 async def visitor_logger_middleware(request: Request, call_next):
     path = request.url.path
     method = request.method
     
-    # Fast path: Skip static assets, vite internals, assets, favicon, and admin log endpoints
+    # Fast path: Skip static assets, vite internals, assets, favicon, visit endpoint, and admin log endpoints
     is_static = (
         path.startswith("/assets") or
         path.startswith("/@") or
         path.startswith("/node_modules") or
         path.startswith("/favicon") or
         path == "/api/admin/visitor-logs" or
+        path == "/api/visit" or
         path.endswith(".js") or
         path.endswith(".css") or
         path.endswith(".png") or
@@ -121,39 +128,50 @@ async def visitor_logger_middleware(request: Request, call_next):
     
     response = await call_next(request)
     
-    # Only log page visits or modifying user actions (POST, PUT, DELETE), skip passive internal GET data fetches
-    should_log = (
-        not is_static and (
-            method in ["POST", "PUT", "DELETE"] or
-            path == "/" or
-            path == "/index.html" or
-            not path.startswith("/api/")
-        )
-    )
-    
-    if should_log:
+    if not is_static:
         client_ip = get_client_ip(request)
-        country = request.headers.get("cf-ipcountry", "")
-        city = request.headers.get("cf-ipcity", "")
-        user_agent = request.headers.get("user-agent", "")
-        status_code = response.status_code
         
-        # Async non-blocking execution in background thread
-        try:
-            asyncio.create_task(
-                asyncio.to_thread(
-                    log_visitor,
-                    ip_address=client_ip,
-                    country=country,
-                    city=city,
-                    method=method,
-                    path=path,
-                    user_agent=user_agent[:255] if user_agent else "",
-                    status_code=status_code
+        # Determine whether to log this request:
+        # 1. Modifying requests (POST, PUT, DELETE) are always logged.
+        # 2. GET requests (page visits or frontend API requests) are debounced per IP (once every 15s per IP)
+        #    This ensures visitor IPs are always captured while preventing concurrent write collisions.
+        should_log = False
+        if method in ["POST", "PUT", "DELETE"]:
+            should_log = True
+        elif method == "GET":
+            now = time.time()
+            with _LOG_LOCK:
+                last_time = _LAST_LOGGED_IPS.get(client_ip, 0)
+                if now - last_time >= 15:
+                    _LAST_LOGGED_IPS[client_ip] = now
+                    should_log = True
+                    if len(_LAST_LOGGED_IPS) > 2000:
+                        expired = [ip for ip, t in _LAST_LOGGED_IPS.items() if now - t > 3600]
+                        for ip in expired:
+                            _LAST_LOGGED_IPS.pop(ip, None)
+                            
+        if should_log:
+            country = request.headers.get("cf-ipcountry", "")
+            city = request.headers.get("cf-ipcity", "")
+            user_agent = request.headers.get("user-agent", "")
+            status_code = response.status_code
+            
+            # Async non-blocking execution in background thread
+            try:
+                asyncio.create_task(
+                    asyncio.to_thread(
+                        log_visitor,
+                        ip_address=client_ip,
+                        country=country,
+                        city=city,
+                        method=method,
+                        path=path,
+                        user_agent=user_agent[:255] if user_agent else "",
+                        status_code=status_code
+                    )
                 )
-            )
-        except Exception:
-            pass
+            except Exception:
+                pass
         
     return response
 
@@ -1006,6 +1024,38 @@ def api_get_my_ip(request: Request):
         "city": request.headers.get("cf-ipcity", ""),
         "user_agent": request.headers.get("user-agent", "")
     }
+
+
+class VisitRequest(BaseModel):
+    page: Optional[str] = None
+    referrer: Optional[str] = None
+
+
+@app.post("/api/visit")
+def api_record_visit(request: Request, payload: Optional[VisitRequest] = None):
+    """Explicitly record a website visit from the frontend."""
+    client_ip = get_client_ip(request)
+    country = request.headers.get("cf-ipcountry", "")
+    city = request.headers.get("cf-ipcity", "")
+    user_agent = request.headers.get("user-agent", "")
+
+    display_path = (payload.page if payload and payload.page else "") or request.headers.get("referer", "/") or "/"
+    if "://" in display_path:
+        display_path = display_path.split("://", 1)[1]
+
+    try:
+        log_visitor(
+            ip_address=client_ip,
+            country=country,
+            city=city,
+            method="VISIT",
+            path=display_path[:120],
+            user_agent=user_agent[:255] if user_agent else "",
+            status_code=200
+        )
+    except Exception as e:
+        print(f"Error recording visit: {e}")
+    return {"status": "ok", "ip": client_ip}
 
 
 # Root route for Render health checks and browser navigation
