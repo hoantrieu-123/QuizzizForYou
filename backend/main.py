@@ -26,7 +26,8 @@ from backend.database import (
     create_document, get_documents, get_document, update_document, delete_document,
     create_document_folder, get_document_folders, get_document_folders_tree,
     get_document_folder, get_folder_breadcrumbs, update_document_folder, delete_document_folder,
-    log_visitor, get_visitor_logs, clear_visitor_logs
+    log_visitor, get_visitor_logs, clear_visitor_logs,
+    get_admin_pin, set_admin_pin, verify_admin_pin
 )
 from fastapi.middleware.gzip import GZipMiddleware
 from backend.grading import grade_submission
@@ -73,6 +74,26 @@ def get_client_ip(request: Request) -> str:
         return request.client.host
         
     return "127.0.0.1"
+
+
+def require_admin(request: Request):
+    """Verify admin PIN from header X-Admin-PIN or query param admin_pin. Raise HTTP 403 if invalid."""
+    pin = request.headers.get("x-admin-pin") or request.query_params.get("admin_pin")
+    if not verify_admin_pin(pin):
+        raise HTTPException(
+            status_code=403,
+            detail="Bạn không có quyền thực hiện thao tác này. Yêu cầu mã PIN Quản trị viên chính xác!"
+        )
+
+
+class VerifyPinRequest(BaseModel):
+    pin: str
+
+
+class ChangePinRequest(BaseModel):
+    old_pin: str
+    new_pin: str
+
 
 
 @app.middleware("http")
@@ -310,7 +331,8 @@ def update_quiz_data(quiz_id: str, payload: UpdateQuizRequest):
 
 
 @app.delete("/api/quizzes/{quiz_id}")
-def remove_quiz(quiz_id: str):
+def remove_quiz(quiz_id: str, request: Request):
+    require_admin(request)
     success = delete_quiz(quiz_id)
     return {"success": success, "message": "Xóa bài thi thành công"}
 
@@ -360,7 +382,8 @@ def edit_class_route(class_id: str, payload: UpdateClassRequest):
 
 
 @app.delete("/api/classes/{class_id}")
-def remove_class_route(class_id: str):
+def remove_class_route(class_id: str, request: Request):
+    require_admin(request)
     delete_class(class_id)
     return {"success": True, "message": "Xóa lớp thành công"}
 
@@ -387,7 +410,8 @@ def edit_semester_route(semester_id: str, payload: UpdateSemesterRequest):
 
 
 @app.delete("/api/semesters/{semester_id}")
-def remove_semester_route(semester_id: str):
+def remove_semester_route(semester_id: str, request: Request):
+    require_admin(request)
     delete_semester(semester_id)
     return {"success": True, "message": "Xóa kỳ học thành công"}
 
@@ -414,7 +438,8 @@ def edit_subject(subject_id: str, payload: UpdateSubjectRequest):
 
 
 @app.delete("/api/subjects/{subject_id}")
-def remove_subject(subject_id: str):
+def remove_subject(subject_id: str, request: Request):
+    require_admin(request)
     delete_subject(subject_id)
     return {"success": True, "message": "Xóa môn học thành công"}
 
@@ -511,7 +536,8 @@ def edit_folder(folder_id: str, payload: UpdateFolderRequest):
 
 
 @app.delete("/api/document-folders/{folder_id}")
-def remove_folder(folder_id: str):
+def remove_folder(folder_id: str, request: Request):
+    require_admin(request)
     existing = get_document_folder(folder_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy thư mục")
@@ -775,7 +801,8 @@ def view_document_inline(doc_id: str):
 
 
 @app.delete("/api/documents/{doc_id}")
-def remove_document(doc_id: str):
+def remove_document(doc_id: str, request: Request):
+    require_admin(request)
     doc = delete_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
@@ -863,6 +890,7 @@ def convert_document_to_quiz(doc_id: str):
 @app.get("/api/admin/visitor-logs")
 def api_get_visitor_logs(request: Request, limit: int = 100, offset: int = 0, search: str = ""):
     """Retrieve visitor logs with total count, unique IP count, and caller's IP."""
+    require_admin(request)
     my_ip = get_client_ip(request)
     data = get_visitor_logs(limit=limit, offset=offset, search=search)
     data["my_ip"] = my_ip
@@ -870,10 +898,38 @@ def api_get_visitor_logs(request: Request, limit: int = 100, offset: int = 0, se
 
 
 @app.delete("/api/admin/visitor-logs")
-def api_clear_visitor_logs():
+def api_clear_visitor_logs(request: Request):
     """Clear all visitor logs."""
+    require_admin(request)
     clear_visitor_logs()
     return {"success": True, "message": "Đã xóa toàn bộ nhật ký truy cập"}
+
+
+@app.post("/api/admin/verify-pin")
+def api_verify_pin(payload: VerifyPinRequest):
+    """Verify administrator PIN."""
+    if not verify_admin_pin(payload.pin):
+        raise HTTPException(status_code=403, detail="Mã PIN không chính xác!")
+    return {"valid": True, "message": "Xác thực mã PIN Quản trị viên thành công"}
+
+
+@app.post("/api/admin/change-pin")
+def api_change_pin(payload: ChangePinRequest):
+    """Change administrator PIN in database."""
+    if not verify_admin_pin(payload.old_pin):
+        raise HTTPException(status_code=403, detail="Mã PIN hiện tại không chính xác!")
+    clean_new = payload.new_pin.strip()
+    if len(clean_new) < 4:
+        raise HTTPException(status_code=400, detail="Mã PIN mới phải có ít nhất 4 ký tự!")
+    set_admin_pin(clean_new)
+    return {"success": True, "message": "Đã đổi mã PIN Quản trị viên thành công!"}
+
+
+@app.get("/api/admin/check-auth")
+def api_check_auth(request: Request):
+    """Check if provided PIN is valid."""
+    pin = request.headers.get("x-admin-pin") or request.query_params.get("admin_pin")
+    return {"authenticated": verify_admin_pin(pin)}
 
 
 @app.get("/api/admin/my-ip")
@@ -884,6 +940,22 @@ def api_get_my_ip(request: Request):
         "country": request.headers.get("cf-ipcountry", "VN"),
         "city": request.headers.get("cf-ipcity", ""),
         "user_agent": request.headers.get("user-agent", "")
+    }
+
+
+# Root route for Render health checks and browser navigation
+@app.get("/")
+def api_root():
+    if os.path.exists(frontend_dist):
+        return FileResponse(
+            os.path.join(frontend_dist, "index.html"),
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
+        )
+    return {
+        "status": "online",
+        "service": "QuizzizForYou Backend API",
+        "version": "1.0.0",
+        "health": "/api/health"
     }
 
 

@@ -4,6 +4,7 @@ import {
   Plus, Edit3, Trash2, Check, X, Calendar, Layers, GripVertical, FileText, UploadCloud, HelpCircle
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
+import { useAdminAuth } from '../utils/adminAuth';
 
 export default function SidebarTree({
   selectedFilter,
@@ -12,6 +13,7 @@ export default function SidebarTree({
   onTreeUpdated,
   activeHomeTab = 'quizzes'
 }) {
+  const { isAdmin, getHeaders } = useAdminAuth();
   const [treeData, setTreeData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -205,15 +207,25 @@ export default function SidebarTree({
 
   const handleDeleteClass = async (classId, e) => {
     e.stopPropagation();
+    if (!isAdmin) {
+      alert('Bạn cần đăng nhập chế độ Quản trị viên để xóa Lớp!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa Lớp này? Các kỳ học, môn học và đề thi sẽ không bị xóa mà chuyển ra ngoài.')) return;
     try {
-      const res = await fetch(apiUrl(`/api/classes/${classId}`), { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/classes/${classId}`), {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
       if (res.ok) {
         if (selectedFilter?.id === classId) {
           onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] });
         }
         await fetchTree();
         if (onTreeUpdated) onTreeUpdated();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.detail || 'Không thể xóa lớp');
       }
     } catch (err) {
       alert('Không thể xóa lớp: ' + err.message);
@@ -269,15 +281,25 @@ export default function SidebarTree({
 
   const handleDeleteSemester = async (semesterId, e) => {
     e.stopPropagation();
+    if (!isAdmin) {
+      alert('Bạn cần đăng nhập chế độ Quản trị viên để xóa Kỳ học!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa Kỳ học này? Các môn và đề thi sẽ được giữ lại an toàn.')) return;
     try {
-      const res = await fetch(apiUrl(`/api/semesters/${semesterId}`), { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/semesters/${semesterId}`), {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
       if (res.ok) {
         if (selectedFilter?.id === semesterId) {
           onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] });
         }
         await fetchTree();
         if (onTreeUpdated) onTreeUpdated();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.detail || 'Không thể xóa kỳ học');
       }
     } catch (err) {
       alert('Không thể xóa kỳ học: ' + err.message);
@@ -337,15 +359,25 @@ export default function SidebarTree({
 
   const handleDeleteSubject = async (subjectId, e) => {
     e.stopPropagation();
+    if (!isAdmin) {
+      alert('Bạn cần đăng nhập chế độ Quản trị viên để xóa Môn học!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa Môn học này? Các đề thi bên trong sẽ được chuyển ra ngoài.')) return;
     try {
-      const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
       if (res.ok) {
         if (selectedFilter?.id === subjectId) {
           onSelectFilter({ type: 'all', id: 'all', name: 'Tất cả đề thi', path: [] });
         }
         fetchTree();
         if (onTreeUpdated) onTreeUpdated();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.detail || 'Không thể xóa môn học');
       }
     } catch (err) {
       alert('Không thể xóa môn học: ' + err.message);
@@ -602,14 +634,16 @@ export default function SidebarTree({
                       >
                         <Edit3 size={12} />
                       </button>
-                      <button
-                        type="button"
-                        className="tree-hover-btn btn-danger-hover"
-                        title="Xóa lớp"
-                        onClick={(e) => handleDeleteClass(cls.id, e)}
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="tree-hover-btn btn-danger-hover"
+                          title="Xóa lớp (Quản trị viên)"
+                          onClick={(e) => handleDeleteClass(cls.id, e)}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
                     </div>
                   )}
                   <span className="tree-badge" title={`${cls.quiz_count || 0} đề thi • ${cls.doc_count || 0} tài liệu`}>
@@ -747,14 +781,16 @@ export default function SidebarTree({
                                 >
                                   <Edit3 size={12} />
                                 </button>
-                                <button
-                                  type="button"
-                                  className="tree-hover-btn btn-danger-hover"
-                                  title="Xóa kỳ học"
-                                  onClick={(e) => handleDeleteSemester(sem.id, e)}
-                                >
-                                  <Trash2 size={12} />
-                                </button>
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    className="tree-hover-btn btn-danger-hover"
+                                    title="Xóa kỳ học (Quản trị viên)"
+                                    onClick={(e) => handleDeleteSemester(sem.id, e)}
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
                               </div>
                             )}
                             <span className="tree-badge" title={`${sem.quiz_count || 0} đề thi • ${sem.doc_count || 0} tài liệu`}>
@@ -886,14 +922,16 @@ export default function SidebarTree({
                                         >
                                           <Edit3 size={12} />
                                         </button>
-                                        <button
-                                          type="button"
-                                          className="tree-hover-btn btn-danger-hover"
-                                          title="Xóa môn học"
-                                          onClick={(e) => handleDeleteSubject(sub.id, e)}
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
+                                        {isAdmin && (
+                                          <button
+                                            type="button"
+                                            className="tree-hover-btn btn-danger-hover"
+                                            title="Xóa môn học (Quản trị viên)"
+                                            onClick={(e) => handleDeleteSubject(sub.id, e)}
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        )}
                                       </div>
                                     )}
                                     <span className="tree-badge" title={`${sub.quiz_count || 0} đề thi • ${sub.doc_count || 0} tài liệu`}>

@@ -51,11 +51,16 @@ export default function App() {
     return () => { isMounted = false; };
   }, [refreshListTrigger]);
 
-  // Private Admin Access: Hidden shortcut Ctrl + Shift + L or ?admin_logs=1 in URL
+  const footerClicksRef = React.useRef(0);
+
+  // Private Admin Access: Hidden shortcut (Ctrl + Shift + L, Alt + L, F2) or URL query (?admin=1, ?logs=1)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Ctrl + Shift + L or Cmd + Shift + L
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+      const isCtrlShiftL = (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'L' || e.key === 'l');
+      const isAltL = e.altKey && (e.key === 'L' || e.key === 'l');
+      const isF2 = e.key === 'F2' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+
+      if (isCtrlShiftL || isAltL || isF2) {
         e.preventDefault();
         setShowVisitorLogModal(prev => !prev);
       }
@@ -63,10 +68,9 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // Check URL query parameter (e.g. yoursite.pages.dev?admin_logs=1)
     try {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('admin_logs') === '1' || params.get('logs') === '1') {
+      if (params.get('admin') === '1' || params.get('logs') === '1' || params.get('admin_logs') === '1') {
         setShowVisitorLogModal(true);
       }
     } catch {
@@ -211,6 +215,7 @@ export default function App() {
         onNavigate={(view) => setCurrentView(view)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        onSecretAdminTrigger={() => setShowVisitorLogModal(true)}
       />
 
       <main className="main-container main-container-wide" style={{ flex: 1 }}>
@@ -461,8 +466,19 @@ export default function App() {
         fontSize: '0.825rem',
         borderTop: '1px solid var(--border)',
         background: 'var(--bg)',
-        marginTop: '2rem'
-      }}>
+        marginTop: '2rem',
+        cursor: 'default',
+        userSelect: 'none'
+      }}
+      onClick={() => {
+        footerClicksRef.current = (footerClicksRef.current || 0) + 1;
+        if (footerClicksRef.current >= 3) {
+          setShowVisitorLogModal(true);
+          footerClicksRef.current = 0;
+        }
+        setTimeout(() => { footerClicksRef.current = 0; }, 800);
+      }}
+      >
         EduDocx — Nền tảng tạo đề trắc nghiệm thông minh từ Highlight Word (.docx)
       </footer>
 

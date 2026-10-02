@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { apiUrl } from '../apiConfig';
-import { Globe, Activity, Shield, X, Search, RefreshCw, Trash2, Check, Copy } from './UIcons';
+import { Globe, Activity, Shield, X, Search, RefreshCw, Trash2, Check, Copy, Key } from './UIcons';
+import {
+  DEFAULT_ADMIN_PIN,
+  getAdminPin,
+  setAdminPinInStorage,
+  isAdminUnlocked,
+  setAdminUnlocked,
+  getAdminHeaders
+} from '../utils/adminAuth';
 
 // Helper to format country flag and name
 function formatCountry(countryCode, ip) {
@@ -74,31 +82,48 @@ function formatDateTime(isoOrSqliteStr) {
 }
 
 export default function VisitorLogModal({ isOpen, onClose }) {
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    return localStorage.getItem('admin_ip_logs_unlocked') === 'true';
-  });
+  const [isUnlocked, setIsUnlocked] = useState(isAdminUnlocked);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
+  // Change PIN dialog state
+  const [showChangePin, setShowChangePin] = useState(false);
+  const [oldPin, setOldPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmNewPin, setConfirmNewPin] = useState('');
+  const [changePinError, setChangePinError] = useState('');
+  const [changePinSuccess, setChangePinSuccess] = useState('');
+
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [data, setData] = useState({ total: 0, unique_ips: 0, my_ip: '', logs: [] });
   const [search, setSearch] = useState('');
   const [copiedIp, setCopiedIp] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
 
-  const getStoredPin = () => localStorage.getItem('admin_ip_logs_pin') || '1234';
-
   const fetchLogs = async (searchTerm = search) => {
     try {
       setLoading(true);
+      setErrorMsg('');
       const url = apiUrl(`/api/admin/visitor-logs?limit=150&search=${encodeURIComponent(searchTerm)}`);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Không thể tải nhật ký IP');
+      const res = await fetch(url, {
+        headers: getAdminHeaders()
+      });
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error('Máy chủ Backend trên Render chưa cập nhật phiên bản mới (Lỗi 404). Vui lòng vào dashboard.render.com -> chọn Web Service backend -> nhấn "Manual Deploy" -> "Deploy latest commit" để kích hoạt tính năng!');
+        }
+        if (res.status === 403) {
+          throw new Error('Mã PIN Quản trị viên không hợp lệ để xem nhật ký!');
+        }
+        throw new Error(`Máy chủ phản hồi lỗi HTTP ${res.status}`);
+      }
       const json = await res.json();
       setData(json);
     } catch (err) {
       console.error('Error fetching visitor logs:', err);
+      setErrorMsg(err.message);
     } finally {
       setLoading(false);
     }
@@ -110,25 +135,110 @@ export default function VisitorLogModal({ isOpen, onClose }) {
     }
   }, [isOpen, isUnlocked]);
 
-  const handleUnlock = (e) => {
+  const handleUnlock = async (e) => {
     e.preventDefault();
-    if (pinInput.trim() === getStoredPin()) {
-      setIsUnlocked(true);
-      setPinError('');
-      if (rememberMe) {
-        localStorage.setItem('admin_ip_logs_unlocked', 'true');
-      }
-      fetchLogs('');
-    } else {
-      setPinError('Mã PIN không chính xác! Vui lòng thử lại.');
+    const enteredPin = pinInput.trim();
+    if (!enteredPin) {
+      setPinError('Vui lòng nhập mã PIN!');
+      return;
     }
+
+    try {
+      const res = await fetch(apiUrl('/api/admin/verify-pin'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: enteredPin })
+      });
+      if (res.ok) {
+        setAdminPinInStorage(enteredPin);
+        if (rememberMe) {
+          setAdminUnlocked(true);
+        }
+        setIsUnlocked(true);
+        setPinError('');
+        fetchLogs('');
+        return;
+      }
+    } catch {
+      // Fallback check against stored or default pin if offline
+      if (enteredPin === getAdminPin()) {
+        setAdminPinInStorage(enteredPin);
+        if (rememberMe) {
+          setAdminUnlocked(true);
+        }
+        setIsUnlocked(true);
+        setPinError('');
+        fetchLogs('');
+        return;
+      }
+    }
+
+    setPinError('Mã PIN không chính xác! Vui lòng thử lại.');
   };
 
   const handleLock = () => {
     setIsUnlocked(false);
-    localStorage.removeItem('admin_ip_logs_unlocked');
+    setAdminUnlocked(false);
     setPinInput('');
     setPinError('');
+    setShowChangePin(false);
+  };
+
+  const handleChangePin = async (e) => {
+    e.preventDefault();
+    setChangePinError('');
+    setChangePinSuccess('');
+
+    const cleanOld = oldPin.trim();
+    const cleanNew = newPin.trim();
+    const cleanConfirm = confirmNewPin.trim();
+
+    if (cleanNew.length < 4) {
+      setChangePinError('Mã PIN mới phải có ít nhất 4 ký tự!');
+      return;
+    }
+
+    if (cleanNew !== cleanConfirm) {
+      setChangePinError('Xác nhận mã PIN mới không trùng khớp!');
+      return;
+    }
+
+    try {
+      const res = await fetch(apiUrl('/api/admin/change-pin'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_pin: cleanOld, new_pin: cleanNew })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || 'Mã PIN hiện tại không chính xác!');
+      }
+
+      setAdminPinInStorage(cleanNew);
+      setChangePinSuccess('Đã đổi mã PIN thành công và đồng bộ lên máy chủ!');
+      setOldPin('');
+      setNewPin('');
+      setConfirmNewPin('');
+      setTimeout(() => {
+        setShowChangePin(false);
+        setChangePinSuccess('');
+      }, 1500);
+    } catch (err) {
+      if (cleanOld === getAdminPin()) {
+        setAdminPinInStorage(cleanNew);
+        setChangePinSuccess('Đã đổi mã PIN thành công trên trình duyệt này!');
+        setOldPin('');
+        setNewPin('');
+        setConfirmNewPin('');
+        setTimeout(() => {
+          setShowChangePin(false);
+          setChangePinSuccess('');
+        }, 1500);
+      } else {
+        setChangePinError(err.message || 'Mã PIN hiện tại không chính xác!');
+      }
+    }
   };
 
   const handleSearchSubmit = (e) => {
@@ -142,7 +252,10 @@ export default function VisitorLogModal({ isOpen, onClose }) {
     }
     try {
       setIsClearing(true);
-      const res = await fetch(apiUrl('/api/admin/visitor-logs'), { method: 'DELETE' });
+      const res = await fetch(apiUrl('/api/admin/visitor-logs'), {
+        method: 'DELETE',
+        headers: getAdminHeaders()
+      });
       if (res.ok) {
         fetchLogs('');
       } else {
@@ -290,6 +403,14 @@ export default function VisitorLogModal({ isOpen, onClose }) {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
+                  onClick={() => setShowChangePin(prev => !prev)}
+                  className="btn btn-secondary btn-sm"
+                  style={{ padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px' }}
+                  title="Thay đổi mã PIN bảo mật"
+                >
+                  <Key size={14} /> Đổi PIN
+                </button>
+                <button
                   onClick={handleLock}
                   className="btn btn-secondary btn-sm"
                   style={{ padding: '4px 8px', fontSize: '0.78rem', borderRadius: '6px' }}
@@ -307,6 +428,112 @@ export default function VisitorLogModal({ isOpen, onClose }) {
                 </button>
               </div>
             </div>
+
+            {/* Change PIN Form (Sub-view) */}
+            {showChangePin && (
+              <div className="card" style={{
+                margin: '0.75rem 0',
+                padding: '0.9rem 1.15rem',
+                border: '1.5px solid var(--primary)',
+                background: 'var(--surface-hover)',
+                borderRadius: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '0.875rem', color: 'var(--text)' }}>
+                    <Key size={15} style={{ color: 'var(--primary)' }} />
+                    <span>Thay Đổi Mã PIN Quản Trị Viên</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowChangePin(false); setChangePinError(''); }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '2px 5px', borderRadius: '4px' }}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleChangePin} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1, minWidth: '125px' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      PIN hiện tại:
+                    </label>
+                    <input
+                      type="password"
+                      className="input-field"
+                      placeholder="Mã PIN cũ..."
+                      value={oldPin}
+                      onChange={(e) => setOldPin(e.target.value)}
+                      style={{ height: '33px', fontSize: '0.85rem' }}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: '125px' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      PIN mới (tối thiểu 4 số):
+                    </label>
+                    <input
+                      type="password"
+                      className="input-field"
+                      placeholder="Mã PIN mới..."
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value)}
+                      style={{ height: '33px', fontSize: '0.85rem' }}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: '125px' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      Xác nhận PIN mới:
+                    </label>
+                    <input
+                      type="password"
+                      className="input-field"
+                      placeholder="Nhập lại PIN mới..."
+                      value={confirmNewPin}
+                      onChange={(e) => setConfirmNewPin(e.target.value)}
+                      style={{ height: '33px', fontSize: '0.85rem' }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <button type="submit" className="btn btn-primary btn-sm" style={{ height: '33px', padding: '0 0.85rem' }}>
+                      Lưu mã PIN mới
+                    </button>
+                  </div>
+                </form>
+
+                {changePinError && (
+                  <div style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: '0.45rem', fontWeight: 500 }}>
+                    {changePinError}
+                  </div>
+                )}
+                {changePinSuccess && (
+                  <div style={{ color: 'var(--success)', fontSize: '0.78rem', marginTop: '0.45rem', fontWeight: 500 }}>
+                    ✓ {changePinSuccess}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error Message Notice (e.g. Render 404 guide) */}
+            {errorMsg && (
+              <div style={{
+                background: '#FFF4E5',
+                color: '#663C00',
+                border: '1px solid #FFE2B8',
+                padding: '0.85rem 1rem',
+                borderRadius: '8px',
+                fontSize: '0.825rem',
+                lineHeight: 1.5,
+                margin: '0.65rem 0'
+              }}>
+                <strong>⚠️ Thông báo:</strong> {errorMsg}
+              </div>
+            )}
 
             {/* Overview KPI Cards */}
             <div style={{

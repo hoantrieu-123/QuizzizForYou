@@ -309,6 +309,15 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_visitor_logs_created_at ON visitor_logs(created_at DESC);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_visitor_logs_ip ON visitor_logs(ip_address);")
 
+    # System Settings Table (Admin PIN, etc.)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     conn.commit()
     conn.close()
 
@@ -1455,4 +1464,70 @@ def clear_visitor_logs() -> bool:
     conn.commit()
     conn.close()
     return True
+
+
+# ==============================================================================
+# System Settings & Admin Authentication Management
+# ==============================================================================
+def get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
+    """Retrieve a setting value by key from system_settings table."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM system_settings WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return row[0] if isinstance(row, (tuple, list)) else row["value"]
+    except Exception as e:
+        print(f"Error reading setting {key}: {e}")
+    return default
+
+
+def set_setting(key: str, value: str):
+    """Store or update a setting value by key."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO system_settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        """, (key, value))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error writing setting {key}: {e}")
+        raise e
+
+
+def get_admin_pin() -> str:
+    """Get the current admin PIN from database, environment variable, or default ('1234')."""
+    try:
+        db_pin = get_setting("admin_pin")
+        if db_pin and str(db_pin).strip():
+            return str(db_pin).strip()
+    except Exception:
+        pass
+
+    env_pin = os.environ.get("ADMIN_PIN")
+    if env_pin and str(env_pin).strip():
+        return str(env_pin).strip()
+
+    return "1234"
+
+
+def set_admin_pin(new_pin: str):
+    """Update admin PIN in the database."""
+    clean_pin = str(new_pin).strip()
+    if not clean_pin or len(clean_pin) < 4:
+        raise ValueError("Mã PIN phải có ít nhất 4 ký tự")
+    set_setting("admin_pin", clean_pin)
+
+
+def verify_admin_pin(pin: Optional[str]) -> bool:
+    """Verify if the provided PIN matches the admin PIN."""
+    if not pin:
+        return False
+    return str(pin).strip() == get_admin_pin()
+
 

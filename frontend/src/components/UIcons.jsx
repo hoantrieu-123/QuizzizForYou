@@ -453,4 +453,13 @@ export const Copy = createStrokeIcon(
   "Copy"
 );
 
+export const Key = createStrokeIcon(
+  <>
+    <path d="M21 2l-2 2m-1.5 1.5L16 7l-3-3L4.5 12.5a5 5 0 1 0 7 7L20 11l-3-3 4.5-4.5z" />
+    <circle cx="7.5" cy="16.5" r="1.5" />
+  </>,
+  "Key"
+);
+
+
 

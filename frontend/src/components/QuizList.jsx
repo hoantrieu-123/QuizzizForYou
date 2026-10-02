@@ -6,6 +6,7 @@ import {
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
 import { prefetchQuizDetail, removeCachedQuiz } from '../services/dataCache';
+import { useAdminAuth } from '../utils/adminAuth';
 
 export const naturalCompareQuizzes = (a, b) => {
   const titleA = (a?.title || a?.filename || '').trim();
@@ -28,6 +29,7 @@ export default function QuizList({
   loadingQuizId = null,
   onQuizzesLoaded
 }) {
+  const { isAdmin, getHeaders } = useAdminAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,16 +109,26 @@ export default function QuizList({
   // Delete Quiz
   const handleDeleteQuiz = async (id, e) => {
     e.stopPropagation();
+    if (!isAdmin) {
+      alert('Bạn cần đăng nhập chế độ Quản trị viên để thực hiện thao tác xóa bài thi!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc chắn muốn xóa bài kiểm tra này không?')) return;
     try {
-      const res = await fetch(apiUrl(`/api/quizzes/${id}`), { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/quizzes/${id}`), {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
       if (res.ok) {
         removeCachedQuiz(id);
         setQuizzes(prev => prev.filter(q => q.id !== id));
         onQuizPlacementChanged?.();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.detail || 'Không thể xóa bài thi');
       }
     } catch (err) {
-      alert('Không thể xóa bài thi');
+      alert('Không thể xóa bài thi: ' + err.message);
     }
   };
 
@@ -295,17 +307,27 @@ export default function QuizList({
   // Delete Subject
   const handleDeleteSubject = async (subjectId, e) => {
     e.stopPropagation();
+    if (!isAdmin) {
+      alert('Bạn cần đăng nhập chế độ Quản trị viên để thực hiện thao tác xóa môn học!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa mục môn này? Các bài thi bên trong sẽ được chuyển an toàn về "Đề thi ngoài mục / Chưa phân loại".')) return;
 
     try {
-      const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
       if (res.ok) {
         setSubjects(prev => prev.filter(s => s.id !== subjectId));
         setQuizzes(prev => prev.map(q => q.subject_id === subjectId ? { ...q, subject_id: '' } : q));
         onQuizPlacementChanged?.();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.detail || 'Không thể xóa môn học');
       }
     } catch (err) {
-      alert('Không thể xóa môn học');
+      alert('Không thể xóa môn học: ' + err.message);
     }
   };
 
@@ -718,7 +740,7 @@ export default function QuizList({
                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {!isEditing && (
+                {isAdmin && !isEditing && (
                   <button
                     type="button"
                     onClick={(e) => handleStartEditSubject(subject, e)}
@@ -740,25 +762,27 @@ export default function QuizList({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={(e) => handleDeleteSubject(subject.id, e)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                  title="Xóa mục môn này (đề thi sẽ được chuyển ra ngoài)"
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                >
-                  <Trash2 size={15} />
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSubject(subject.id, e)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Xóa mục môn này (đề thi sẽ được chuyển ra ngoài)"
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -790,6 +814,7 @@ export default function QuizList({
                         onStartQuiz={onStartQuiz}
                         onDeleteQuiz={handleDeleteQuiz}
                         loadingQuizId={loadingQuizId}
+                        isAdmin={isAdmin}
                       />
                     ))}
                   </div>
@@ -831,6 +856,7 @@ export default function QuizList({
                   onStartQuiz={onStartQuiz}
                   onDeleteQuiz={handleDeleteQuiz}
                   loadingQuizId={loadingQuizId}
+                  isAdmin={isAdmin}
                 />
               ))}
             </div>
@@ -869,6 +895,7 @@ export default function QuizList({
                   onStartQuiz={onStartQuiz}
                   onDeleteQuiz={handleDeleteQuiz}
                   loadingQuizId={loadingQuizId}
+                  isAdmin={isAdmin}
                 />
               ))}
             </div>
@@ -987,6 +1014,7 @@ export default function QuizList({
                     onStartQuiz={onStartQuiz}
                     onDeleteQuiz={handleDeleteQuiz}
                     loadingQuizId={loadingQuizId}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
@@ -1013,7 +1041,8 @@ function QuizCardItem({
   onSelectQuiz,
   onStartQuiz,
   onDeleteQuiz,
-  loadingQuizId
+  loadingQuizId,
+  isAdmin
 }) {
   const isLoading = loadingQuizId === quiz.id;
   const cleanTitle = (quiz.title || '').replace(/\\/g, '/').split('/').pop();
@@ -1082,24 +1111,26 @@ function QuizCardItem({
             </span>
           </div>
 
-          <button
-            onClick={(e) => onDeleteQuiz(quiz.id, e)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '2px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
-            title="Xóa bài thi này"
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-          >
-            <Trash2 size={14} />
-          </button>
+          {isAdmin && onDeleteQuiz && (
+            <button
+              onClick={(e) => onDeleteQuiz(quiz.id, e)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '2px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title="Xóa bài thi này (Quản trị viên)"
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
 
         {/* Title */}
