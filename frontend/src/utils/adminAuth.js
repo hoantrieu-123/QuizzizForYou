@@ -3,13 +3,47 @@ import { apiUrl } from '../apiConfig';
 
 export const DEFAULT_ADMIN_PIN = '1234';
 
+/**
+ * Safely encode any string to ISO-8859-1 / ASCII safe format for HTTP headers.
+ * Converts characters outside 0x20-0x7E into URL encoded format so that browser
+ * fetch() never throws: "Failed to read the 'headers' property: String contains non ISO-8859-1 code point"
+ */
+export const toSafeHeaderValue = (val) => {
+  if (!val) return '';
+  const str = String(val).trim();
+  let hasNonAscii = false;
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code < 32 || code > 126) {
+      hasNonAscii = true;
+      break;
+    }
+  }
+  if (!hasNonAscii) return str;
+  try {
+    return encodeURIComponent(str);
+  } catch {
+    return str.replace(/[^\x20-\x7E]/g, '');
+  }
+};
+
 export const getAdminPin = () => {
-  return localStorage.getItem('admin_ip_logs_pin') || DEFAULT_ADMIN_PIN;
+  try {
+    const raw = localStorage.getItem('admin_ip_logs_pin');
+    if (!raw || !raw.trim()) return DEFAULT_ADMIN_PIN;
+    return raw.trim();
+  } catch {
+    return DEFAULT_ADMIN_PIN;
+  }
 };
 
 export const setAdminPinInStorage = (pin) => {
   if (pin) {
-    localStorage.setItem('admin_ip_logs_pin', pin.trim());
+    try {
+      localStorage.setItem('admin_ip_logs_pin', String(pin).trim());
+    } catch (e) {
+      console.warn('Failed to save admin pin:', e);
+    }
   }
   window.dispatchEvent(new Event('admin-auth-changed'));
 };
@@ -31,7 +65,7 @@ export const getAdminHeaders = () => {
   const headers = {};
   const pin = getAdminPin();
   if (pin) {
-    headers['X-Admin-PIN'] = pin;
+    headers['X-Admin-PIN'] = toSafeHeaderValue(pin);
   }
   return headers;
 };
@@ -54,7 +88,10 @@ export const fetchClientPermissions = async (force = false) => {
     try {
       const headers = {};
       if (isAdminUnlocked()) {
-        headers['X-Admin-PIN'] = getAdminPin();
+        const pin = getAdminPin();
+        if (pin) {
+          headers['X-Admin-PIN'] = toSafeHeaderValue(pin);
+        }
       }
       const res = await fetch(apiUrl('/api/client/permissions'), { headers });
       if (res.ok) {

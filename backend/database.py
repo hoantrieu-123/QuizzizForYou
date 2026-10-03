@@ -1820,10 +1820,20 @@ def set_admin_pin(new_pin: str):
 
 
 def verify_admin_pin(pin: Optional[str]) -> bool:
-    """Verify if the provided PIN matches the admin PIN."""
+    """Verify if the provided PIN matches the admin PIN (supports raw and URL-encoded strings)."""
     if not pin:
         return False
-    return str(pin).strip() == get_admin_pin()
+    pin_str = str(pin).strip()
+    target = get_admin_pin()
+    if pin_str == target:
+        return True
+    try:
+        import urllib.parse
+        if urllib.parse.unquote(pin_str).strip() == target:
+            return True
+    except Exception:
+        pass
+    return False
 
 
 # ==============================================================================
