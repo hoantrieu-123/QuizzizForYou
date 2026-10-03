@@ -11,6 +11,7 @@ import ResultView from './components/ResultView';
 import VisitorLogModal from './components/VisitorLogModal';
 import { apiUrl } from './apiConfig';
 import { getQuizDetail, updateCachedQuiz, getCachedQuizSync } from './services/dataCache';
+import { getAdminHeaders } from './utils/adminAuth';
 import { FileText, Folders, HelpCircle, CheckCircle2, ClipboardList } from './components/UIcons';
 
 export default function App() {
@@ -178,7 +179,7 @@ export default function App() {
   const handleSaveQuiz = async (quizId, title, questions) => {
     const res = await fetch(apiUrl(`/api/quizzes/${quizId}`), {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
       body: JSON.stringify({ title, questions }),
     });
     const data = await res.json();

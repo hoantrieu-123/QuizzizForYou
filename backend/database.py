@@ -283,6 +283,8 @@ def init_db():
         cursor.execute("ALTER TABLE quizzes ADD COLUMN is_deleted INTEGER DEFAULT 0")
     if 'deleted_at' not in quiz_columns:
         cursor.execute("ALTER TABLE quizzes ADD COLUMN deleted_at TIMESTAMP")
+    if 'created_ip' not in quiz_columns:
+        cursor.execute("ALTER TABLE quizzes ADD COLUMN created_ip TEXT DEFAULT ''")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS classes (
@@ -292,6 +294,11 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
+    cursor.execute("PRAGMA table_info(classes)")
+    class_cols = [col[1] for col in cursor.fetchall()]
+    if 'created_ip' not in class_cols:
+        cursor.execute("ALTER TABLE classes ADD COLUMN created_ip TEXT DEFAULT ''")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS semesters (
@@ -303,6 +310,11 @@ def init_db():
         FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
     );
     """)
+
+    cursor.execute("PRAGMA table_info(semesters)")
+    sem_cols = [col[1] for col in cursor.fetchall()]
+    if 'created_ip' not in sem_cols:
+        cursor.execute("ALTER TABLE semesters ADD COLUMN created_ip TEXT DEFAULT ''")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS subjects (
@@ -321,6 +333,8 @@ def init_db():
         cursor.execute("ALTER TABLE subjects ADD COLUMN semester_id TEXT DEFAULT ''")
     if 'class_id' not in subj_cols:
         cursor.execute("ALTER TABLE subjects ADD COLUMN class_id TEXT DEFAULT ''")
+    if 'created_ip' not in subj_cols:
+        cursor.execute("ALTER TABLE subjects ADD COLUMN created_ip TEXT DEFAULT ''")
 
     cursor.execute("""
     UPDATE quizzes 
@@ -403,6 +417,13 @@ def init_db():
         cursor.execute("ALTER TABLE documents ADD COLUMN is_deleted INTEGER DEFAULT 0")
     if 'deleted_at' not in doc_cols:
         cursor.execute("ALTER TABLE documents ADD COLUMN deleted_at TIMESTAMP")
+    if 'created_ip' not in doc_cols:
+        cursor.execute("ALTER TABLE documents ADD COLUMN created_ip TEXT DEFAULT ''")
+
+    cursor.execute("PRAGMA table_info(document_folders)")
+    folder_cols = [col[1] for col in cursor.fetchall()]
+    if 'created_ip' not in folder_cols:
+        cursor.execute("ALTER TABLE document_folders ADD COLUMN created_ip TEXT DEFAULT ''")
 
     # Performance Indexes
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_questions_quiz_id ON questions(quiz_id);")
@@ -455,15 +476,15 @@ def init_db():
 init_db()
 
 
-def save_quiz(title: str, filename: str, questions: List[Dict[str, Any]]) -> str:
+def save_quiz(title: str, filename: str, questions: List[Dict[str, Any]], created_ip: str = "") -> str:
     """Save parsed quiz and all questions into SQLite."""
     conn = get_connection()
     cursor = conn.cursor()
     quiz_id = f"quiz_{uuid.uuid4().hex[:10]}"
 
     cursor.execute(
-        "INSERT INTO quizzes (id, title, filename, question_count) VALUES (?, ?, ?, ?)",
-        (quiz_id, title, filename, len(questions))
+        "INSERT INTO quizzes (id, title, filename, question_count, created_ip) VALUES (?, ?, ?, ?, ?)",
+        (quiz_id, title, filename, len(questions), created_ip or '')
     )
 
     for idx, q in enumerate(questions, start=1):
@@ -685,7 +706,7 @@ def get_subjects(conn=None) -> List[Dict[str, Any]]:
     return result
 
 
-def create_subject(name: str, semester_id: Optional[str] = None, class_id: Optional[str] = None) -> Dict[str, Any]:
+def create_subject(name: str, semester_id: Optional[str] = None, class_id: Optional[str] = None, created_ip: str = "") -> Dict[str, Any]:
     """Create a new subject."""
     conn = get_connection()
     cursor = conn.cursor()
@@ -700,8 +721,8 @@ def create_subject(name: str, semester_id: Optional[str] = None, class_id: Optio
         if r:
             cls_val = r.get('class_id') or ''
     cursor.execute(
-        "INSERT INTO subjects (id, name, semester_id, class_id, order_idx) VALUES (?, ?, ?, ?, ?)",
-        (subject_id, name.strip(), sem_val, cls_val, next_order)
+        "INSERT INTO subjects (id, name, semester_id, class_id, order_idx, created_ip) VALUES (?, ?, ?, ?, ?, ?)",
+        (subject_id, name.strip(), sem_val, cls_val, next_order, created_ip or '')
     )
     conn.commit()
     cursor.execute("SELECT * FROM subjects WHERE id = ?", (subject_id,))
@@ -795,15 +816,15 @@ def get_classes(conn=None) -> List[Dict[str, Any]]:
     return result
 
 
-def create_class(name: str) -> Dict[str, Any]:
+def create_class(name: str, created_ip: str = "") -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
     class_id = f"cls_{uuid.uuid4().hex[:8]}"
     cursor.execute("SELECT COALESCE(MAX(order_idx), 0) + 1 FROM classes")
     next_order = cursor.fetchone()[0]
     cursor.execute(
-        "INSERT INTO classes (id, name, order_idx) VALUES (?, ?, ?)",
-        (class_id, name.strip(), next_order)
+        "INSERT INTO classes (id, name, order_idx, created_ip) VALUES (?, ?, ?, ?)",
+        (class_id, name.strip(), next_order, created_ip or '')
     )
     conn.commit()
     cursor.execute("SELECT * FROM classes WHERE id = ?", (class_id,))
@@ -861,15 +882,15 @@ def get_semesters(class_id: Optional[str] = None, conn=None) -> List[Dict[str, A
     return result
 
 
-def create_semester(class_id: str, name: str) -> Dict[str, Any]:
+def create_semester(class_id: str, name: str, created_ip: str = "") -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
     semester_id = f"sem_{uuid.uuid4().hex[:8]}"
     cursor.execute("SELECT COALESCE(MAX(order_idx), 0) + 1 FROM semesters WHERE class_id = ?", (class_id,))
     next_order = cursor.fetchone()[0]
     cursor.execute(
-        "INSERT INTO semesters (id, class_id, name, order_idx) VALUES (?, ?, ?, ?)",
-        (semester_id, class_id, name.strip(), next_order)
+        "INSERT INTO semesters (id, class_id, name, order_idx, created_ip) VALUES (?, ?, ?, ?, ?)",
+        (semester_id, class_id, name.strip(), next_order, created_ip or '')
     )
     conn.commit()
     cursor.execute("SELECT * FROM semesters WHERE id = ?", (semester_id,))
@@ -957,7 +978,8 @@ def create_document_folder(
     parent_id: Optional[str] = None,
     subject_id: str = '',
     semester_id: str = '',
-    class_id: str = ''
+    class_id: str = '',
+    created_ip: str = ''
 ) -> Dict[str, Any]:
     """Create a new folder or subfolder for documents."""
     conn = get_connection()
@@ -977,11 +999,12 @@ def create_document_folder(
 
     cursor.execute("""
     INSERT INTO document_folders (
-        id, name, parent_id, subject_id, semester_id, class_id
-    ) VALUES (?, ?, ?, ?, ?, ?)
+        id, name, parent_id, subject_id, semester_id, class_id, created_ip
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
         folder_id, name.strip(), clean_parent,
-        subject_id or '', semester_id or '', class_id or ''
+        subject_id or '', semester_id or '', class_id or '',
+        created_ip or ''
     ))
     conn.commit()
 
@@ -1230,7 +1253,8 @@ def create_document(
     subject_id: str = '',
     semester_id: str = '',
     class_id: str = '',
-    folder_path: str = ''
+    folder_path: str = '',
+    created_ip: str = ''
 ) -> Dict[str, Any]:
     """Create a new document entry in database."""
     conn = get_connection()
@@ -1270,11 +1294,11 @@ def create_document(
     cursor.execute("""
     INSERT INTO documents (
         id, title, filename, file_path, file_size, file_type, folder_id,
-        subject_id, semester_id, class_id, folder_path
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        subject_id, semester_id, class_id, folder_path, created_ip
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         doc_id, title.strip(), filename.strip(), file_path, file_size, file_type.lower(),
-        clean_folder_id, sub_id, sem_id, cls_id, folder_path or ''
+        clean_folder_id, sub_id, sem_id, cls_id, folder_path or '', created_ip or ''
     ))
     conn.commit()
 
@@ -1800,5 +1824,74 @@ def verify_admin_pin(pin: Optional[str]) -> bool:
     if not pin:
         return False
     return str(pin).strip() == get_admin_pin()
+
+
+# ==============================================================================
+# Super Admin IP Management (Quyền IP cao nhất)
+# ==============================================================================
+def get_super_admin_ips() -> List[str]:
+    """Get list of authorized super admin IPs from database and environment."""
+    ips_set = set()
+    # 1. Read from system_settings
+    try:
+        raw = get_setting("super_admin_ips")
+        if raw:
+            loaded = json.loads(raw)
+            if isinstance(loaded, list):
+                for ip in loaded:
+                    if ip and str(ip).strip():
+                        ips_set.add(str(ip).strip())
+    except Exception as e:
+        print(f"Error loading super_admin_ips: {e}")
+
+    # 2. Check environment variable SUPER_ADMIN_IPS
+    env_ips = os.environ.get("SUPER_ADMIN_IPS", "")
+    if env_ips:
+        for ip in env_ips.split(","):
+            if ip.strip():
+                ips_set.add(ip.strip())
+
+    return sorted(list(ips_set))
+
+
+def set_super_admin_ips(ips: List[str]):
+    """Save list of super admin IPs to database."""
+    clean_ips = []
+    for ip in ips:
+        clean = str(ip).strip()
+        if clean and clean not in clean_ips:
+            clean_ips.append(clean)
+    set_setting("super_admin_ips", json.dumps(clean_ips))
+
+
+def add_super_admin_ip(ip: str) -> List[str]:
+    """Grant super admin rights to an IP address."""
+    clean = str(ip).strip()
+    if not clean:
+        raise ValueError("Địa chỉ IP không được để trống")
+    current = get_super_admin_ips()
+    if clean not in current:
+        current.append(clean)
+        set_super_admin_ips(current)
+    return current
+
+
+def remove_super_admin_ip(ip: str) -> List[str]:
+    """Revoke super admin rights from an IP address."""
+    clean = str(ip).strip()
+    current = get_super_admin_ips()
+    if clean in current:
+        current.remove(clean)
+        set_super_admin_ips(current)
+    return current
+
+
+def is_super_admin_ip(ip: Optional[str]) -> bool:
+    """Check if an IP address has super admin privileges."""
+    if not ip:
+        return False
+    clean = str(ip).strip()
+    return clean in get_super_admin_ips()
+
 
 

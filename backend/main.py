@@ -30,6 +30,7 @@ from backend.database import (
     get_document_folder, get_folder_breadcrumbs, update_document_folder, delete_document_folder,
     log_visitor, get_visitor_logs, clear_visitor_logs,
     get_admin_pin, set_admin_pin, verify_admin_pin,
+    get_super_admin_ips, add_super_admin_ip, remove_super_admin_ip, is_super_admin_ip,
     restore_document, permanent_delete_document, restore_quiz, permanent_delete_quiz,
     get_trash_items, restore_all_trash, clear_trash_permanently
 )
@@ -80,13 +81,42 @@ def get_client_ip(request: Request) -> str:
     return "127.0.0.1"
 
 
-def require_admin(request: Request):
-    """Verify admin PIN from header X-Admin-PIN or query param admin_pin. Raise HTTP 403 if invalid."""
+def is_request_admin(request: Request) -> bool:
+    """Return True if request is from a Super Admin IP OR provides a valid admin PIN."""
+    client_ip = get_client_ip(request)
+    if is_super_admin_ip(client_ip):
+        return True
     pin = request.headers.get("x-admin-pin") or request.query_params.get("admin_pin")
-    if not verify_admin_pin(pin):
+    if pin and verify_admin_pin(pin):
+        return True
+    return False
+
+
+def require_admin(request: Request):
+    """Verify admin privilege from either Super Admin IP or valid Admin PIN. Raise HTTP 403 if invalid."""
+    if not is_request_admin(request):
         raise HTTPException(
             status_code=403,
-            detail="Bạn không có quyền thực hiện thao tác này. Yêu cầu mã PIN Quản trị viên chính xác!"
+            detail="Bạn không có quyền thực hiện thao tác này. Yêu cầu quyền IP cao nhất hoặc mã PIN Quản trị viên chính xác!"
+        )
+
+
+def check_item_edit_permission(request: Request, item: Optional[Dict[str, Any]], item_type: str = "mục này"):
+    """
+    Check if the requester has permission to edit this item.
+    - Super Admin or valid admin PIN: always allowed.
+    - Guest IP: only allowed if item was created/imported by this exact IP.
+    """
+    if is_request_admin(request):
+        return
+    if not item:
+        return
+    client_ip = get_client_ip(request)
+    created_ip = (item.get("created_ip") or "").strip()
+    if not created_ip or created_ip != client_ip:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Bạn không có quyền chỉnh sửa {item_type} này. Chỉ IP đã import vào website hoặc Quản trị viên cấp cao mới có quyền sửa!"
         )
 
 
@@ -97,6 +127,11 @@ class VerifyPinRequest(BaseModel):
 class ChangePinRequest(BaseModel):
     old_pin: str
     new_pin: str
+
+
+class GrantIpRequest(BaseModel):
+    ip: str
+    pin: Optional[str] = None
 
 
 
@@ -303,7 +338,7 @@ def download_sample():
 
 
 @app.post("/api/upload")
-async def upload_docx(file: UploadFile = File(...)):
+async def upload_docx(request: Request, file: UploadFile = File(...)):
     """Upload a .docx file, parse XML runs and highlights, detect questions, and save to database."""
     if not file.filename.lower().endswith(".docx"):
         raise HTTPException(status_code=400, detail="Vui lòng tải lên file định dạng Word (.docx)")
@@ -326,8 +361,9 @@ async def upload_docx(file: UploadFile = File(...)):
 
     clean_name = os.path.splitext(file.filename)[0]
     title = clean_name.replace("_", " ").strip()
+    client_ip = get_client_ip(request)
 
-    quiz_id = save_quiz(title, file.filename, questions)
+    quiz_id = save_quiz(title, file.filename, questions, created_ip=client_ip)
     saved_quiz = get_quiz(quiz_id)
 
     return {
@@ -351,10 +387,11 @@ def get_quiz_detail(quiz_id: str):
 
 
 @app.put("/api/quizzes/{quiz_id}")
-def update_quiz_data(quiz_id: str, payload: UpdateQuizRequest):
+def update_quiz_data(request: Request, quiz_id: str, payload: UpdateQuizRequest):
     existing = get_quiz(quiz_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy bài thi")
+    check_item_edit_permission(request, existing, "đề thi")
 
     success = update_quiz_questions(quiz_id, payload.questions, payload.title)
     updated_quiz = get_quiz(quiz_id)
@@ -366,7 +403,8 @@ def update_quiz_data(quiz_id: str, payload: UpdateQuizRequest):
 
 
 @app.delete("/api/quizzes/{quiz_id}")
-def remove_quiz(quiz_id: str):
+def remove_quiz(request: Request, quiz_id: str):
+    require_admin(request)
     success = delete_quiz(quiz_id)
     return {"success": success, "message": "Xóa bài thi thành công"}
 
@@ -400,23 +438,29 @@ def list_classes_route():
 
 
 @app.post("/api/classes")
-def add_class_route(payload: CreateClassRequest):
+def add_class_route(request: Request, payload: CreateClassRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên lớp không được để trống")
-    cls = create_class(payload.name)
+    client_ip = get_client_ip(request)
+    cls = create_class(payload.name, created_ip=client_ip)
     return {"success": True, "class": cls}
 
 
 @app.put("/api/classes/{class_id}")
-def edit_class_route(class_id: str, payload: UpdateClassRequest):
+def edit_class_route(request: Request, class_id: str, payload: UpdateClassRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên lớp không được để trống")
+    if not is_request_admin(request):
+        classes = get_classes()
+        cls = next((c for c in classes if c['id'] == class_id), None)
+        check_item_edit_permission(request, cls, "lớp học")
     update_class(class_id, payload.name)
     return {"success": True, "message": "Cập nhật lớp thành công"}
 
 
 @app.delete("/api/classes/{class_id}")
-def remove_class_route(class_id: str):
+def remove_class_route(request: Request, class_id: str):
+    require_admin(request)
     delete_class(class_id)
     return {"success": True, "message": "Xóa lớp thành công"}
 
@@ -427,23 +471,29 @@ def list_semesters_route(class_id: Optional[str] = None):
 
 
 @app.post("/api/semesters")
-def add_semester_route(payload: CreateSemesterRequest):
+def add_semester_route(request: Request, payload: CreateSemesterRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên kỳ học không được để trống")
-    sem = create_semester(payload.class_id, payload.name)
+    client_ip = get_client_ip(request)
+    sem = create_semester(payload.class_id, payload.name, created_ip=client_ip)
     return {"success": True, "semester": sem}
 
 
 @app.put("/api/semesters/{semester_id}")
-def edit_semester_route(semester_id: str, payload: UpdateSemesterRequest):
+def edit_semester_route(request: Request, semester_id: str, payload: UpdateSemesterRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên kỳ học không được để trống")
+    if not is_request_admin(request):
+        sems = get_semesters()
+        sem = next((s for s in sems if s['id'] == semester_id), None)
+        check_item_edit_permission(request, sem, "kỳ học")
     update_semester(semester_id, payload.name)
     return {"success": True, "message": "Cập nhật kỳ học thành công"}
 
 
 @app.delete("/api/semesters/{semester_id}")
-def remove_semester_route(semester_id: str):
+def remove_semester_route(request: Request, semester_id: str):
+    require_admin(request)
     delete_semester(semester_id)
     return {"success": True, "message": "Xóa kỳ học thành công"}
 
@@ -454,50 +504,58 @@ def list_subjects():
 
 
 @app.post("/api/subjects")
-def add_subject(payload: CreateSubjectRequest):
+def add_subject(request: Request, payload: CreateSubjectRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên môn học không được để trống")
-    subj = create_subject(payload.name, semester_id=payload.semester_id, class_id=payload.class_id)
+    client_ip = get_client_ip(request)
+    subj = create_subject(payload.name, semester_id=payload.semester_id, class_id=payload.class_id, created_ip=client_ip)
     return {"success": True, "subject": subj}
 
 
 @app.put("/api/subjects/{subject_id}")
-def edit_subject(subject_id: str, payload: UpdateSubjectRequest):
+def edit_subject(request: Request, subject_id: str, payload: UpdateSubjectRequest):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên môn học không được để trống")
+    if not is_request_admin(request):
+        subj = get_subject(subject_id)
+        check_item_edit_permission(request, subj, "môn học")
     update_subject(subject_id, payload.name, semester_id=payload.semester_id, class_id=payload.class_id)
     return {"success": True, "message": "Cập nhật môn học thành công"}
 
 
 @app.delete("/api/subjects/{subject_id}")
-def remove_subject(subject_id: str):
+def remove_subject(request: Request, subject_id: str):
+    require_admin(request)
     delete_subject(subject_id)
     return {"success": True, "message": "Xóa môn học thành công"}
 
 
 @app.put("/api/subjects/{subject_id}/move")
-def move_subject_route(subject_id: str, payload: MoveSubjectRequest):
+def move_subject_route(request: Request, subject_id: str, payload: MoveSubjectRequest):
     existing = get_subject(subject_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy môn học")
+    check_item_edit_permission(request, existing, "môn học")
     move_subject(subject_id, payload.semester_id, payload.class_id)
     return {"success": True, "message": "Chuyển môn học vào kỳ thành công"}
 
 
 @app.put("/api/quizzes/{quiz_id}/subject")
-def change_quiz_subject(quiz_id: str, payload: UpdateQuizSubjectRequest):
+def change_quiz_subject(request: Request, quiz_id: str, payload: UpdateQuizSubjectRequest):
     existing = get_quiz(quiz_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy bài thi")
+    check_item_edit_permission(request, existing, "đề thi")
     update_quiz_subject(quiz_id, payload.subject_id)
     return {"success": True, "message": "Cập nhật môn học cho đề thi thành công"}
 
 
 @app.put("/api/quizzes/{quiz_id}/placement")
-def place_quiz_route(quiz_id: str, payload: UpdateQuizPlacementRequest):
+def place_quiz_route(request: Request, quiz_id: str, payload: UpdateQuizPlacementRequest):
     existing = get_quiz(quiz_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy bài thi")
+    check_item_edit_permission(request, existing, "đề thi")
     update_quiz_placement(quiz_id, subject_id=payload.subject_id, semester_id=payload.semester_id, class_id=payload.class_id)
     return {"success": True, "message": "Cập nhật vị trí bài thi thành công"}
 
@@ -526,16 +584,18 @@ def get_breadcrumbs(folder_id: str):
 
 
 @app.post("/api/document-folders")
-def create_folder(payload: CreateFolderRequest):
+def create_folder(request: Request, payload: CreateFolderRequest):
     if not payload.name or not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên thư mục không được để trống")
     try:
+        client_ip = get_client_ip(request)
         folder = create_document_folder(
             name=payload.name.strip(),
             parent_id=payload.parent_id or '',
             subject_id=payload.subject_id or '',
             semester_id=payload.semester_id or '',
-            class_id=payload.class_id or ''
+            class_id=payload.class_id or '',
+            created_ip=client_ip
         )
         return {"success": True, "folder": folder}
     except Exception as e:
@@ -545,10 +605,11 @@ def create_folder(payload: CreateFolderRequest):
 
 
 @app.put("/api/document-folders/{folder_id}")
-def edit_folder(folder_id: str, payload: UpdateFolderRequest):
+def edit_folder(request: Request, folder_id: str, payload: UpdateFolderRequest):
     existing = get_document_folder(folder_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy thư mục")
+    check_item_edit_permission(request, existing, "thư mục")
 
     if payload.name is not None and not payload.name.strip():
         raise HTTPException(status_code=400, detail="Tên thư mục không được để trống")
@@ -567,7 +628,8 @@ def edit_folder(folder_id: str, payload: UpdateFolderRequest):
 
 
 @app.delete("/api/document-folders/{folder_id}")
-def remove_folder(folder_id: str):
+def remove_folder(request: Request, folder_id: str):
+    require_admin(request)
     existing = get_document_folder(folder_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy thư mục")
@@ -594,6 +656,7 @@ def remove_folder(folder_id: str):
 # ==============================================================================
 @app.post("/api/documents/upload")
 async def upload_documents(
+    request: Request,
     files: List[UploadFile] = File(...),
     subject_id: Optional[str] = Form(None),
     semester_id: Optional[str] = Form(None),
@@ -607,6 +670,8 @@ async def upload_documents(
     """
     if not files:
         raise HTTPException(status_code=400, detail="Không có file nào được tải lên")
+
+    client_ip = get_client_ip(request)
 
     try:
         parsed_paths = []
@@ -676,7 +741,8 @@ async def upload_documents(
                                     parent_id=current_parent,
                                     subject_id=subject_id or '',
                                     semester_id=semester_id or '',
-                                    class_id=class_id or ''
+                                    class_id=class_id or '',
+                                    created_ip=client_ip
                                 )
                                 f_id = new_f['id']
                             folder_cache[cache_key] = f_id
@@ -695,7 +761,8 @@ async def upload_documents(
                 subject_id=subject_id or '',
                 semester_id=semester_id or '',
                 class_id=class_id or '',
-                folder_path=relative_folder
+                folder_path=relative_folder,
+                created_ip=client_ip
             )
             uploaded_docs.append(doc)
 
@@ -831,7 +898,8 @@ def view_document_inline(doc_id: str):
 
 
 @app.delete("/api/documents/{doc_id}")
-def remove_document(doc_id: str):
+def remove_document(request: Request, doc_id: str):
+    require_admin(request)
     doc = delete_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
@@ -839,10 +907,12 @@ def remove_document(doc_id: str):
 
 
 @app.put("/api/documents/{doc_id}")
-def edit_document(doc_id: str, payload: UpdateDocumentRequest):
+def edit_document(request: Request, doc_id: str, payload: UpdateDocumentRequest):
     existing = get_document(doc_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+
+    check_item_edit_permission(request, existing, "tài liệu")
 
     # Ensure clean title without directory slashes
     clean_title = payload.title
@@ -863,7 +933,7 @@ def edit_document(doc_id: str, payload: UpdateDocumentRequest):
 
 
 @app.post("/api/documents/{doc_id}/create-quiz")
-def convert_document_to_quiz(doc_id: str):
+def convert_document_to_quiz(request: Request, doc_id: str):
     doc = get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
@@ -887,10 +957,12 @@ def convert_document_to_quiz(doc_id: str):
     clean_filename = os.path.basename(raw_filename.replace('\\', '/'))
     clean_title = os.path.basename((doc.get('title') or clean_filename).replace('\\', '/'))
 
+    client_ip = get_client_ip(request)
     quiz_id = save_quiz(
         title=clean_title,
         filename=clean_filename,
-        questions=detected_questions
+        questions=detected_questions,
+        created_ip=client_ip
     )
     if doc.get('subject_id'):
         update_quiz_placement(
@@ -936,8 +1008,9 @@ def api_restore_all_trash():
 
 
 @app.delete("/api/trash/clear")
-def api_clear_trash():
-    """Permanently delete all items currently in trash."""
+def api_clear_trash(request: Request):
+    """Permanently delete all items currently in trash. Requires admin."""
+    require_admin(request)
     result = clear_trash_permanently()
     for fpath in result.get("files_to_remove", []):
         if fpath and os.path.exists(fpath):
@@ -949,8 +1022,9 @@ def api_clear_trash():
 
 
 @app.delete("/api/documents/{doc_id}/permanent")
-def api_permanent_delete_document(doc_id: str):
-    """Permanently delete document from database and disk."""
+def api_permanent_delete_document(request: Request, doc_id: str):
+    """Permanently delete document from database and disk. Requires admin."""
+    require_admin(request)
     doc = permanent_delete_document(doc_id)
     if doc:
         actual_path = get_document_actual_path(doc)
@@ -963,8 +1037,9 @@ def api_permanent_delete_document(doc_id: str):
 
 
 @app.delete("/api/quizzes/{quiz_id}/permanent")
-def api_permanent_delete_quiz(quiz_id: str):
-    """Permanently delete quiz from database."""
+def api_permanent_delete_quiz(request: Request, quiz_id: str):
+    """Permanently delete quiz from database. Requires admin."""
+    require_admin(request)
     permanent_delete_quiz(quiz_id)
     return {"success": True, "message": "Đã xóa vĩnh viễn bài thi"}
 
@@ -1023,6 +1098,86 @@ def api_get_my_ip(request: Request):
         "country": request.headers.get("cf-ipcountry", "VN"),
         "city": request.headers.get("cf-ipcity", ""),
         "user_agent": request.headers.get("user-agent", "")
+    }
+
+
+@app.get("/api/client/permissions")
+def api_get_client_permissions(request: Request):
+    """Return permissions of the current client IP."""
+    client_ip = get_client_ip(request)
+    is_super = is_super_admin_ip(client_ip)
+    pin = request.headers.get("x-admin-pin") or request.query_params.get("admin_pin")
+    pin_valid = verify_admin_pin(pin) if pin else False
+    is_admin = is_super or pin_valid
+    super_ips = get_super_admin_ips()
+    return {
+        "client_ip": client_ip,
+        "is_super_admin": is_super,
+        "is_admin": is_admin,
+        "can_delete": is_admin,
+        "super_admin_ips": super_ips if is_admin else []
+    }
+
+
+@app.get("/api/admin/super-ips")
+def api_get_super_ips(request: Request):
+    """List all super admin IPs."""
+    require_admin(request)
+    return {
+        "super_admin_ips": get_super_admin_ips(),
+        "my_ip": get_client_ip(request)
+    }
+
+
+@app.post("/api/admin/grant-super-ip")
+def api_grant_super_ip(request: Request, payload: GrantIpRequest):
+    """Grant Super Admin status to an IP address. Requires either existing Super Admin IP or valid Admin PIN."""
+    client_ip = get_client_ip(request)
+    is_super = is_super_admin_ip(client_ip)
+    pin = payload.pin or request.headers.get("x-admin-pin") or request.query_params.get("admin_pin")
+    pin_valid = verify_admin_pin(pin) if pin else False
+
+    if not (is_super or pin_valid):
+        raise HTTPException(
+            status_code=403,
+            detail="Cần quyền IP Cao Nhất hoặc mã PIN Quản trị viên chính xác để cấp quyền!"
+        )
+
+    target_ip = (payload.ip or "").strip()
+    if not target_ip:
+        raise HTTPException(status_code=400, detail="Địa chỉ IP không được để trống")
+
+    updated_ips = add_super_admin_ip(target_ip)
+    return {
+        "success": True,
+        "message": f"Đã cấp quyền IP Cao Nhất (toàn quyền Xóa/Sửa) cho IP: {target_ip}",
+        "super_admin_ips": updated_ips
+    }
+
+
+@app.post("/api/admin/revoke-super-ip")
+def api_revoke_super_ip(request: Request, payload: GrantIpRequest):
+    """Revoke Super Admin status from an IP address. Requires Super Admin IP or valid Admin PIN."""
+    client_ip = get_client_ip(request)
+    is_super = is_super_admin_ip(client_ip)
+    pin = payload.pin or request.headers.get("x-admin-pin") or request.query_params.get("admin_pin")
+    pin_valid = verify_admin_pin(pin) if pin else False
+
+    if not (is_super or pin_valid):
+        raise HTTPException(
+            status_code=403,
+            detail="Cần quyền IP Cao Nhất hoặc mã PIN Quản trị viên chính xác để hủy quyền!"
+        )
+
+    target_ip = (payload.ip or "").strip()
+    if not target_ip:
+        raise HTTPException(status_code=400, detail="Địa chỉ IP không được để trống")
+
+    updated_ips = remove_super_admin_ip(target_ip)
+    return {
+        "success": True,
+        "message": f"Đã hủy quyền IP Cao Nhất của IP: {target_ip}",
+        "super_admin_ips": updated_ips
     }
 
 

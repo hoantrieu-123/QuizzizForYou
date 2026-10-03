@@ -5,6 +5,7 @@ import {
   Folders, Play, Loader2, ChevronRight, ChevronDown, AddFolder, Home, Clock, Calendar
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
+import { useAdminAuth } from '../utils/adminAuth';
 
 export default function DocumentList({
   selectedFilter,
@@ -14,6 +15,7 @@ export default function DocumentList({
   onTreeUpdated,
   refreshTrigger = 0
 }) {
+  const { canDelete, canEdit, getHeaders } = useAdminAuth();
   const [documents, setDocuments] = useState([]);
   const [folderTree, setFolderTree] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState(null); // null: all, 'root': root, string: folder_id
@@ -263,7 +265,7 @@ export default function DocumentList({
 
         const res = await fetch(apiUrl(`/api/document-folders/${modalState.folderId}`), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getHeaders() },
           body: JSON.stringify({ name: trimmed })
         });
         const data = await res.json().catch(() => ({}));
@@ -279,7 +281,8 @@ export default function DocumentList({
         onTreeUpdated?.();
       } else if (modalState.type === 'delete') {
         const res = await fetch(apiUrl(`/api/document-folders/${modalState.folderId}`), {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: getHeaders()
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -409,11 +412,16 @@ export default function DocumentList({
   };
 
   const handleDeleteDoc = async (doc) => {
+    if (!canDelete) {
+      alert('Bạn không có quyền xóa tài liệu này. Thao tác xóa yêu cầu quyền IP Cao Nhất!');
+      return;
+    }
     const displayName = getCleanFileName(doc.title || doc.filename);
     if (!window.confirm(`Bạn có chắc chắn muốn xóa tài liệu "${displayName}"?`)) return;
     try {
       const res = await fetch(apiUrl(`/api/documents/${doc.id}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getHeaders()
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
@@ -429,6 +437,10 @@ export default function DocumentList({
   };
 
   const handleStartRenameDoc = (doc) => {
+    if (!canEdit(doc)) {
+      alert('Bạn không có quyền đổi tên tài liệu này. Chỉ người đã import hoặc IP Cao Nhất mới có quyền sửa!');
+      return;
+    }
     setEditingDocId(doc.id);
     setEditingTitle(getCleanFileName(doc.title || doc.filename));
   };
@@ -439,10 +451,13 @@ export default function DocumentList({
     try {
       const res = await fetch(apiUrl(`/api/documents/${docId}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
         body: JSON.stringify({ title: cleanTitle })
       });
-      if (!res.ok) throw new Error('Lỗi đổi tên');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || 'Lỗi đổi tên tài liệu');
+      }
       setEditingDocId(null);
       fetchDocuments();
     } catch (err) {
@@ -595,15 +610,17 @@ export default function DocumentList({
             >
               <Plus size={11} />
             </button>
-            <button
-              type="button"
-              onClick={() => openRenameFolderModal(node)}
-              className="btn btn-secondary btn-sm"
-              style={{ padding: '2px 4px', height: '20px', minWidth: '20px' }}
-              title="Đổi tên"
-            >
-              <Edit3 size={11} />
-            </button>
+            {canEdit(node) && (
+              <button
+                type="button"
+                onClick={() => openRenameFolderModal(node)}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '2px 4px', height: '20px', minWidth: '20px' }}
+                title="Đổi tên"
+              >
+                <Edit3 size={11} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -977,30 +994,34 @@ export default function DocumentList({
 
               {currentFolderId && currentFolderId !== 'root' && (
                 <div style={{ display: 'inline-flex', gap: '4px', marginLeft: '0.35rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const f = findFolderInTree(folderTree, currentFolderId);
-                      if (f) openRenameFolderModal(f);
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                    title="Đổi tên thư mục hiện tại"
-                  >
-                    <Edit3 size={12} /> Sửa tên
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const f = findFolderInTree(folderTree, currentFolderId);
-                      if (f) openDeleteFolderModal(f);
-                    }}
-                    className="btn btn-secondary btn-sm"
-                    style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                    title="Xóa thư mục hiện tại"
-                  >
-                    <Trash2 size={12} /> Xóa
-                  </button>
+                  {canEdit(findFolderInTree(folderTree, currentFolderId)) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const f = findFolderInTree(folderTree, currentFolderId);
+                        if (f) openRenameFolderModal(f);
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                      title="Đổi tên thư mục hiện tại"
+                    >
+                      <Edit3 size={12} /> Sửa tên
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const f = findFolderInTree(folderTree, currentFolderId);
+                        if (f) openDeleteFolderModal(f);
+                      }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                      title="Xóa thư mục hiện tại"
+                    >
+                      <Trash2 size={12} /> Xóa
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1078,24 +1099,28 @@ export default function DocumentList({
                       onClick={(e) => e.stopPropagation()}
                       style={{ display: 'none', alignItems: 'center', gap: '2px' }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => openRenameFolderModal(sub)}
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '2px 5px' }}
-                        title="Đổi tên"
-                      >
-                        <Edit3 size={11} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openDeleteFolderModal(sub)}
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '2px 5px' }}
-                        title="Xóa thư mục"
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                      {canEdit(sub) && (
+                        <button
+                          type="button"
+                          onClick={() => openRenameFolderModal(sub)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '2px 5px' }}
+                          title="Đổi tên"
+                        >
+                          <Edit3 size={11} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => openDeleteFolderModal(sub)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '2px 5px' }}
+                          title="Xóa thư mục"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1449,26 +1474,30 @@ export default function DocumentList({
                         </a>
 
                         {/* Rename */}
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleStartRenameDoc(doc)}
-                          style={{ padding: '4px 6px' }}
-                          title="Đổi tên"
-                        >
-                          <Edit3 size={12} />
-                        </button>
+                        {canEdit(doc) && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleStartRenameDoc(doc)}
+                            style={{ padding: '4px 6px' }}
+                            title="Đổi tên"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                        )}
 
                         {/* Delete */}
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleDeleteDoc(doc)}
-                          style={{ padding: '4px 6px' }}
-                          title="Xóa tài liệu"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleDeleteDoc(doc)}
+                            style={{ padding: '4px 6px' }}
+                            title="Xóa tài liệu"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1634,24 +1663,28 @@ export default function DocumentList({
                             >
                               <Download size={12} />
                             </a>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => isEditing ? handleSaveRenameDoc(doc.id) : handleStartRenameDoc(doc)}
-                              style={{ padding: '3px 6px' }}
-                              title={isEditing ? "Lưu tên" : "Đổi tên"}
-                            >
-                              {isEditing ? <Check size={12} /> : <Edit3 size={12} />}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => handleDeleteDoc(doc)}
-                              style={{ padding: '3px 6px' }}
-                              title="Xóa tài liệu"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            {canEdit(doc) && (
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => isEditing ? handleSaveRenameDoc(doc.id) : handleStartRenameDoc(doc)}
+                                style={{ padding: '3px 6px' }}
+                                title={isEditing ? "Lưu tên" : "Đổi tên"}
+                              >
+                                {isEditing ? <Check size={12} /> : <Edit3 size={12} />}
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => handleDeleteDoc(doc)}
+                                style={{ padding: '3px 6px' }}
+                                title="Xóa tài liệu"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

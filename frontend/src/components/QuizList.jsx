@@ -6,6 +6,7 @@ import {
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
 import { prefetchQuizDetail, removeCachedQuiz } from '../services/dataCache';
+import { useAdminAuth } from '../utils/adminAuth';
 
 export const naturalCompareQuizzes = (a, b) => {
   const titleA = (a?.title || a?.filename || '').trim();
@@ -28,6 +29,7 @@ export default function QuizList({
   loadingQuizId = null,
   onQuizzesLoaded
 }) {
+  const { canDelete, canEdit, getHeaders } = useAdminAuth();
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,10 +109,15 @@ export default function QuizList({
   // Delete Quiz
   const handleDeleteQuiz = async (id, e) => {
     e.stopPropagation();
+    if (!canDelete) {
+      alert('Bạn không có quyền xóa bài thi này. Thao tác xóa yêu cầu quyền IP Cao Nhất!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc chắn muốn xóa bài kiểm tra này không?')) return;
     try {
       const res = await fetch(apiUrl(`/api/quizzes/${id}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getHeaders()
       });
       if (res.ok) {
         removeCachedQuiz(id);
@@ -300,11 +307,16 @@ export default function QuizList({
   // Delete Subject
   const handleDeleteSubject = async (subjectId, e) => {
     e.stopPropagation();
+    if (!canDelete) {
+      alert('Bạn không có quyền xóa môn này. Thao tác xóa yêu cầu quyền IP Cao Nhất!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa mục môn này? Các bài thi bên trong sẽ được chuyển an toàn về "Đề thi ngoài mục / Chưa phân loại".')) return;
 
     try {
       const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getHeaders()
       });
       if (res.ok) {
         setSubjects(prev => prev.filter(s => s.id !== subjectId));
@@ -728,7 +740,7 @@ export default function QuizList({
                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {!isEditing && (
+                {!isEditing && canEdit(subject) && (
                   <button
                     type="button"
                     onClick={(e) => handleStartEditSubject(subject, e)}
@@ -750,25 +762,27 @@ export default function QuizList({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={(e) => handleDeleteSubject(subject.id, e)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                  title="Xóa mục môn này (đề thi sẽ được chuyển ra ngoài)"
-                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                >
-                  <Trash2 size={15} />
-                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSubject(subject.id, e)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Xóa mục môn này (đề thi sẽ được chuyển ra ngoài)"
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--danger)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1025,6 +1039,7 @@ function QuizCardItem({
   onDeleteQuiz,
   loadingQuizId
 }) {
+  const { canDelete, canEdit } = useAdminAuth();
   const isLoading = loadingQuizId === quiz.id;
   const cleanTitle = (quiz.title || '').replace(/\\/g, '/').split('/').pop();
   const cleanFilename = (quiz.filename || '').replace(/\\/g, '/').split('/').pop();
@@ -1092,7 +1107,7 @@ function QuizCardItem({
             </span>
           </div>
 
-          {onDeleteQuiz && (
+          {canDelete && onDeleteQuiz && (
             <button
               onClick={(e) => onDeleteQuiz(quiz.id, e)}
               style={{
@@ -1160,6 +1175,7 @@ function QuizCardItem({
         >
           <select
             value={quiz.subject_id || ''}
+            disabled={isLoading || !canEdit(quiz)}
             onChange={(e) => onSelectSubject(quiz.id, e.target.value)}
             style={{
               width: '100%',
@@ -1170,14 +1186,15 @@ function QuizCardItem({
               border: '1px solid var(--border)',
               background: 'var(--surface)',
               color: 'var(--text)',
-              cursor: 'pointer',
+              cursor: (!canEdit(quiz) || isLoading) ? 'not-allowed' : 'pointer',
+              opacity: !canEdit(quiz) ? 0.7 : 1,
               outline: 'none',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               height: '26px'
             }}
-            title="Chuyển mục môn học"
+            title={canEdit(quiz) ? "Chuyển mục môn học" : "Chỉ người tạo hoặc IP Cao Nhất mới có quyền chuyển mục"}
           >
             <option value="">-- Ngoài mục (Chưa phân loại) --</option>
             {subjects.map(s => (
@@ -1227,27 +1244,29 @@ function QuizCardItem({
           )}
         </button>
 
-        <button
-          className="btn btn-secondary"
-          disabled={isLoading}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelectQuiz(quiz.id);
-          }}
-          onMouseEnter={() => prefetchQuizDetail(quiz.id)}
-          style={{
-            padding: '0.35rem 0.6rem',
-            fontSize: '0.78rem',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.25rem'
-          }}
-          title="Chỉnh sửa câu hỏi"
-        >
-          <Edit3 size={12} /> Sửa
-        </button>
+        {canEdit(quiz) && (
+          <button
+            className="btn btn-secondary"
+            disabled={isLoading}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectQuiz(quiz.id);
+            }}
+            onMouseEnter={() => prefetchQuizDetail(quiz.id)}
+            style={{
+              padding: '0.35rem 0.6rem',
+              fontSize: '0.78rem',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.25rem'
+            }}
+            title="Chỉnh sửa câu hỏi"
+          >
+            <Edit3 size={12} /> Sửa
+          </button>
+        )}
       </div>
     </div>
   );

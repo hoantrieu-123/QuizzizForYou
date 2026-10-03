@@ -4,6 +4,7 @@ import {
   Plus, Edit3, Trash2, Check, X, Calendar, Layers, GripVertical, FileText, UploadCloud, HelpCircle
 } from './UIcons';
 import { apiUrl } from '../apiConfig';
+import { useAdminAuth } from '../utils/adminAuth';
 
 export default function SidebarTree({
   selectedFilter,
@@ -12,6 +13,7 @@ export default function SidebarTree({
   onTreeUpdated,
   activeHomeTab = 'quizzes'
 }) {
+  const { canDelete, canEdit, getHeaders } = useAdminAuth();
   const [treeData, setTreeData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -187,7 +189,7 @@ export default function SidebarTree({
     try {
       const res = await fetch(apiUrl(`/api/classes/${classId}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
         body: JSON.stringify({ name: editingState.name.trim() })
       });
       const data = await res.json().catch(() => ({}));
@@ -205,10 +207,15 @@ export default function SidebarTree({
 
   const handleDeleteClass = async (classId, e) => {
     e.stopPropagation();
+    if (!canDelete) {
+      alert('Bạn không có quyền xóa lớp này. Thao tác xóa yêu cầu quyền IP Cao Nhất!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa Lớp này? Các kỳ học, môn học và đề thi sẽ không bị xóa mà chuyển ra ngoài.')) return;
     try {
       const res = await fetch(apiUrl(`/api/classes/${classId}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getHeaders()
       });
       if (res.ok) {
         if (selectedFilter?.id === classId) {
@@ -256,7 +263,7 @@ export default function SidebarTree({
     try {
       const res = await fetch(apiUrl(`/api/semesters/${semesterId}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
         body: JSON.stringify({ name: editingState.name.trim() })
       });
       const data = await res.json().catch(() => ({}));
@@ -274,10 +281,15 @@ export default function SidebarTree({
 
   const handleDeleteSemester = async (semesterId, e) => {
     e.stopPropagation();
+    if (!canDelete) {
+      alert('Bạn không có quyền xóa kỳ học này. Thao tác xóa yêu cầu quyền IP Cao Nhất!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa Kỳ học này? Các môn và đề thi sẽ được giữ lại an toàn.')) return;
     try {
       const res = await fetch(apiUrl(`/api/semesters/${semesterId}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getHeaders()
       });
       if (res.ok) {
         if (selectedFilter?.id === semesterId) {
@@ -329,7 +341,7 @@ export default function SidebarTree({
     try {
       const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
         body: JSON.stringify({ name: editingState.name.trim() })
       });
       const data = await res.json().catch(() => ({}));
@@ -347,10 +359,15 @@ export default function SidebarTree({
 
   const handleDeleteSubject = async (subjectId, e) => {
     e.stopPropagation();
+    if (!canDelete) {
+      alert('Bạn không có quyền xóa môn học này. Thao tác xóa yêu cầu quyền IP Cao Nhất!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc muốn xóa Môn học này? Các đề thi bên trong sẽ được chuyển ra ngoài.')) return;
     try {
       const res = await fetch(apiUrl(`/api/subjects/${subjectId}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getHeaders()
       });
       if (res.ok) {
         if (selectedFilter?.id === subjectId) {
@@ -609,14 +626,16 @@ export default function SidebarTree({
                       >
                         <Plus size={12} />
                       </button>
-                      <button
-                        type="button"
-                        className="tree-hover-btn"
-                        title="Đổi tên lớp"
-                        onClick={() => setEditingState({ type: 'class', id: cls.id, name: cls.name })}
-                      >
-                        <Edit3 size={12} />
-                      </button>
+                      {canEdit(cls) && (
+                        <button
+                          type="button"
+                          className="tree-hover-btn"
+                          title="Đổi tên lớp"
+                          onClick={() => setEditingState({ type: 'class', id: cls.id, name: cls.name })}
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                      )}
                     </div>
                   )}
                   <span className="tree-badge" title={`${cls.quiz_count || 0} đề thi • ${cls.doc_count || 0} tài liệu`}>
@@ -746,14 +765,16 @@ export default function SidebarTree({
                                 >
                                   <Plus size={12} />
                                 </button>
-                                <button
-                                  type="button"
-                                  className="tree-hover-btn"
-                                  title="Đổi tên kỳ"
-                                  onClick={() => setEditingState({ type: 'semester', id: sem.id, name: sem.name })}
-                                >
-                                  <Edit3 size={12} />
-                                </button>
+                                {canEdit(sem) && (
+                                  <button
+                                    type="button"
+                                    className="tree-hover-btn"
+                                    title="Đổi tên kỳ"
+                                    onClick={() => setEditingState({ type: 'semester', id: sem.id, name: sem.name })}
+                                  >
+                                    <Edit3 size={12} />
+                                  </button>
+                                )}
                               </div>
                             )}
                             <span className="tree-badge" title={`${sem.quiz_count || 0} đề thi • ${sem.doc_count || 0} tài liệu`}>
@@ -877,14 +898,16 @@ export default function SidebarTree({
                                   <div className="tree-node-right">
                                     {!isSubEditing && (
                                       <div className="tree-hover-actions" onClick={(e) => e.stopPropagation()}>
-                                        <button
-                                          type="button"
-                                          className="tree-hover-btn"
-                                          title="Đổi tên môn"
-                                          onClick={() => setEditingState({ type: 'subject', id: sub.id, name: sub.name })}
-                                        >
-                                          <Edit3 size={12} />
-                                        </button>
+                                        {canEdit(sub) && (
+                                          <button
+                                            type="button"
+                                            className="tree-hover-btn"
+                                            title="Đổi tên môn"
+                                            onClick={() => setEditingState({ type: 'subject', id: sub.id, name: sub.name })}
+                                          >
+                                            <Edit3 size={12} />
+                                          </button>
+                                        )}
                                       </div>
                                     )}
                                     <span className="tree-badge" title={`${sub.quiz_count || 0} đề thi • ${sub.doc_count || 0} tài liệu`}>

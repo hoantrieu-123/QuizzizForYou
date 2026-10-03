@@ -5,6 +5,7 @@ import {
   Shuffle, Package, GripVertical, X, Layers, Settings2, Loader2
 } from './UIcons';
 import { cleanQuestionPrompt, cleanItemText, createScrambledRights, createScrambledBlanks } from './QuizPlayer';
+import { useAdminAuth } from '../utils/adminAuth';
 
 const QUESTION_TYPES = [
   { value: 'single_choice', label: '1. Chọn một đáp án' },
@@ -18,6 +19,8 @@ const QUESTION_TYPES = [
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
+  const { canEdit } = useAdminAuth();
+  const isEditable = canEdit(quiz);
   const [title, setTitle] = useState(quiz.title || '');
   const [questions, setQuestions] = useState(quiz.questions || []);
   const [filterType, setFilterType] = useState('all');
@@ -1044,6 +1047,10 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
   };
 
   const handleSaveAll = async () => {
+    if (!isEditable) {
+      alert('Bạn không có quyền lưu đề thi này. Chỉ người đã import hoặc Quản trị viên IP Cao Nhất mới có quyền chỉnh sửa/lưu!');
+      return;
+    }
     setIsSaving(true);
     setSaveSuccess(false);
     try {
@@ -1074,6 +1081,22 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '4rem', position: 'relative' }}>
+      {!isEditable && (
+        <div style={{
+          background: '#fffbeb',
+          color: '#b45309',
+          border: '1px solid #fef3c7',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          marginBottom: '1.25rem',
+          fontSize: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span>🔒 <strong>Chế độ chỉ xem:</strong> Bạn không phải người đã tạo đề thi này. Chỉ IP đã import hoặc Quản trị viên IP Cao Nhất mới có quyền chỉnh sửa và lưu thay đổi vào hệ thống.</span>
+        </div>
+      )}
       {toastMessage && (
         <div className="animate-toast" style={{
           position: 'fixed',
@@ -2643,44 +2666,48 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
             Xác nhận & Bắt đầu làm bài
           </button>
 
-          <button
-            className="btn btn-secondary"
-            onClick={handleSaveAll}
-            disabled={isSaving}
-            style={{
-              width: '100%',
-              padding: '0.65rem 1rem',
-              fontSize: '0.85rem',
-              fontWeight: 400,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              borderRadius: '12px'
-            }}
-          >
-            {isSaving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
-            {isSaving ? 'Đang lưu vào ngân hàng...' : 'Lưu vào Ngân hàng câu hỏi'}
-          </button>
+          {isEditable && (
+            <button
+              className="btn btn-secondary"
+              onClick={handleSaveAll}
+              disabled={isSaving}
+              style={{
+                width: '100%',
+                padding: '0.65rem 1rem',
+                fontSize: '0.85rem',
+                fontWeight: 400,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                borderRadius: '12px'
+              }}
+            >
+              {isSaving ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
+              {isSaving ? 'Đang lưu vào ngân hàng...' : 'Lưu vào Ngân hàng câu hỏi'}
+            </button>
+          )}
 
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleAddQuestion}
-            style={{
-              width: '100%',
-              padding: '0.65rem 1rem',
-              fontSize: '0.85rem',
-              fontWeight: 400,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              borderRadius: '12px'
-            }}
-          >
-            <Plus size={16} /> Thêm câu hỏi thủ công
-          </button>
+          {isEditable && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleAddQuestion}
+              style={{
+                width: '100%',
+                padding: '0.65rem 1rem',
+                fontSize: '0.85rem',
+                fontWeight: 400,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                borderRadius: '12px'
+              }}
+            >
+              <Plus size={16} /> Thêm câu hỏi thủ công
+            </button>
+          )}
 
           <button
             type="button"

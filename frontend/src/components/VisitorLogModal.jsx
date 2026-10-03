@@ -9,7 +9,8 @@ import {
   DEFAULT_ADMIN_PIN,
   getAdminPin,
   setAdminPinInStorage,
-  getAdminHeaders
+  getAdminHeaders,
+  fetchClientPermissions
 } from '../utils/adminAuth';
 
 // Helper to format country flag and name
@@ -257,6 +258,126 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
   };
 
   // ===========================================================================
+  // SUPER ADMIN IP PERMISSIONS STATE & HANDLERS
+  // ===========================================================================
+  const [superIps, setSuperIps] = useState([]);
+  const [myIp, setMyIp] = useState('');
+  const [isMyIpSuper, setIsMyIpSuper] = useState(false);
+  const [superIpsLoading, setSuperIpsLoading] = useState(false);
+  const [inputSuperIp, setInputSuperIp] = useState('');
+  const [superAdminActionLoading, setSuperAdminActionLoading] = useState(false);
+
+  const fetchSuperAdminInfo = async () => {
+    try {
+      setSuperIpsLoading(true);
+      const res = await fetch(apiUrl('/api/client/permissions'), {
+        headers: getAdminHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyIp(data.client_ip || '');
+        setIsMyIpSuper(!!data.is_super_admin);
+        if (data.super_admin_ips) {
+          setSuperIps(data.super_admin_ips);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching super admin permissions:', e);
+    } finally {
+      setSuperIpsLoading(false);
+    }
+  };
+
+  const handleGrantSuperIp = async (targetIp, inputPin) => {
+    const cleanIp = (targetIp || '').trim();
+    if (!cleanIp) {
+      showToast('Vui lòng nhập địa chỉ IP hợp lệ', true);
+      return;
+    }
+    const pinToUse = inputPin || getAdminPin();
+    try {
+      setSuperAdminActionLoading(true);
+      const res = await fetch(apiUrl('/api/admin/grant-super-ip'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+        body: JSON.stringify({ ip: cleanIp, pin: pinToUse })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 403) {
+          const userPin = window.prompt('Nhập mã PIN Quản trị viên để cấp quyền IP Cao Nhất:');
+          if (userPin) {
+            setAdminPinInStorage(userPin);
+            return handleGrantSuperIp(cleanIp, userPin);
+          }
+        }
+        throw new Error(data.detail || 'Không thể cấp quyền IP');
+      }
+
+      showToast(`Đã cấp quyền IP Cao Nhất thành công cho ${cleanIp}!`);
+      if (data.super_admin_ips) {
+        setSuperIps(data.super_admin_ips);
+      }
+      if (cleanIp === myIp) {
+        setIsMyIpSuper(true);
+      }
+      setInputSuperIp('');
+      fetchClientPermissions(true);
+      if (activeTab === 'logs') {
+        fetchLogs();
+      }
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      setSuperAdminActionLoading(false);
+    }
+  };
+
+  const handleRevokeSuperIp = async (targetIp, inputPin) => {
+    const cleanIp = (targetIp || '').trim();
+    if (!cleanIp) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn thu hồi quyền IP Cao Nhất của ${cleanIp}?`)) {
+      return;
+    }
+    const pinToUse = inputPin || getAdminPin();
+    try {
+      setSuperAdminActionLoading(true);
+      const res = await fetch(apiUrl('/api/admin/revoke-super-ip'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+        body: JSON.stringify({ ip: cleanIp, pin: pinToUse })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 403) {
+          const userPin = window.prompt('Nhập mã PIN Quản trị viên để thu hồi quyền IP:');
+          if (userPin) {
+            setAdminPinInStorage(userPin);
+            return handleRevokeSuperIp(cleanIp, userPin);
+          }
+        }
+        throw new Error(data.detail || 'Không thể thu hồi quyền IP');
+      }
+
+      showToast(`Đã thu hồi quyền IP Cao Nhất của ${cleanIp}!`);
+      if (data.super_admin_ips) {
+        setSuperIps(data.super_admin_ips);
+      }
+      if (cleanIp === myIp) {
+        setIsMyIpSuper(false);
+      }
+      fetchClientPermissions(true);
+      if (activeTab === 'logs') {
+        fetchLogs();
+      }
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      setSuperAdminActionLoading(false);
+    }
+  };
+
+  // ===========================================================================
   // VISITOR LOGS STATE
   // ===========================================================================
   const [logsLoading, setLogsLoading] = useState(false);
@@ -390,6 +511,7 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
   useEffect(() => {
     if (isOpen) {
       fetchTrash();
+      fetchSuperAdminInfo();
       if (activeTab === 'logs') {
         fetchLogs('');
       }
@@ -551,6 +673,40 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
                 fontWeight: 600
               }}>
                 {totalTrashCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('super_ips')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: activeTab === 'super_ips' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'super_ips' ? '#FFFFFF' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'super_ips' ? 600 : 500,
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Shield size={15} />
+            <span>Quyền IP Cao Nhất</span>
+            {isMyIpSuper && (
+              <span style={{
+                background: '#22c55e',
+                color: '#FFFFFF',
+                fontSize: '10px',
+                padding: '1px 6px',
+                borderRadius: '8px',
+                fontWeight: 600
+              }}>
+                VIP
               </span>
             )}
           </button>
@@ -913,7 +1069,247 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
         )}
 
         {/* ================================================================= */}
-        {/* TAB 2: VISITOR LOGS PANEL                                         */}
+        {/* TAB 2: SUPER ADMIN IP MANAGEMENT PANEL                            */}
+        {/* ================================================================= */}
+        {activeTab === 'super_ips' && (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: '1rem', overflowY: 'auto', paddingRight: '4px' }}>
+            {/* 1. CURRENT DEVICE STATUS CARD */}
+            <div style={{
+              background: isMyIpSuper ? 'rgba(34, 197, 94, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+              border: `1px solid ${isMyIpSuper ? '#86efac' : '#fde68a'}`,
+              borderRadius: '10px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.85rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Shield size={20} style={{ color: isMyIpSuper ? '#15803d' : '#b45309' }} />
+                  <span style={{ fontWeight: 600, fontSize: '0.95rem', color: isMyIpSuper ? '#15803d' : '#b45309' }}>
+                    Thiết bị / Địa chỉ IP của bạn
+                  </span>
+                </div>
+                <div style={{
+                  padding: '3px 10px',
+                  borderRadius: '20px',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  background: isMyIpSuper ? '#dcfce7' : '#fef3c7',
+                  color: isMyIpSuper ? '#166534' : '#92400e',
+                  border: `1px solid ${isMyIpSuper ? '#bbf7d0' : '#fde68a'}`
+                }}>
+                  {isMyIpSuper ? '👑 IP Cao Nhất (Toàn quyền Xóa / Sửa)' : '👤 IP Khách (Không thể Xóa / Chỉ sửa mục của mình)'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: '#1e293b' }}>
+                  {myIp || 'Đang lấy IP...'}
+                </div>
+                {myIp && (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(myIp)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                  >
+                    {copiedIp === myIp ? <Check size={12} /> : <Copy size={12} />} {copiedIp === myIp ? 'Đã sao chép' : 'Sao chép IP'}
+                  </button>
+                )}
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.825rem', color: '#64748b', lineHeight: 1.5 }}>
+                {isMyIpSuper
+                  ? 'Máy này hiện có toàn quyền Quản trị viên Cao Nhất: nút Xóa tài liệu, thư mục, đề thi luôn hiển thị đầy đủ và có thể sửa mọi nội dung trên website.'
+                  : 'Các IP khách thông thường sẽ bị ẩn hoàn toàn nút Xóa và không thể chỉnh sửa đề thi, thư mục hoặc tài liệu do người khác tải lên. Bấm nút dưới để cấp quyền IP Cao Nhất cho máy này.'
+                }
+              </p>
+
+              <div>
+                {!isMyIpSuper ? (
+                  <button
+                    type="button"
+                    disabled={superAdminActionLoading || !myIp}
+                    onClick={() => handleGrantSuperIp(myIp)}
+                    className="btn btn-primary"
+                    style={{
+                      padding: '0.65rem 1.35rem',
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}
+                  >
+                    ⭐ Cấp quyền IP Cao Nhất cho máy này
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={superAdminActionLoading || !myIp}
+                    onClick={() => handleRevokeSuperIp(myIp)}
+                    className="btn btn-secondary"
+                    style={{
+                      padding: '0.5rem 1rem',
+                      color: '#b91c1c',
+                      borderColor: '#fca5a5',
+                      fontSize: '0.825rem',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    Hủy quyền IP Cao Nhất của máy này
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 2. GRANT ANOTHER IP FORM */}
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>
+                Cấp quyền IP Cao Nhất cho một IP khác
+              </span>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Nhập địa chỉ IP của máy tính, điện thoại hoặc quản trị viên khác để cấp toàn quyền Xóa và Sửa trên website:
+              </p>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (inputSuperIp) handleGrantSuperIp(inputSuperIp);
+                }}
+                style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}
+              >
+                <input
+                  type="text"
+                  placeholder="Nhập địa chỉ IP (VD: 1.53.93.51)..."
+                  value={inputSuperIp}
+                  onChange={(e) => setInputSuperIp(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: '220px',
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--background)',
+                    color: 'var(--text)',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    fontFamily: 'monospace'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={superAdminActionLoading || !inputSuperIp.trim()}
+                  className="btn btn-primary btn-sm"
+                  style={{ padding: '0.55rem 1.1rem', borderRadius: '8px', fontWeight: 600 }}
+                >
+                  + Cấp quyền IP
+                </button>
+              </form>
+            </div>
+
+            {/* 3. LIST OF SUPER ADMIN IPS */}
+            <div style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              padding: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>
+                  Danh sách các IP Cao Nhất ({superIps.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={fetchSuperAdminInfo}
+                  className="btn btn-secondary btn-sm"
+                  style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                >
+                  <RefreshCw size={12} /> Làm mới
+                </button>
+              </div>
+
+              {superIps.length === 0 ? (
+                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  Chưa có IP nào trong danh sách. Hãy nhấn "Cấp quyền IP Cao Nhất cho máy này" phía trên.
+                </div>
+              ) : (
+                <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--background)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Địa chỉ IP</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Loại</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600 }}>Quyền hạn</th>
+                        <th style={{ padding: '8px 12px', fontWeight: 600, textAlign: 'right' }}>Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {superIps.map(ip => {
+                        const isThisMine = ip === myIp;
+                        return (
+                          <tr key={ip} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 600 }}>
+                              {ip}
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              {isThisMine ? (
+                                <span style={{
+                                  background: '#dcfce7',
+                                  color: '#15803d',
+                                  fontSize: '0.72rem',
+                                  padding: '2px 7px',
+                                  borderRadius: '6px',
+                                  fontWeight: 600
+                                }}>
+                                  Máy của bạn
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                                  Quản trị viên
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '8px 12px', color: '#166534', fontSize: '0.8rem' }}>
+                              Toàn quyền Xóa & Sửa
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeSuperIp(ip)}
+                                disabled={superAdminActionLoading}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#dc2626' }}
+                              >
+                                Thu hồi quyền
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* TAB 3: VISITOR LOGS PANEL                                         */}
         {/* ================================================================= */}
         {activeTab === 'logs' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -1230,7 +1626,7 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
                             {formatDateTime(log.created_at)}
                           </td>
                           <td style={{ padding: '0.55rem 0.85rem', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                               <span style={{
                                 fontFamily: 'monospace',
                                 fontWeight: 600,
@@ -1251,6 +1647,18 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
                                   Bạn
                                 </span>
                               )}
+                              {superIps.includes(log.ip_address) && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  padding: '1px 5px',
+                                  background: '#22c55e',
+                                  color: '#FFFFFF',
+                                  borderRadius: '3px',
+                                  fontWeight: 600
+                                }}>
+                                  ⭐ IP Cao Nhất
+                                </span>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleCopy(log.ip_address)}
@@ -1267,6 +1675,46 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
                               >
                                 {copiedIp === log.ip_address ? <Check size={12} /> : <Copy size={12} />}
                               </button>
+
+                              {superIps.includes(log.ip_address) ? (
+                                <button
+                                  type="button"
+                                  disabled={superAdminActionLoading}
+                                  onClick={() => handleRevokeSuperIp(log.ip_address)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: '#dc2626',
+                                    padding: '1px 4px',
+                                    fontSize: '10px',
+                                    borderRadius: '3px',
+                                    textDecoration: 'underline'
+                                  }}
+                                  title="Thu hồi quyền IP Cao Nhất"
+                                >
+                                  Hủy quyền
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={superAdminActionLoading}
+                                  onClick={() => handleGrantSuperIp(log.ip_address)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'var(--primary)',
+                                    padding: '1px 4px',
+                                    fontSize: '10px',
+                                    borderRadius: '3px',
+                                    textDecoration: 'underline'
+                                  }}
+                                  title="Cấp quyền IP Cao Nhất cho IP này"
+                                >
+                                  + Cấp quyền
+                                </button>
+                              )}
                             </div>
                           </td>
                           <td style={{ padding: '0.55rem 0.85rem', whiteSpace: 'nowrap' }}>
