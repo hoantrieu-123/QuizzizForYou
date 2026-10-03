@@ -267,6 +267,32 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
   const [inputSuperIp, setInputSuperIp] = useState('');
   const [superAdminActionLoading, setSuperAdminActionLoading] = useState(false);
 
+  // In-app PIN modal (replaces window.prompt)
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinModalLabel, setPinModalLabel] = useState('');
+  const [pinModalValue, setPinModalValue] = useState('');
+  const [pinModalError, setPinModalError] = useState('');
+  const [pinModalCallback, setPinModalCallback] = useState(null);
+
+  // In-app Confirm modal (replaces window.confirm)
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmModalMessage, setConfirmModalMessage] = useState('');
+  const [confirmModalCallback, setConfirmModalCallback] = useState(null);
+
+  const showPinModal = (label, onConfirm) => {
+    setPinModalLabel(label);
+    setPinModalValue('');
+    setPinModalError('');
+    setPinModalCallback(() => onConfirm);
+    setPinModalOpen(true);
+  };
+
+  const showConfirmModal = (message, onConfirm) => {
+    setConfirmModalMessage(message);
+    setConfirmModalCallback(() => onConfirm);
+    setConfirmModalOpen(true);
+  };
+
   const fetchSuperAdminInfo = async () => {
     try {
       setSuperIpsLoading(true);
@@ -305,11 +331,12 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 403) {
-          const userPin = window.prompt('Nhập mã PIN Quản trị viên để cấp quyền IP Cao Nhất:');
-          if (userPin) {
+          setSuperAdminActionLoading(false);
+          showPinModal('Nhập mã PIN Quản trị viên để cấp quyền IP Cao Nhất:', (userPin) => {
             setAdminPinInStorage(userPin);
-            return handleGrantSuperIp(cleanIp, userPin);
-          }
+            handleGrantSuperIp(cleanIp, userPin);
+          });
+          return;
         }
         throw new Error(data.detail || 'Không thể cấp quyền IP');
       }
@@ -336,45 +363,51 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
   const handleRevokeSuperIp = async (targetIp, inputPin) => {
     const cleanIp = (targetIp || '').trim();
     if (!cleanIp) return;
-    if (!window.confirm(`Bạn có chắc chắn muốn thu hồi quyền IP Cao Nhất của ${cleanIp}?`)) {
-      return;
-    }
-    const pinToUse = inputPin || getAdminPin();
-    try {
-      setSuperAdminActionLoading(true);
-      const res = await fetch(apiUrl('/api/admin/revoke-super-ip'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
-        body: JSON.stringify({ ip: cleanIp, pin: pinToUse })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (res.status === 403) {
-          const userPin = window.prompt('Nhập mã PIN Quản trị viên để thu hồi quyền IP:');
-          if (userPin) {
-            setAdminPinInStorage(userPin);
-            return handleRevokeSuperIp(cleanIp, userPin);
-          }
-        }
-        throw new Error(data.detail || 'Không thể thu hồi quyền IP');
-      }
 
-      showToast(`Đã thu hồi quyền IP Cao Nhất của ${cleanIp}!`);
-      if (data.super_admin_ips) {
-        setSuperIps(data.super_admin_ips);
+    const doRevoke = async (pin) => {
+      const pinToUse = pin || inputPin || getAdminPin();
+      try {
+        setSuperAdminActionLoading(true);
+        const res = await fetch(apiUrl('/api/admin/revoke-super-ip'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+          body: JSON.stringify({ ip: cleanIp, pin: pinToUse })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (res.status === 403) {
+            setSuperAdminActionLoading(false);
+            showPinModal('Nhập mã PIN Quản trị viên để thu hồi quyền IP:', (userPin) => {
+              setAdminPinInStorage(userPin);
+              doRevoke(userPin);
+            });
+            return;
+          }
+          throw new Error(data.detail || 'Không thể thu hồi quyền IP');
+        }
+
+        showToast(`Đã thu hồi quyền IP Cao Nhất của ${cleanIp}!`);
+        if (data.super_admin_ips) {
+          setSuperIps(data.super_admin_ips);
+        }
+        if (cleanIp === myIp) {
+          setIsMyIpSuper(false);
+        }
+        fetchClientPermissions(true);
+        if (activeTab === 'logs') {
+          fetchLogs();
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        setSuperAdminActionLoading(false);
       }
-      if (cleanIp === myIp) {
-        setIsMyIpSuper(false);
-      }
-      fetchClientPermissions(true);
-      if (activeTab === 'logs') {
-        fetchLogs();
-      }
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setSuperAdminActionLoading(false);
-    }
+    };
+
+    showConfirmModal(
+      `Bạn có chắc chắn muốn thu hồi quyền IP Cao Nhất của ${cleanIp}?`,
+      () => doRevoke()
+    );
   };
 
   // ===========================================================================
@@ -536,6 +569,7 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
   const filteredQuizzes = trashFilter === 'documents' ? [] : trashData.quizzes;
 
   return createPortal(
+    <>
     <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 1200 }}>
       <div
         className="modal-content"
@@ -1808,7 +1842,115 @@ export default function VisitorLogModal({ isOpen, onClose, onRestored }) {
           </button>
         </div>
       </div>
-    </div>,
+    </div>
+
+    {/* ===== IN-APP PIN MODAL (replaces window.prompt) ===== */}
+    {pinModalOpen && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(0,0,0,0.55)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center'
+      }}>
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '12px', padding: '1.5rem', width: '340px',
+          maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.35)'
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.95rem' }}>
+            🔑 Xác thực Quản trị viên
+          </div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+            {pinModalLabel}
+          </div>
+          <input
+            autoFocus
+            type="password"
+            value={pinModalValue}
+            onChange={(e) => { setPinModalValue(e.target.value); setPinModalError(''); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const pin = pinModalValue.trim();
+                if (!pin) { setPinModalError('Vui lòng nhập mã PIN'); return; }
+                setPinModalOpen(false);
+                if (pinModalCallback) pinModalCallback(pin);
+              }
+              if (e.key === 'Escape') setPinModalOpen(false);
+            }}
+            placeholder="Nhập mã PIN..."
+            style={{
+              width: '100%', padding: '0.5rem 0.75rem', borderRadius: '7px',
+              border: pinModalError ? '1.5px solid #ef4444' : '1px solid var(--border)',
+              background: 'var(--surface)', color: 'var(--text)',
+              fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.5rem'
+            }}
+          />
+          {pinModalError && (
+            <div style={{ color: '#ef4444', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+              {pinModalError}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setPinModalOpen(false)}
+              style={{ padding: '6px 16px' }}
+            >Hủy</button>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                const pin = pinModalValue.trim();
+                if (!pin) { setPinModalError('Vui lòng nhập mã PIN'); return; }
+                setPinModalOpen(false);
+                if (pinModalCallback) pinModalCallback(pin);
+              }}
+              style={{ padding: '6px 16px' }}
+            >OK</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ===== IN-APP CONFIRM MODAL (replaces window.confirm) ===== */}
+    {confirmModalOpen && (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(0,0,0,0.55)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center'
+      }}>
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '12px', padding: '1.5rem', width: '380px',
+          maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.35)'
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.95rem' }}>
+            ⚠️ Xác nhận hành động
+          </div>
+          <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+            {confirmModalMessage}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setConfirmModalOpen(false)}
+              style={{ padding: '6px 16px' }}
+            >Hủy</button>
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={() => {
+                setConfirmModalOpen(false);
+                if (confirmModalCallback) confirmModalCallback();
+              }}
+              style={{
+                padding: '6px 16px',
+                background: '#ef4444', color: '#fff',
+                border: 'none', borderRadius: '6px', cursor: 'pointer'
+              }}
+            >Xác nhận</button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>,
     document.body
   );
 }
