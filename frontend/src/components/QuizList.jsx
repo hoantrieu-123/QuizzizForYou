@@ -1053,7 +1053,12 @@ function QuizCardItem({
       onMouseEnter={() => prefetchQuizDetail(quiz.id)}
       onClick={() => {
         if (!isLoading) {
-          onSelectQuiz(quiz.id);
+          // Guests (cannot edit) go directly to play mode; editors open preview/edit view
+          if (canEdit(quiz)) {
+            onSelectQuiz(quiz.id);
+          } else {
+            onStartQuiz(quiz.id);
+          }
         }
       }}
       style={{
