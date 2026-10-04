@@ -460,6 +460,16 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_visitor_logs_created_at ON visitor_logs(created_at DESC);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_visitor_logs_ip ON visitor_logs(ip_address);")
 
+    # Document Blobs Table (Permanent file storage in SQLite/Turso across container restarts)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS document_blobs (
+        doc_id TEXT PRIMARY KEY,
+        filename TEXT DEFAULT '',
+        file_data BLOB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     # System Settings Table (Admin PIN, etc.)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS system_settings (
@@ -1517,11 +1527,52 @@ def permanent_delete_document(doc_id: str) -> Optional[Dict[str, Any]]:
         return None
 
     cursor.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+    try:
+        cursor.execute("DELETE FROM document_blobs WHERE doc_id = ?", (doc_id,))
+    except Exception:
+        pass
     conn.commit()
     conn.close()
 
     invalidate_doc_cache(doc_id)
     return row
+
+
+def save_document_blob(doc_id: str, filename: str, file_data: bytes):
+    """Save binary file data of a document into database for permanent persistence."""
+    try:
+        conn = get_connection()
+        conn.execute("""
+            INSERT OR REPLACE INTO document_blobs (doc_id, filename, file_data, created_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """, (doc_id, filename, file_data))
+        conn.commit()
+    except Exception as e:
+        print(f"Error saving document blob {doc_id}: {e}")
+
+
+def get_document_blob(doc_id: str) -> Optional[bytes]:
+    """Retrieve binary file data of a document from database."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT file_data FROM document_blobs WHERE doc_id = ?", (doc_id,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            return bytes(row[0])
+    except Exception as e:
+        print(f"Error retrieving document blob {doc_id}: {e}")
+    return None
+
+
+def delete_document_blob(doc_id: str):
+    """Remove binary file data when a document is permanently deleted."""
+    try:
+        conn = get_connection()
+        conn.execute("DELETE FROM document_blobs WHERE doc_id = ?", (doc_id,))
+        conn.commit()
+    except Exception:
+        pass
 
 
 def get_trash_items() -> Dict[str, Any]:
@@ -1579,6 +1630,10 @@ def clear_trash_permanently() -> Dict[str, Any]:
     doc_files = [r[0] for r in cursor.fetchall() if r[0]]
 
     cursor.execute("DELETE FROM documents WHERE COALESCE(is_deleted, 0) = 1")
+    try:
+        cursor.execute("DELETE FROM document_blobs WHERE doc_id NOT IN (SELECT id FROM documents)")
+    except Exception:
+        pass
 
     cursor.execute("SELECT id FROM quizzes WHERE COALESCE(is_deleted, 0) = 1")
     quiz_ids = [r[0] for r in cursor.fetchall()]

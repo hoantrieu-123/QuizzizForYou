@@ -28,8 +28,8 @@ backend/quizizz.db
 .DS_Store
 Thumbs.db
 
-# Uploaded documents
-backend/uploads/
+# Uploaded documents (allow documents so Render container has the physical files)
+!backend/uploads/documents/
 
 # Local credentials & configs
 .turso_config.json

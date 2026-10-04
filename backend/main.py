@@ -32,7 +32,8 @@ from backend.database import (
     get_admin_pin, set_admin_pin, verify_admin_pin,
     get_super_admin_ips, add_super_admin_ip, remove_super_admin_ip, is_super_admin_ip,
     restore_document, permanent_delete_document, restore_quiz, permanent_delete_quiz,
-    get_trash_items, restore_all_trash, clear_trash_permanently
+    get_trash_items, restore_all_trash, clear_trash_permanently,
+    save_document_blob, get_document_blob, delete_document_blob
 )
 from fastapi.middleware.gzip import GZipMiddleware
 from backend.grading import grade_submission
@@ -764,6 +765,11 @@ async def upload_documents(
                 folder_path=relative_folder,
                 created_ip=client_ip
             )
+            try:
+                save_document_blob(doc['id'], filename, content)
+            except Exception as e:
+                print(f"Error saving blob for uploaded doc {doc['id']}: {e}")
+
             uploaded_docs.append(doc)
 
         return {
@@ -798,8 +804,16 @@ def list_documents(
     return {"documents": docs, "total": len(docs)}
 
 
+def extract_clean_basename(path_str: str) -> str:
+    """Extract clean filename from path, handling both Windows backslashes and Unix slashes."""
+    if not path_str:
+        return ""
+    normalized = str(path_str).replace('\\', '/').strip()
+    return normalized.split('/')[-1] if normalized else ""
+
+
 def get_document_actual_path(doc: Dict[str, Any]) -> Optional[str]:
-    """Find the valid physical file for a document, resolving relative or shifted paths."""
+    """Find the valid physical file for a document, resolving relative or shifted paths across Windows and Linux."""
     if not doc:
         return None
     raw_path = doc.get('file_path') or ''
@@ -807,9 +821,9 @@ def get_document_actual_path(doc: Dict[str, Any]) -> Optional[str]:
     if raw_path and os.path.exists(raw_path):
         return raw_path
 
-    # 2. Check if disk base name exists in current DOCUMENTS_DIR
-    if raw_path:
-        base_name = os.path.basename(raw_path)
+    # 2. Check if disk base name exists in current DOCUMENTS_DIR (handles Windows paths on Linux)
+    base_name = extract_clean_basename(raw_path)
+    if base_name:
         p1 = os.path.join(DOCUMENTS_DIR, base_name)
         if os.path.exists(p1):
             try:
@@ -820,7 +834,7 @@ def get_document_actual_path(doc: Dict[str, Any]) -> Optional[str]:
 
     # 3. Check by doc['filename'] clean basename in DOCUMENTS_DIR
     raw_fname = doc.get('filename') or ''
-    clean_fname = os.path.basename(raw_fname.replace('\\', '/'))
+    clean_fname = extract_clean_basename(raw_fname)
     if clean_fname:
         p2 = os.path.join(DOCUMENTS_DIR, clean_fname)
         if os.path.exists(p2):
@@ -832,15 +846,43 @@ def get_document_actual_path(doc: Dict[str, Any]) -> Optional[str]:
 
         # 4. Search DOCUMENTS_DIR for any file matching clean_fname or base_name
         if os.path.exists(DOCUMENTS_DIR):
-            for candidate in os.listdir(DOCUMENTS_DIR):
-                if candidate.endswith(clean_fname) or (raw_path and os.path.basename(raw_path) in candidate):
-                    p3 = os.path.join(DOCUMENTS_DIR, candidate)
-                    if os.path.exists(p3):
-                        try:
-                            update_document(doc['id'], file_path=p3)
-                        except Exception:
-                            pass
-                        return p3
+            try:
+                for candidate in os.listdir(DOCUMENTS_DIR):
+                    cand_lower = candidate.lower()
+                    if (
+                        candidate.endswith(clean_fname) or
+                        (base_name and base_name.lower() in cand_lower) or
+                        (clean_fname and clean_fname.lower() in cand_lower)
+                    ):
+                        p3 = os.path.join(DOCUMENTS_DIR, candidate)
+                        if os.path.exists(p3):
+                            try:
+                                update_document(doc['id'], file_path=p3)
+                            except Exception:
+                                pass
+                            return p3
+            except Exception:
+                pass
+
+    # 5. Check if binary content exists in database (document_blobs)
+    doc_id = doc.get('id')
+    if doc_id:
+        blob_bytes = get_document_blob(doc_id)
+        if blob_bytes:
+            restore_fname = base_name or (f"{doc_id[:8]}_{clean_fname}" if clean_fname else f"{doc_id}.{doc.get('file_type', 'docx')}")
+            restore_path = os.path.join(DOCUMENTS_DIR, restore_fname)
+            try:
+                os.makedirs(DOCUMENTS_DIR, exist_ok=True)
+                with open(restore_path, "wb") as f:
+                    f.write(blob_bytes)
+                try:
+                    update_document(doc['id'], file_path=restore_path)
+                except Exception:
+                    pass
+                return restore_path
+            except Exception as e:
+                print(f"Error restoring document {doc_id} to disk: {e}")
+
     return None
 
 

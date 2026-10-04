@@ -4,6 +4,7 @@ import {
   Clock, ArrowLeft, ArrowRight, CheckCircle2,
   Send, Grid, X, Edit3, Shuffle, UploadCloud
 } from './UIcons';
+import { useAdminAuth } from '../utils/adminAuth';
 
 export const cleanQuestionPrompt = (text) => {
   if (!text) return '';
@@ -313,6 +314,7 @@ export const createRandomizedQuizQuestions = (rawQuestions) => {
 };
 
 export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
+  const { canEdit } = useAdminAuth();
   const [questions, setQuestions] = useState(() => createRandomizedQuizQuestions(quiz.questions || []));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -1754,7 +1756,7 @@ export default function QuizPlayer({ quiz, onSubmit, onExit, onEdit }) {
               <Shuffle size={12} />
               <span>Đảo tất cả đáp án</span>
             </button>
-            {onEdit && (
+            {onEdit && canEdit(quiz) && (
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"

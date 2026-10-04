@@ -11,10 +11,11 @@ import ResultView from './components/ResultView';
 import VisitorLogModal from './components/VisitorLogModal';
 import { apiUrl } from './apiConfig';
 import { getQuizDetail, updateCachedQuiz, getCachedQuizSync } from './services/dataCache';
-import { getAdminHeaders } from './utils/adminAuth';
+import { getAdminHeaders, useAdminAuth } from './utils/adminAuth';
 import { FileText, Folders, HelpCircle, CheckCircle2, ClipboardList } from './components/UIcons';
 
 export default function App() {
+  const { canEdit } = useAdminAuth();
   const [currentView, setCurrentView] = useState('home');
   const [activeHomeTab, setActiveHomeTab] = useState('quizzes'); // 'quizzes' | 'documents'
   const [currentQuiz, setCurrentQuiz] = useState(null);
@@ -455,7 +456,7 @@ export default function App() {
             quiz={currentQuiz}
             onSubmit={handleSubmitQuiz}
             onExit={() => setCurrentView('home')}
-            onEdit={() => setCurrentView('preview')}
+            onEdit={canEdit(currentQuiz) ? () => setCurrentView('preview') : null}
           />
         )}
 
@@ -469,7 +470,7 @@ export default function App() {
                 setPlayerSessionKey(prev => prev + 1);
                 setCurrentView('player');
               }}
-              onEdit={() => setCurrentView('preview')}
+              onEdit={canEdit(currentQuiz) ? () => setCurrentView('preview') : null}
               onHome={() => setCurrentView('home')}
             />
           </div>

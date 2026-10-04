@@ -3,8 +3,10 @@ import {
   RotateCcw, Edit3, Home, ArrowRight, Play
 } from './UIcons';
 import { cleanQuestionPrompt, cleanOptionText } from './QuizPlayer';
+import { useAdminAuth } from '../utils/adminAuth';
 
 export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
+  const { canEdit } = useAdminAuth();
   const [filter, setFilter] = useState('all');
 
   const earnedScore = result?.earned_score || 0;
@@ -117,7 +119,7 @@ export default function ResultView({ result, quiz, onRetake, onEdit, onHome }) {
               Xuất kết quả PDF
             </button>
 
-            {onEdit && (
+            {onEdit && canEdit(quiz) && (
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
