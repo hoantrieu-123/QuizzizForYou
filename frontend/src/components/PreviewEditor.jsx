@@ -354,6 +354,214 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
     setQuestions(updated);
   };
 
+  const handleQuestionTypeChange = (qIdx, newType) => {
+    const q = questions[qIdx];
+    if (!q || q.type === newType) return;
+
+    const oldType = q.type;
+    const updatedQ = { ...q, type: newType };
+
+    // 1. Chuyển sang KÉO THẢ VÀO Ô TRỐNG (drag_drop_blank)
+    if (newType === 'drag_drop_blank') {
+      const pairs = (q.pairs && q.pairs.length > 0) ? q.pairs : [];
+      if (pairs.length > 0) {
+        // Chuyển đổi tương ứng từ cặp ghép đôi sang các ô kéo thả
+        const items = pairs.map((p, idx) => {
+          const rightTrimmed = (p.right || '').trim();
+          return {
+            blank: idx + 1,
+            text: (p.left || '').trim() || `Vị trí ${idx + 1}`,
+            correctAnswer: rightTrimmed,
+            correctAnswers: rightTrimmed ? [rightTrimmed] : [],
+            highlighted: Boolean(rightTrimmed)
+          };
+        });
+        const rightWords = pairs.map(p => (p.right || '').trim()).filter(Boolean);
+        const existingBank = Array.isArray(q.bank) ? q.bank : [];
+        const extraDistractors = existingBank.filter(w => !rightWords.includes(w));
+        const bank = [...rightWords, ...extraDistractors];
+
+        updatedQ.items = items;
+        updatedQ.bank = bank.length > 0 ? bank : rightWords;
+        updatedQ.correctAnswers = rightWords;
+        updatedQ.hasHighlight = items.length > 0 && rightWords.length > 0;
+        updatedQ.warning = rightWords.length === 0 ? '⚠ Chưa có đáp án kéo thả nào' : null;
+        showToast(`🔄 Đã chuyển Câu ${q.order || qIdx + 1} sang Kéo thả và giữ nguyên toàn bộ các đáp án tương ứng!`);
+      } else if (q.correctAnswers && q.correctAnswers.length > 0) {
+        // Chuyển từ điền từ hoặc các dạng khác có correctAnswers
+        const answers = q.correctAnswers.map(a => String(a).trim()).filter(Boolean);
+        const items = answers.map((ans, idx) => ({
+          blank: idx + 1,
+          text: `Vị trí ${idx + 1}`,
+          correctAnswer: ans,
+          correctAnswers: [ans],
+          highlighted: true
+        }));
+        updatedQ.items = items;
+        updatedQ.bank = [...answers];
+        updatedQ.correctAnswers = answers;
+        updatedQ.hasHighlight = items.length > 0;
+        updatedQ.warning = null;
+        showToast(`🔄 Đã chuyển Câu ${q.order || qIdx + 1} sang Kéo thả từ các đáp án có sẵn!`);
+      } else if (!updatedQ.items || updatedQ.items.length === 0) {
+        updatedQ.items = [
+          { blank: 1, text: 'Vị trí 1', correctAnswer: 'Đáp án 1', correctAnswers: ['Đáp án 1'], highlighted: true },
+          { blank: 2, text: 'Vị trí 2', correctAnswer: 'Đáp án 2', correctAnswers: ['Đáp án 2'], highlighted: true }
+        ];
+        updatedQ.bank = ['Đáp án 1', 'Đáp án 2'];
+        updatedQ.correctAnswers = ['Đáp án 1', 'Đáp án 2'];
+        updatedQ.hasHighlight = true;
+        updatedQ.warning = null;
+      }
+    }
+
+    // 2. Chuyển sang GHÉP ĐÔI (matching)
+    else if (newType === 'matching') {
+      const items = (q.items && q.items.length > 0) ? q.items : [];
+      if (items.length > 0) {
+        // Chuyển đổi tương ứng từ các ô kéo thả sang cặp ghép đôi
+        const pairs = items.map((it, idx) => {
+          const ansList = it.correctAnswers && it.correctAnswers.length > 0
+            ? it.correctAnswers
+            : (it.correctAnswer ? String(it.correctAnswer).split(/[,;]+/).map(s => s.trim()).filter(Boolean) : []);
+          const rightAns = ansList.join(', ') || (q.bank && q.bank[idx]) || '';
+          return {
+            id: `pair_${Date.now()}_${idx + 1}`,
+            left: (it.text || '').trim() || `Mục ${it.blank || idx + 1}`,
+            right: rightAns.trim(),
+            highlighted: Boolean(rightAns.trim())
+          };
+        });
+        updatedQ.pairs = pairs;
+        updatedQ.correctAnswers = pairs.map(p => `${p.left} → ${p.right}`);
+        updatedQ.hasHighlight = pairs.length > 0 && pairs.some(p => p.right);
+        updatedQ.warning = pairs.some(p => p.right) ? null : '⚠ Vui lòng nhập định nghĩa cột phải';
+        showToast(`🔄 Đã chuyển Câu ${q.order || qIdx + 1} sang Ghép đôi và giữ nguyên các cặp tương ứng!`);
+      } else if (q.options && q.options.length > 0) {
+        const pairs = q.options.map((opt, idx) => ({
+          id: `pair_${Date.now()}_${idx + 1}`,
+          left: opt.label || `Mục ${idx + 1}`,
+          right: (opt.text || opt.full_text || '').trim(),
+          highlighted: (q.correctAnswers || []).includes(opt.label)
+        }));
+        updatedQ.pairs = pairs;
+        updatedQ.correctAnswers = pairs.map(p => `${p.left} → ${p.right}`);
+        updatedQ.hasHighlight = pairs.length > 0;
+        updatedQ.warning = null;
+        showToast(`🔄 Đã chuyển Câu ${q.order || qIdx + 1} sang Ghép đôi!`);
+      } else if (!updatedQ.pairs || updatedQ.pairs.length === 0) {
+        updatedQ.pairs = [
+          { id: `pair_${Date.now()}_1`, left: 'Thuật ngữ 1', right: 'Định nghĩa 1', highlighted: true },
+          { id: `pair_${Date.now()}_2`, left: 'Thuật ngữ 2', right: 'Định nghĩa 2', highlighted: true }
+        ];
+        updatedQ.correctAnswers = ['Thuật ngữ 1 → Định nghĩa 1', 'Thuật ngữ 2 → Định nghĩa 2'];
+        updatedQ.hasHighlight = true;
+        updatedQ.warning = null;
+      }
+    }
+
+    // 3. Chuyển sang ĐIỀN TỪ (fill_blank)
+    else if (newType === 'fill_blank') {
+      if (oldType === 'drag_drop_blank' && q.items && q.items.length > 0) {
+        const answers = q.items.map(it => (it.correctAnswers && it.correctAnswers[0]) || it.correctAnswer || '').filter(Boolean);
+        if (answers.length > 0) {
+          updatedQ.correctAnswers = answers;
+          updatedQ.blankCount = Math.max(answers.length, 1);
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        }
+      } else if (oldType === 'matching' && q.pairs && q.pairs.length > 0) {
+        const answers = q.pairs.map(p => (p.right || '').trim()).filter(Boolean);
+        if (answers.length > 0) {
+          updatedQ.correctAnswers = answers;
+          updatedQ.blankCount = Math.max(answers.length, 1);
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        }
+      }
+    }
+
+    // 4. Chuyển sang CHỌN MỘT HOẶC NHIỀU ĐÁP ÁN (single_choice / multiple_choice)
+    else if (newType === 'single_choice' || newType === 'multiple_choice') {
+      if (!updatedQ.options || updatedQ.options.length < 2) {
+        if (q.pairs && q.pairs.length > 0) {
+          const opts = q.pairs.map((p, idx) => ({
+            label: ALPHABET[idx] || String(idx + 1),
+            text: (p.left && p.right) ? `${p.left}: ${p.right}` : (p.left || p.right || `Phương án ${idx + 1}`),
+            highlighted: idx === 0
+          }));
+          updatedQ.options = opts;
+          updatedQ.correctAnswers = [opts[0].label];
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        } else if (q.items && q.items.length > 0) {
+          const opts = q.items.map((it, idx) => ({
+            label: ALPHABET[idx] || String(idx + 1),
+            text: (it.text && it.correctAnswer) ? `${it.text}: ${it.correctAnswer}` : (it.text || it.correctAnswer || `Phương án ${idx + 1}`),
+            highlighted: idx === 0
+          }));
+          updatedQ.options = opts;
+          updatedQ.correctAnswers = [opts[0].label];
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        } else {
+          updatedQ.options = [
+            { label: 'A', text: '', highlighted: true },
+            { label: 'B', text: '', highlighted: false },
+            { label: 'C', text: '', highlighted: false },
+            { label: 'D', text: '', highlighted: false }
+          ];
+          updatedQ.correctAnswers = ['A'];
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        }
+      }
+    }
+
+    // 5. Chuyển sang ĐÚNG / SAI (true_false)
+    else if (newType === 'true_false') {
+      if (!updatedQ.statements || updatedQ.statements.length === 0) {
+        if (q.pairs && q.pairs.length > 0) {
+          updatedQ.statements = q.pairs.map((p, idx) => ({
+            id: `st_${Date.now()}_${idx + 1}`,
+            order: idx + 1,
+            content: (p.left && p.right) ? `${p.left} là ${p.right}` : (p.left || p.right || `Mệnh đề ${idx + 1}`),
+            correctAnswer: 'Đúng',
+            options: ['Đúng', 'Sai'],
+            highlighted: true
+          }));
+          updatedQ.correctAnswers = updatedQ.statements.map(s => s.correctAnswer);
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        } else if (q.options && q.options.length > 0) {
+          updatedQ.statements = q.options.map((opt, idx) => ({
+            id: `st_${Date.now()}_${idx + 1}`,
+            order: idx + 1,
+            content: opt.text || opt.full_text || `Mệnh đề ${opt.label}`,
+            correctAnswer: (q.correctAnswers || []).includes(opt.label) ? 'Đúng' : 'Sai',
+            options: ['Đúng', 'Sai'],
+            highlighted: true
+          }));
+          updatedQ.correctAnswers = updatedQ.statements.map(s => s.correctAnswer);
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        } else {
+          updatedQ.statements = [
+            { id: `st_${Date.now()}_1`, order: 1, content: 'Mệnh đề 1', correctAnswer: 'Đúng', options: ['Đúng', 'Sai'], highlighted: true },
+            { id: `st_${Date.now()}_2`, order: 2, content: 'Mệnh đề 2', correctAnswer: 'Sai', options: ['Đúng', 'Sai'], highlighted: true }
+          ];
+          updatedQ.correctAnswers = ['Đúng', 'Sai'];
+          updatedQ.hasHighlight = true;
+          updatedQ.warning = null;
+        }
+      }
+    }
+
+    const updatedQuestions = [...questions];
+    updatedQuestions[qIdx] = updatedQ;
+    setQuestions(updatedQuestions);
+  };
+
   // -------------------------------------------------------------
   // OPTIONS CRUD (Single Choice & Multiple Choice)
   // -------------------------------------------------------------
@@ -1327,7 +1535,7 @@ export default function PreviewEditor({ quiz, onSave, onStartQuiz, onBack }) {
 
                   <select
                     value={q.type}
-                    onChange={(e) => handleUpdateQuestion(qActualIndex, 'type', e.target.value)}
+                    onChange={(e) => handleQuestionTypeChange(qActualIndex, e.target.value)}
                     style={{
                       padding: '0.35rem 0.65rem',
                       borderRadius: '6px',
